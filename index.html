@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>XFit — Твоя нова спортсім'я</title>
+<meta name="description" content="XFit Podilsk — сучасний тренажерний зал. Тренажери, кросфіт, персональні тренування та групові заняття.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%2339ff6a%22>X</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<div class="noise-overlay"></div>
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<!-- ===== NAV ===== -->
+<header class="navbar" id="navbar">
+  <div class="container navbar__inner">
+    <a href="#home" class="logo" id="secretTrigger">
+      <span class="logo__x">X</span><span class="logo__fit">FIT</span>
+    </a>
+
+    <nav class="nav-links" id="navLinks">
+      <a href="#announcements" class="nav-link nav-link--announce" id="navAnnounceLink">Анонси</a>
+      <a href="#about" class="nav-link">Про нас</a>
+      <a href="#programs" class="nav-link">Програми</a>
+      <a href="#trainers" class="nav-link">Тренери</a>
+      <a href="#gallery" class="nav-link">Галерея</a>
+      <a href="#pricing" class="nav-link">Абонементи</a>
+      <a href="#schedule" class="nav-link">Розклад</a>
+      <a href="#contact" class="nav-link">Контакти</a>
+    </nav>
+
+    <a href="#pricing" class="btn btn--primary btn--nav">Приєднатись</a>
+
+    <button class="burger" id="burger" aria-label="Меню" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#announcements" class="mobile-link mobile-link--announce" id="mobileAnnounceLink">Анонси</a>
+  <a href="#about" class="mobile-link">Про нас</a>
+  <a href="#programs" class="mobile-link">Програми</a>
+  <a href="#trainers" class="mobile-link">Тренери</a>
+  <a href="#gallery" class="mobile-link">Галерея</a>
+  <a href="#pricing" class="mobile-link">Абонементи</a>
+  <a href="#schedule" class="mobile-link">Розклад</a>
+  <a href="#contact" class="mobile-link">Контакти</a>
+  <a href="#pricing" class="btn btn--primary" style="margin-top:20px;">Приєднатись</a>
+</div>
+
+<!-- ===== HERO ===== -->
+<section class="hero" id="home">
+  <canvas id="heroCanvas" class="hero__canvas"></canvas>
+  <div class="hero__grid"></div>
+  <div class="hero__scrim"></div>
+  <div class="hero__glow hero__glow--1"></div>
+  <div class="hero__glow hero__glow--2"></div>
+
+  <div class="container hero__content">
+    <p class="eyebrow reveal"><span class="dot"></span> <span data-edit-key="hero.eyebrow">XFIT_PODILSK · ТВОЯ НОВА СПОРТСІМ'Я</span></p>
+    <h1 class="hero__title reveal">
+      <span data-edit-key="hero.title1">СИЛА.</span><br>
+      <span class="text-outline" data-edit-key="hero.title2">ФОРМА.</span><br>
+      <span class="text-glow" data-edit-key="hero.title3">XFIT.</span>
+    </h1>
+    <p class="hero__subtitle reveal" data-edit-key="hero.subtitle">
+      Тренажерний зал нового покоління у Подільську. Обладнання преміум-класу,
+      круті тренери та атмосфера, яка заряджає на результат.
+    </p>
+    <div class="hero__actions reveal">
+      <a href="#pricing" class="btn btn--primary btn--lg">Обрати абонемент</a>
+      <a href="#programs" class="btn btn--ghost btn--lg">Наші програми ↓</a>
+    </div>
+
+    <div class="hero__stats reveal">
+      <div class="stat">
+        <span class="stat__num" data-count="1" data-edit-key="stat.years" data-edit-type="number">0</span><span class="stat__suffix">+</span>
+        <span class="stat__label" data-edit-key="stat.years.label">рік на ринку</span>
+      </div>
+      <div class="stat">
+        <span class="stat__num" data-count="500" data-edit-key="stat.clients" data-edit-type="number">0</span><span class="stat__suffix">+</span>
+        <span class="stat__label" data-edit-key="stat.clients.label">клієнтів</span>
+      </div>
+      <div class="stat">
+        <span class="stat__num" data-count="30" data-edit-key="stat.machines" data-edit-type="number">0</span><span class="stat__suffix">+</span>
+        <span class="stat__label" data-edit-key="stat.machines.label">тренажерів</span>
+      </div>
+      <div class="stat">
+        <span class="stat__num" data-count="7" data-edit-key="stat.days" data-edit-type="number">0</span>
+        <span class="stat__label" data-edit-key="stat.days.label">днів на тиждень</span>
+      </div>
+    </div>
+  </div>
+
+  <a href="#about" class="scroll-hint" aria-label="Далі">
+    <span></span>
+  </a>
+</section>
+
+<!-- ===== MARQUEE ===== -->
+<div class="marquee">
+  <div class="marquee__track">
+    <span>СИЛА</span><span class="marquee__dot">✦</span>
+    <span>ВИТРИВАЛІСТЬ</span><span class="marquee__dot">✦</span>
+    <span>ДИСЦИПЛІНА</span><span class="marquee__dot">✦</span>
+    <span>РЕЗУЛЬТАТ</span><span class="marquee__dot">✦</span>
+    <span>XFIT</span><span class="marquee__dot">✦</span>
+    <span>СИЛА</span><span class="marquee__dot">✦</span>
+    <span>ВИТРИВАЛІСТЬ</span><span class="marquee__dot">✦</span>
+    <span>ДИСЦИПЛІНА</span><span class="marquee__dot">✦</span>
+    <span>РЕЗУЛЬТАТ</span><span class="marquee__dot">✦</span>
+    <span>XFIT</span><span class="marquee__dot">✦</span>
+  </div>
+</div>
+
+<!-- ===== ANNOUNCEMENTS (керується адміністратором) ===== -->
+<section class="section announcements" id="announcements">
+  <div class="container">
+    <div class="announcements__head">
+      <div>
+        <p class="section-eyebrow reveal">// АНОНСИ</p>
+        <h2 class="section-title reveal">Оголошення та афіші</h2>
+      </div>
+      <button type="button" class="btn btn--ghost admin-only-control" id="addAnnouncementBtn">+ Додати оголошення</button>
+    </div>
+    <p class="announcements__admin-hint">
+      Цей розділ прихований для відвідувачів, доки адміністратор його не увімкне (кнопка «Оголошення» в адмін-панелі).
+    </p>
+    <div class="announcements-grid" id="announcementsGrid"></div>
+    <p class="announcements-empty" id="announcementsEmpty">Поки що немає активних оголошень.</p>
+  </div>
+</section>
+
+<!-- ===== ABOUT ===== -->
+<section class="section" id="about">
+  <div class="container about__grid">
+    <div class="about__visual reveal">
+      <div class="about__frame">
+        <div class="about__badge">
+          <span class="about__badge-num">01</span>
+          <span class="about__badge-text">РІК<br>РАЗОМ</span>
+        </div>
+        <div class="about__shape" id="aboutShape"></div>
+      </div>
+    </div>
+    <div class="about__text">
+      <p class="section-eyebrow reveal">// ПРО ЗАЛ</p>
+      <h2 class="section-title reveal">Не просто зал.<br>Твоя <span class="text-accent">спортсім'я</span>.</h2>
+      <p class="reveal" data-edit-key="about.text">
+        XFit — це простір, де сучасне обладнання, продумане зонування та атмосфера
+        підтримки роблять тренування ефективними та приємними. Ми віримо, що спорт
+        об'єднує, тому кожен клієнт для нас — частина великої команди.
+      </p>
+      <ul class="check-list reveal">
+        <li data-edit-key="about.check1">Обладнання преміум-класу від провідних брендів</li>
+        <li data-edit-key="about.check2">Кваліфіковані тренери та персональний супровід</li>
+        <li data-edit-key="about.check3">Зручний графік — відкрито 7 днів на тиждень</li>
+        <li data-edit-key="about.check4">Чиста, доглянута та мотивуюча атмосфера</li>
+      </ul>
+      <a href="#contact" class="btn btn--primary reveal">Записатись на пробне</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PROGRAMS ===== -->
+<section class="section section--alt" id="programs">
+  <div class="container">
+    <p class="section-eyebrow reveal center">// НАПРЯМКИ</p>
+    <h2 class="section-title reveal center">Обери свій формат</h2>
+
+    <div class="cards-grid">
+      <article class="tilt-card reveal">
+        <div class="tilt-card__inner">
+          <span class="tilt-card__num">01</span>
+          <h3 data-edit-key="program1.title">Тренажерний зал</h3>
+          <p data-edit-key="program1.desc">Повний спектр силового та кардіо обладнання для будь-якого рівня підготовки.</p>
+        </div>
+      </article>
+      <article class="tilt-card reveal">
+        <div class="tilt-card__inner">
+          <span class="tilt-card__num">02</span>
+          <h3 data-edit-key="program2.title">Кросфіт</h3>
+          <p data-edit-key="program2.desc">Високоінтенсивні функціональні тренування у групі під керівництвом коуча.</p>
+        </div>
+      </article>
+      <article class="tilt-card reveal">
+        <div class="tilt-card__inner">
+          <span class="tilt-card__num">03</span>
+          <h3 data-edit-key="program3.title">Персональні тренування</h3>
+          <p data-edit-key="program3.desc">Індивідуальна програма, контроль техніки та швидкий прогрес до цілі.</p>
+        </div>
+      </article>
+      <article class="tilt-card reveal">
+        <div class="tilt-card__inner">
+          <span class="tilt-card__num">04</span>
+          <h3 data-edit-key="program4.title">Групові заняття</h3>
+          <p data-edit-key="program4.desc">Йога, стретчинг, функціональні класи — заряд енергії у гарній компанії.</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FEATURES ===== -->
+<section class="section" id="features">
+  <div class="container">
+    <div class="features__grid">
+      <div class="features__col reveal">
+        <p class="section-eyebrow">// ЧОМУ XFIT</p>
+        <h2 class="section-title">Все для твого<br>результату</h2>
+        <p data-edit-key="features.text">Ми продумали кожну деталь простору, щоб тренування приносили максимум користі та задоволення.</p>
+      </div>
+
+      <div class="feature reveal">
+        <div class="feature__icon">◈</div>
+        <h4 data-edit-key="feature1.title">Преміум обладнання</h4>
+        <p data-edit-key="feature1.desc">Сучасні тренажери провідних світових брендів, регулярне оновлення парку.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="feature__icon">◇</div>
+        <h4 data-edit-key="feature2.title">Досвідчені тренери</h4>
+        <p data-edit-key="feature2.desc">Сертифіковані фахівці, які підберуть програму під твою мету та рівень.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="feature__icon">◆</div>
+        <h4 data-edit-key="feature3.title">Зручна локація</h4>
+        <p data-edit-key="feature3.desc">Зал у центрі Подільська з парковкою та зручним під'їздом.</p>
+      </div>
+      <div class="feature reveal">
+        <div class="feature__icon">✦</div>
+        <h4 data-edit-key="feature4.title">Комʼюніті</h4>
+        <p data-edit-key="feature4.desc">Спільнота однодумців, спільні активності та підтримка на кожному кроці.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TRAINERS ===== -->
+<section class="section section--alt" id="trainers">
+  <div class="container">
+    <p class="section-eyebrow reveal center">// КОМАНДА</p>
+    <h2 class="section-title reveal center">Наші тренери</h2>
+
+    <div class="trainers-grid">
+      <article class="trainer-card reveal">
+        <div class="trainer-card__photo photo-slot" style="--hue:150">
+          <img class="photo-img" data-photo-key="trainer1" alt="Олександр К.">
+          <label class="photo-upload">
+            <input type="file" accept="image/*" data-photo-input="trainer1" hidden>
+            <span class="photo-upload__btn">📷 Фото</span>
+          </label>
+          <button type="button" class="photo-remove" data-photo-remove="trainer1" title="Видалити фото">✕</button>
+        </div>
+        <h3 data-edit-key="trainer1.name">Олександр К.</h3>
+        <span class="trainer-card__role" data-edit-key="trainer1.role">Силові тренування</span>
+      </article>
+      <article class="trainer-card reveal">
+        <div class="trainer-card__photo photo-slot" style="--hue:130">
+          <img class="photo-img" data-photo-key="trainer2" alt="Марина В.">
+          <label class="photo-upload">
+            <input type="file" accept="image/*" data-photo-input="trainer2" hidden>
+            <span class="photo-upload__btn">📷 Фото</span>
+          </label>
+          <button type="button" class="photo-remove" data-photo-remove="trainer2" title="Видалити фото">✕</button>
+        </div>
+        <h3 data-edit-key="trainer2.name">Марина В.</h3>
+        <span class="trainer-card__role" data-edit-key="trainer2.role">Кросфіт / Функціонал</span>
+      </article>
+      <article class="trainer-card reveal">
+        <div class="trainer-card__photo photo-slot" style="--hue:100">
+          <img class="photo-img" data-photo-key="trainer3" alt="Дмитро П.">
+          <label class="photo-upload">
+            <input type="file" accept="image/*" data-photo-input="trainer3" hidden>
+            <span class="photo-upload__btn">📷 Фото</span>
+          </label>
+          <button type="button" class="photo-remove" data-photo-remove="trainer3" title="Видалити фото">✕</button>
+        </div>
+        <h3 data-edit-key="trainer3.name">Дмитро П.</h3>
+        <span class="trainer-card__role" data-edit-key="trainer3.role">Персональний тренер</span>
+      </article>
+      <article class="trainer-card reveal">
+        <div class="trainer-card__photo photo-slot" style="--hue:160">
+          <img class="photo-img" data-photo-key="trainer4" alt="Ірина С.">
+          <label class="photo-upload">
+            <input type="file" accept="image/*" data-photo-input="trainer4" hidden>
+            <span class="photo-upload__btn">📷 Фото</span>
+          </label>
+          <button type="button" class="photo-remove" data-photo-remove="trainer4" title="Видалити фото">✕</button>
+        </div>
+        <h3 data-edit-key="trainer4.name">Ірина С.</h3>
+        <span class="trainer-card__role" data-edit-key="trainer4.role">Йога / Стретчинг</span>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== GALLERY ===== -->
+<section class="section" id="gallery">
+  <div class="container">
+    <p class="section-eyebrow reveal center">// ГАЛЕРЕЯ</p>
+    <h2 class="section-title reveal center">Атмосфера залу</h2>
+    <p class="reveal center" style="max-width:520px;margin-left:auto;margin-right:auto;">
+      Фото додаються адміністратором прямо з сайту — в адмін-режимі наведи курсор на плитку, щоб завантажити зображення.
+    </p>
+
+    <div class="gallery-grid">
+      <div class="gallery-tile reveal photo-slot" style="--hue:150">
+        <img class="photo-img" data-photo-key="gallery1" alt="Зал XFit">
+        <label class="photo-upload">
+          <input type="file" accept="image/*" data-photo-input="gallery1" hidden>
+          <span class="photo-upload__btn">📷 Додати фото</span>
+        </label>
+        <button type="button" class="photo-remove" data-photo-remove="gallery1" title="Видалити фото">✕</button>
+      </div>
+      <div class="gallery-tile reveal photo-slot" style="--hue:135">
+        <img class="photo-img" data-photo-key="gallery2" alt="Зал XFit">
+        <label class="photo-upload">
+          <input type="file" accept="image/*" data-photo-input="gallery2" hidden>
+          <span class="photo-upload__btn">📷 Додати фото</span>
+        </label>
+        <button type="button" class="photo-remove" data-photo-remove="gallery2" title="Видалити фото">✕</button>
+      </div>
+      <div class="gallery-tile reveal photo-slot" style="--hue:120">
+        <img class="photo-img" data-photo-key="gallery3" alt="Зал XFit">
+        <label class="photo-upload">
+          <input type="file" accept="image/*" data-photo-input="gallery3" hidden>
+          <span class="photo-upload__btn">📷 Додати фото</span>
+        </label>
+        <button type="button" class="photo-remove" data-photo-remove="gallery3" title="Видалити фото">✕</button>
+      </div>
+      <div class="gallery-tile reveal photo-slot" style="--hue:105">
+        <img class="photo-img" data-photo-key="gallery4" alt="Зал XFit">
+        <label class="photo-upload">
+          <input type="file" accept="image/*" data-photo-input="gallery4" hidden>
+          <span class="photo-upload__btn">📷 Додати фото</span>
+        </label>
+        <button type="button" class="photo-remove" data-photo-remove="gallery4" title="Видалити фото">✕</button>
+      </div>
+      <div class="gallery-tile reveal photo-slot" style="--hue:145">
+        <img class="photo-img" data-photo-key="gallery5" alt="Зал XFit">
+        <label class="photo-upload">
+          <input type="file" accept="image/*" data-photo-input="gallery5" hidden>
+          <span class="photo-upload__btn">📷 Додати фото</span>
+        </label>
+        <button type="button" class="photo-remove" data-photo-remove="gallery5" title="Видалити фото">✕</button>
+      </div>
+      <div class="gallery-tile reveal photo-slot" style="--hue:160">
+        <img class="photo-img" data-photo-key="gallery6" alt="Зал XFit">
+        <label class="photo-upload">
+          <input type="file" accept="image/*" data-photo-input="gallery6" hidden>
+          <span class="photo-upload__btn">📷 Додати фото</span>
+        </label>
+        <button type="button" class="photo-remove" data-photo-remove="gallery6" title="Видалити фото">✕</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PRICING ===== -->
+<section class="section" id="pricing">
+  <div class="container">
+    <p class="section-eyebrow reveal center">// АБОНЕМЕНТИ</p>
+    <h2 class="section-title reveal center">Обери свій план</h2>
+
+    <div class="pricing-grid">
+      <article class="price-card reveal">
+        <h3 data-edit-key="price1.name">Старт</h3>
+        <p class="price-card__price"><span data-edit-key="price1.amount">499₴</span><span>/міс</span></p>
+        <ul>
+          <li data-edit-key="price1.item1">Доступ у будні дні</li>
+          <li data-edit-key="price1.item2">Тренажерний зал</li>
+          <li data-edit-key="price1.item3">Роздягальня + душ</li>
+        </ul>
+        <a href="#contact" class="btn btn--ghost">Обрати</a>
+      </article>
+
+      <article class="price-card price-card--featured reveal">
+        <span class="price-card__badge">Популярний</span>
+        <h3 data-edit-key="price2.name">Повний</h3>
+        <p class="price-card__price"><span data-edit-key="price2.amount">799₴</span><span>/міс</span></p>
+        <ul>
+          <li data-edit-key="price2.item1">Доступ 7 днів на тиждень</li>
+          <li data-edit-key="price2.item2">Тренажерний зал + кросфіт</li>
+          <li data-edit-key="price2.item3">Групові заняття</li>
+          <li data-edit-key="price2.item4">1 персональна консультація</li>
+        </ul>
+        <a href="#contact" class="btn btn--primary">Обрати</a>
+      </article>
+
+      <article class="price-card reveal">
+        <h3 data-edit-key="price3.name">PRO</h3>
+        <p class="price-card__price"><span data-edit-key="price3.amount">1299₴</span><span>/міс</span></p>
+        <ul>
+          <li data-edit-key="price3.item1">Все з плану «Повний»</li>
+          <li data-edit-key="price3.item2">4 персональні тренування</li>
+          <li data-edit-key="price3.item3">Індивідуальний план харчування</li>
+        </ul>
+        <a href="#contact" class="btn btn--ghost">Обрати</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SCHEDULE / CTA ===== -->
+<section class="section section--cta" id="schedule">
+  <div class="cta__glow"></div>
+  <div class="container cta__inner">
+    <p class="section-eyebrow reveal center">// РОЗКЛАД</p>
+    <h2 class="section-title reveal center">Відкрито щодня</h2>
+    <div class="schedule-grid reveal">
+      <div class="schedule-row"><span data-edit-key="schedule1.day">Пн — Пт</span><span data-edit-key="schedule1.hours">07:00 — 23:00</span></div>
+      <div class="schedule-row"><span data-edit-key="schedule2.day">Субота</span><span data-edit-key="schedule2.hours">09:00 — 21:00</span></div>
+      <div class="schedule-row"><span data-edit-key="schedule3.day">Неділя</span><span data-edit-key="schedule3.hours">09:00 — 20:00</span></div>
+    </div>
+    <p class="reveal center" style="margin-top:24px;">Приходь на безкоштовне пробне тренування — покажемо зал і підберемо програму.</p>
+    <div class="reveal center" style="margin-top:24px;">
+      <a href="#contact" class="btn btn--primary btn--lg">Записатись зараз</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CONTACT ===== -->
+<section class="section" id="contact">
+  <div class="container contact__grid">
+    <div class="reveal">
+      <p class="section-eyebrow">// КОНТАКТИ</p>
+      <h2 class="section-title">Чекаємо<br>на тебе</h2>
+      <div class="contact-info">
+        <div class="contact-info__item">
+          <span class="contact-info__label">Адреса</span>
+          <span data-edit-key="contact.address">м. Подільськ, вул. Центральна (уточнюйте в Instagram)</span>
+        </div>
+        <div class="contact-info__item">
+          <span class="contact-info__label">Телефон</span>
+          <a href="tel:+380000000000" data-edit-key="contact.phone">+380 (00) 000-00-00</a>
+        </div>
+        <div class="contact-info__item">
+          <span class="contact-info__label">Instagram</span>
+          <a href="https://instagram.com/xfit_podilsk" target="_blank" rel="noopener" data-edit-key="contact.instagram">@xfit_podilsk</a>
+        </div>
+      </div>
+    </div>
+
+    <form class="contact-form reveal" id="contactForm">
+      <div class="form-row">
+        <input type="text" name="name" placeholder="Ім'я" required>
+        <input type="tel" name="phone" placeholder="Телефон" required>
+      </div>
+      <textarea name="message" placeholder="Повідомлення (необов'язково)" rows="4"></textarea>
+      <button type="submit" class="btn btn--primary btn--lg btn--block">Надіслати заявку</button>
+      <p class="form-note" id="formNote"></p>
+    </form>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="container footer__inner">
+    <a href="#home" class="logo">
+      <span class="logo__x">X</span><span class="logo__fit">FIT</span>
+    </a>
+    <nav class="footer__links">
+      <a href="#about">Про нас</a>
+      <a href="#programs">Програми</a>
+      <a href="#pricing">Абонементи</a>
+      <a href="#contact">Контакти</a>
+    </nav>
+    <div class="footer__social">
+      <a href="https://instagram.com/xfit_podilsk" target="_blank" rel="noopener">Instagram</a>
+    </div>
+  </div>
+  <div class="container">
+    <p class="footer__copy" data-edit-key="footer.copy">© 2026 XFit Podilsk. Твоя нова спортсім'я.</p>
+  </div>
+</footer>
+
+<!-- ===== ADMIN ===== -->
+<div class="admin-toast" id="adminToast"></div>
+
+<div class="admin-modal" id="adminLoginModal">
+  <form class="admin-modal__box" id="adminLoginForm">
+    <p class="admin-modal__title">🔒 Вхід адміністратора</p>
+    <p class="admin-modal__status" id="adminSyncStatus"></p>
+    <input type="email" id="adminEmailInput" placeholder="Email адміністратора" autocomplete="username" hidden>
+    <input type="password" id="adminPasswordInput" placeholder="Пароль" autocomplete="current-password" required>
+    <p class="admin-modal__error" id="adminLoginError"></p>
+    <div class="admin-modal__actions">
+      <button type="button" class="btn btn--ghost" id="adminLoginCancel">Скасувати</button>
+      <button type="submit" class="btn btn--primary">Увійти</button>
+    </div>
+  </form>
+</div>
+
+<div class="admin-bar" id="adminBar">
+  <span class="admin-bar__label">⚙ Режим адміністратора</span>
+  <span class="admin-bar__sync" id="adminBarSync"></span>
+  <button class="admin-bar__btn admin-bar__btn--edit" id="adminEditToggle">Редагувати</button>
+  <button class="admin-bar__btn" id="adminAnnouncementsToggle">Оголошення: Вимкнено</button>
+  <button class="admin-bar__btn" id="adminSaveBtn">Зберегти</button>
+  <button class="admin-bar__btn" id="adminExportBtn">⬇ Зберегти у файл</button>
+  <label class="admin-bar__btn" id="adminImportLabel">
+    ⬆ Завантажити з файлу
+    <input type="file" accept="application/json" id="adminImportInput" hidden>
+  </label>
+  <button class="admin-bar__btn" id="adminResetBtn">Скинути все</button>
+  <button class="admin-bar__btn" id="adminPasswordBtn">Змінити пароль</button>
+  <button class="admin-bar__btn admin-bar__btn--exit" id="adminLogoutBtn">Вийти</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/main.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
