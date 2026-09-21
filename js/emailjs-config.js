@@ -21,6 +21,6 @@
    Якщо залишити плейсхолдери — email просто не надсилатиметься
    (заявки й далі зберігатимуться в Supabase, якщо він налаштований).
    ============================================================ */
-window.XFIT_EMAILJS_SERVICE_ID = 'YOUR_SERVICE_ID';
-window.XFIT_EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
-window.XFIT_EMAILJS_PUBLIC_KEY = 'YOUR_PUBLIC_KEY';
+window.XFIT_EMAILJS_SERVICE_ID = 'service_qpcd66k';
+window.XFIT_EMAILJS_TEMPLATE_ID = 'template_h75hebf';
+window.XFIT_EMAILJS_PUBLIC_KEY = 'XDQKTWJ_jDRJclCDW';
