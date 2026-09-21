@@ -34,6 +34,7 @@
   const syncStatusEl = $('#adminSyncStatus');
   const adminBar = $('#adminBar');
   const adminBarSync = $('#adminBarSync');
+  const adminBarCollapseToggle = $('#adminBarCollapseToggle');
   const editToggleBtn = $('#adminEditToggle');
   const saveBtn = $('#adminSaveBtn');
   const resetBtn = $('#adminResetBtn');
@@ -380,6 +381,12 @@
   }
 
   editToggleBtn.addEventListener('click', () => setEditing(!editing));
+
+  if (adminBarCollapseToggle) {
+    adminBarCollapseToggle.addEventListener('click', () => {
+      adminBar.classList.toggle('is-collapsed');
+    });
+  }
 
   function collectContent() {
     const data = {};

@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=3">
-<link rel="stylesheet" href="css/admin.css?v=3">
+<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/admin.css?v=4">
 </head>
 <body>
 
@@ -541,23 +541,35 @@
 </div>
 
 <div class="admin-bar" id="adminBar">
-  <span class="admin-bar__label">⚙ Режим адміністратора</span>
-  <span class="admin-bar__sync" id="adminBarSync"></span>
-  <button class="admin-bar__btn admin-bar__btn--edit" id="adminEditToggle">Редагувати</button>
-  <button class="admin-bar__btn" id="adminAnnouncementsToggle">Оголошення: Вимкнено</button>
-  <button class="admin-bar__btn" id="adminLeadsBtn">📋 Заявки</button>
-  <button class="admin-bar__btn" id="adminSaveBtn">Зберегти</button>
-  <button class="admin-bar__btn" id="adminResetBtn">Скинути все</button>
-  <button class="admin-bar__btn" id="adminPasswordBtn">Змінити пароль</button>
-  <button class="admin-bar__btn admin-bar__btn--exit" id="adminLogoutBtn">Вийти</button>
+  <button type="button" class="admin-bar__collapse-toggle" id="adminBarCollapseToggle" aria-label="Згорнути/розгорнути панель">
+    <span class="admin-bar__label">⚙ Адмін-панель</span>
+    <span class="admin-bar__sync" id="adminBarSync"></span>
+    <span class="admin-bar__chevron">▾</span>
+  </button>
+
+  <div class="admin-bar__body" id="adminBarBody">
+    <button class="admin-bar__btn admin-bar__btn--primary admin-bar__btn--edit" id="adminEditToggle">✎ Редагувати сторінку</button>
+
+    <div class="admin-bar__grid">
+      <button class="admin-bar__btn" id="adminAnnouncementsToggle">Оголошення: Вимкнено</button>
+      <button class="admin-bar__btn" id="adminLeadsBtn">📋 Заявки</button>
+      <button class="admin-bar__btn" id="adminSaveBtn">💾 Зберегти</button>
+      <button class="admin-bar__btn" id="adminPasswordBtn">🔑 Пароль</button>
+    </div>
+
+    <button class="admin-bar__btn admin-bar__btn--danger" id="adminResetBtn">Скинути все</button>
+
+    <div class="admin-bar__divider"></div>
+    <button class="admin-bar__btn admin-bar__btn--exit" id="adminLogoutBtn">Вийти з адмін-режиму</button>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="js/supabase-config.js?v=3"></script>
-<script src="js/emailjs-config.js?v=3"></script>
-<script src="js/main.js?v=3"></script>
-<script src="js/admin.js?v=3"></script>
+<script src="js/supabase-config.js?v=4"></script>
+<script src="js/emailjs-config.js?v=4"></script>
+<script src="js/main.js?v=4"></script>
+<script src="js/admin.js?v=4"></script>
 </body>
 </html>

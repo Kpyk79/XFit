@@ -53,34 +53,61 @@
 
 /* ============ ADMIN BAR ============ */
 .admin-bar{
-  position: fixed; left:50%; bottom: 18px; transform: translateX(-50%);
-  z-index: 2900; display:none; align-items:center; gap: 10px;
-  background: rgba(6,7,6,0.92); backdrop-filter: blur(14px);
-  border: 1px solid rgba(57,255,106,0.4);
-  border-radius: 999px; padding: 10px 12px 10px 18px;
-  box-shadow: 0 20px 50px -18px rgba(0,0,0,0.7), 0 0 24px -6px rgba(57,255,106,0.35);
-  flex-wrap: wrap; max-width: calc(100vw - 24px); justify-content:center;
+  position: fixed; right: 20px; bottom: 20px; z-index: 2900;
+  display:none; flex-direction:column;
+  width: min(300px, calc(100vw - 32px));
+  background: rgba(8,10,8,0.97); backdrop-filter: blur(16px);
+  border: 1px solid rgba(57,255,106,0.35);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px -20px rgba(0,0,0,0.8), 0 0 30px -10px rgba(57,255,106,0.25);
+  overflow: hidden;
 }
 .admin-bar.open{ display:flex; }
+
+.admin-bar__collapse-toggle{
+  display:flex; align-items:center; gap: 8px; width:100%;
+  background: transparent; border:none; padding: 14px 16px; cursor:pointer;
+  font: inherit; text-align:left;
+}
 .admin-bar__label{
-  font-size:.78rem; font-weight:700; color:#39ff6a; letter-spacing:.03em;
-  margin-right: 4px; white-space:nowrap;
+  font-size:.85rem; font-weight:700; color:#39ff6a; letter-spacing:.02em;
+  white-space:nowrap;
 }
 .admin-bar__sync{
-  font-size:.7rem; font-weight:700; padding: 4px 10px; border-radius:999px; white-space:nowrap;
+  font-size:.68rem; font-weight:700; padding: 3px 9px; border-radius:999px; white-space:nowrap;
 }
 .admin-bar__sync.is-cloud{ color:#39ff6a; background: rgba(57,255,106,0.1); border:1px solid rgba(57,255,106,0.3); }
 .admin-bar__sync.is-local{ color:#ffb020; background: rgba(255,176,32,0.1); border:1px solid rgba(255,176,32,0.3); }
-.admin-bar__btn{
-  background: rgba(255,255,255,0.06); color:#f4f6f4; border:1px solid rgba(255,255,255,0.12);
-  border-radius: 999px; padding: 8px 16px; font-size:.8rem; font-weight:600;
-  cursor:pointer; transition: background .2s, border-color .2s, color .2s;
-  white-space:nowrap;
+.admin-bar__chevron{
+  margin-left:auto; color:#9aa39a; font-size:.8rem; transition: transform .25s;
 }
-.admin-bar__btn:hover{ border-color:#39ff6a; color:#39ff6a; }
+.admin-bar.is-collapsed .admin-bar__chevron{ transform: rotate(-90deg); }
+
+.admin-bar__body{
+  display:flex; flex-direction:column; gap: 10px;
+  padding: 0 16px 16px;
+}
+.admin-bar.is-collapsed .admin-bar__body{ display:none; }
+
+.admin-bar__grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.admin-bar__divider{ height:1px; background: rgba(255,255,255,0.08); margin: 2px 0; }
+
+.admin-bar__btn{
+  background: rgba(255,255,255,0.05); color:#f4f6f4; border:1px solid rgba(255,255,255,0.12);
+  border-radius: 10px; padding: 10px 12px; font-size:.8rem; font-weight:600;
+  cursor:pointer; transition: background .2s, border-color .2s, color .2s;
+  text-align:center; line-height:1.25;
+}
+.admin-bar__btn:hover{ border-color:#39ff6a; color:#39ff6a; background: rgba(57,255,106,0.06); }
+.admin-bar__btn--primary{
+  background: rgba(57,255,106,0.1); border-color: rgba(57,255,106,0.4); color:#39ff6a;
+}
 .admin-bar__btn--edit.is-active{ background:#39ff6a; color:#04140a; border-color:#39ff6a; }
+.admin-bar__btn--danger{ color:#ffb020; }
+.admin-bar__btn--danger:hover{ border-color:#ffb020; color:#ffb020; background: rgba(255,176,32,0.08); }
 .admin-bar__btn--exit{ color:#ff8080; }
-.admin-bar__btn--exit:hover{ border-color:#ff5c5c; color:#ff5c5c; }
+.admin-bar__btn--exit:hover{ border-color:#ff5c5c; color:#ff5c5c; background: rgba(255,92,92,0.08); }
 
 /* ============ EDITABLE STATE ============ */
 body.admin-editing [data-edit-key]{
@@ -110,7 +137,6 @@ body.admin-editing [data-edit-key]:focus{
 .admin-toast.show{ transform: translateX(-50%) translateY(0); }
 
 @media (max-width: 640px){
-  .admin-bar{ bottom: 10px; padding: 8px 10px; gap: 6px; }
-  .admin-bar__label{ width:100%; text-align:center; margin: 0 0 4px; }
-  .admin-bar__btn{ padding: 7px 12px; font-size:.74rem; }
+  .admin-bar{ right: 12px; left: 12px; bottom: 12px; width:auto; }
+  .admin-bar__btn{ padding: 10px; font-size:.76rem; }
 }

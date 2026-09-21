@@ -24,7 +24,7 @@ create table if not exists announcements (
   body text not null default '',
   date_label text not null default '',
   image_url text,
-  sort_order integer not null default 0,
+  sort_order bigint not null default 0,
   created_at timestamptz not null default now()
 );
 
