@@ -34,11 +34,21 @@ create table if not exists site_settings (
   value text not null default ''
 );
 
+-- Заявки з контактної форми
+create table if not exists leads (
+  id uuid primary key default gen_random_uuid(),
+  name text not null default '',
+  phone text not null default '',
+  message text not null default '',
+  created_at timestamptz not null default now()
+);
+
 -- ---------- Row Level Security ----------
 alter table site_content enable row level security;
 alter table site_photos enable row level security;
 alter table announcements enable row level security;
 alter table site_settings enable row level security;
+alter table leads enable row level security;
 
 -- Читати може будь-хто (відвідувачі сайту)
 drop policy if exists "Public read content" on site_content;
@@ -69,3 +79,17 @@ create policy "Admin write announcements" on announcements for all
 drop policy if exists "Admin write settings" on site_settings;
 create policy "Admin write settings" on site_settings for all
   using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+-- Заявки: будь-хто (відвідувач) може надіслати заявку, але читати й
+-- видаляти їх може лише залогінений адміністратор — так номери
+-- телефонів клієнтів не витікають у публічний доступ.
+drop policy if exists "Public submit leads" on leads;
+create policy "Public submit leads" on leads for insert with check (true);
+
+drop policy if exists "Admin read leads" on leads;
+create policy "Admin read leads" on leads for select
+  using (auth.role() = 'authenticated');
+
+drop policy if exists "Admin delete leads" on leads;
+create policy "Admin delete leads" on leads for delete
+  using (auth.role() = 'authenticated');

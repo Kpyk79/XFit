@@ -32,6 +32,25 @@
 .admin-modal__actions{ display:flex; gap: 10px; justify-content:flex-end; margin-top: 4px; }
 .admin-modal__actions .btn{ padding: 10px 20px; font-size:.85rem; }
 
+/* ============ ADMIN LEADS MODAL ============ */
+.admin-modal__box--wide{ width: min(560px, 100%); max-height: 80vh; }
+.admin-leads-list{
+  overflow-y: auto; max-height: 60vh; display:flex; flex-direction:column; gap: 10px;
+}
+.admin-leads-empty{ color:#9aa39a; font-size:.9rem; text-align:center; padding: 20px 0; margin:0; }
+.admin-lead-card{
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 16px;
+  background: #101210; position:relative;
+}
+.admin-lead-card__date{ font-size:.72rem; color:#9aa39a; margin: 0 0 6px; }
+.admin-lead-card__row{ font-size:.9rem; color:#f4f6f4; margin: 0 0 4px; }
+.admin-lead-card__row b{ color:#39ff6a; font-weight:700; }
+.admin-lead-card__delete{
+  position:absolute; top: 10px; right: 10px; width: 26px; height: 26px; border-radius:50%;
+  border:1px solid rgba(255,92,92,0.4); background: rgba(6,7,6,0.8); color:#ff8080;
+  font-size:.75rem; cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+
 /* ============ ADMIN BAR ============ */
 .admin-bar{
   position: fixed; left:50%; bottom: 18px; transform: translateX(-50%);

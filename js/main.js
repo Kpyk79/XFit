@@ -89,10 +89,54 @@ if (window.matchMedia('(pointer: fine)').matches) {
 /* ============ CONTACT FORM ============ */
 const contactForm = document.getElementById('contactForm');
 const formNote = document.getElementById('formNote');
-contactForm.addEventListener('submit', (e) => {
+
+const LEADS_URL = window.XFIT_SUPABASE_URL || '';
+const LEADS_KEY = window.XFIT_SUPABASE_ANON_KEY || '';
+const leadsRemoteReady = !!(
+  window.supabase && LEADS_URL && LEADS_KEY &&
+  !LEADS_URL.includes('YOUR-PROJECT') && !LEADS_KEY.includes('YOUR-ANON')
+);
+const leadsClient = leadsRemoteReady ? window.supabase.createClient(LEADS_URL, LEADS_KEY) : null;
+
+const EMAILJS_SERVICE_ID = window.XFIT_EMAILJS_SERVICE_ID || '';
+const EMAILJS_TEMPLATE_ID = window.XFIT_EMAILJS_TEMPLATE_ID || '';
+const EMAILJS_PUBLIC_KEY = window.XFIT_EMAILJS_PUBLIC_KEY || '';
+const emailjsReady = !!(
+  window.emailjs && EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY &&
+  !EMAILJS_SERVICE_ID.includes('YOUR_')
+);
+if (emailjsReady) {
+  window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+}
+
+contactForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  const submitBtn = contactForm.querySelector('button[type="submit"]');
+  const formData = new FormData(contactForm);
+  const name = (formData.get('name') || '').toString().trim();
+  const phone = (formData.get('phone') || '').toString().trim();
+  const message = (formData.get('message') || '').toString().trim();
+
+  if (submitBtn) submitBtn.disabled = true;
+
+  const tasks = [];
+  // Важливо: .insert() БЕЗ .select() — інакше PostgREST спробує повернути
+  // рядок і впреться в RLS, бо читати "leads" може лише адмін.
+  if (leadsRemoteReady) {
+    tasks.push(leadsClient.from('leads').insert({ name, phone, message }));
+  }
+  if (emailjsReady) {
+    tasks.push(window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { name, phone, message }));
+  }
+
+  const results = await Promise.allSettled(tasks);
+  results.forEach((r) => {
+    if (r.status === 'rejected') console.error('Не вдалося доставити заявку:', r.reason);
+  });
+
   formNote.textContent = 'Дякуємо! Ми звʼяжемось з тобою найближчим часом.';
   contactForm.reset();
+  if (submitBtn) submitBtn.disabled = false;
 });
 
 /* ============ THREE.JS HERO SCENE ============ */

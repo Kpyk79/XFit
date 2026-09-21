@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/admin.css">
+<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="stylesheet" href="css/admin.css?v=3">
 </head>
 <body>
 
@@ -528,11 +528,24 @@
   </form>
 </div>
 
+<div class="admin-modal" id="adminLeadsModal">
+  <div class="admin-modal__box admin-modal__box--wide">
+    <p class="admin-modal__title">📋 Заявки з сайту</p>
+    <div class="admin-leads-list" id="adminLeadsList">
+      <p class="admin-leads-empty">Завантаження…</p>
+    </div>
+    <div class="admin-modal__actions">
+      <button type="button" class="btn btn--ghost" id="adminLeadsClose">Закрити</button>
+    </div>
+  </div>
+</div>
+
 <div class="admin-bar" id="adminBar">
   <span class="admin-bar__label">⚙ Режим адміністратора</span>
   <span class="admin-bar__sync" id="adminBarSync"></span>
   <button class="admin-bar__btn admin-bar__btn--edit" id="adminEditToggle">Редагувати</button>
   <button class="admin-bar__btn" id="adminAnnouncementsToggle">Оголошення: Вимкнено</button>
+  <button class="admin-bar__btn" id="adminLeadsBtn">📋 Заявки</button>
   <button class="admin-bar__btn" id="adminSaveBtn">Зберегти</button>
   <button class="admin-bar__btn" id="adminResetBtn">Скинути все</button>
   <button class="admin-bar__btn" id="adminPasswordBtn">Змінити пароль</button>
@@ -541,8 +554,10 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase-config.js"></script>
-<script src="js/main.js"></script>
-<script src="js/admin.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="js/supabase-config.js?v=3"></script>
+<script src="js/emailjs-config.js?v=3"></script>
+<script src="js/main.js?v=3"></script>
+<script src="js/admin.js?v=3"></script>
 </body>
 </html>

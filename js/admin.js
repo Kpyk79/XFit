@@ -46,6 +46,10 @@
   const announcementsSection = $('#announcements');
   const navAnnounceLink = $('#navAnnounceLink');
   const mobileAnnounceLink = $('#mobileAnnounceLink');
+  const leadsBtn = $('#adminLeadsBtn');
+  const leadsModal = $('#adminLeadsModal');
+  const leadsList = $('#adminLeadsList');
+  const leadsClose = $('#adminLeadsClose');
 
   let editing = false;
   let toastTimer = null;
@@ -723,6 +727,91 @@
       }
       if (isRemote) await remoteUpsertAnnouncement(newItem);
       showToast('Оголошення додано — заповни деталі');
+    });
+  }
+
+  /* ============================================================
+     Перегляд заявок з контактної форми (тільки для адміна)
+     ============================================================ */
+  function formatLeadDate(iso) {
+    try {
+      return new Date(iso).toLocaleString('uk-UA', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return iso;
+    }
+  }
+
+  async function loadLeads() {
+    if (!isRemote) {
+      leadsList.innerHTML = '<p class="admin-leads-empty">Заявки доступні лише в хмарному режимі (Supabase не налаштований).</p>';
+      return;
+    }
+    leadsList.innerHTML = '<p class="admin-leads-empty">Завантаження…</p>';
+    const { data, error } = await sb.from('leads').select('*').order('created_at', { ascending: false });
+    if (error) {
+      leadsList.innerHTML = '<p class="admin-leads-empty">Не вдалося завантажити заявки. Переконайся, що ти залогінений.</p>';
+      return;
+    }
+    if (!data || !data.length) {
+      leadsList.innerHTML = '<p class="admin-leads-empty">Поки що немає заявок.</p>';
+      return;
+    }
+    leadsList.innerHTML = '';
+    data.forEach((lead) => {
+      const card = document.createElement('div');
+      card.className = 'admin-lead-card';
+
+      const date = document.createElement('p');
+      date.className = 'admin-lead-card__date';
+      date.textContent = formatLeadDate(lead.created_at);
+
+      const nameRow = document.createElement('p');
+      nameRow.className = 'admin-lead-card__row';
+      nameRow.innerHTML = '<b>Ім\'я:</b> ';
+      nameRow.appendChild(document.createTextNode(lead.name || '—'));
+
+      const phoneRow = document.createElement('p');
+      phoneRow.className = 'admin-lead-card__row';
+      phoneRow.innerHTML = '<b>Телефон:</b> ';
+      phoneRow.appendChild(document.createTextNode(lead.phone || '—'));
+
+      const msgRow = document.createElement('p');
+      msgRow.className = 'admin-lead-card__row';
+      msgRow.innerHTML = '<b>Повідомлення:</b> ';
+      msgRow.appendChild(document.createTextNode(lead.message || '—'));
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'admin-lead-card__delete';
+      del.title = 'Видалити заявку';
+      del.textContent = '✕';
+      del.addEventListener('click', async () => {
+        if (!confirm('Видалити цю заявку?')) return;
+        await sb.from('leads').delete().eq('id', lead.id);
+        loadLeads();
+      });
+
+      card.appendChild(date);
+      card.appendChild(nameRow);
+      card.appendChild(phoneRow);
+      card.appendChild(msgRow);
+      card.appendChild(del);
+      leadsList.appendChild(card);
+    });
+  }
+
+  if (leadsBtn) {
+    leadsBtn.addEventListener('click', () => {
+      leadsModal.classList.add('open');
+      loadLeads();
+    });
+  }
+  if (leadsClose) {
+    leadsClose.addEventListener('click', () => leadsModal.classList.remove('open'));
+  }
+  if (leadsModal) {
+    leadsModal.addEventListener('click', (e) => {
+      if (e.target === leadsModal) leadsModal.classList.remove('open');
     });
   }
 
