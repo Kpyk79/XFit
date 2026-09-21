@@ -268,10 +268,61 @@ contactForm.addEventListener('submit', async (e) => {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   el.appendChild(renderer.domElement);
 
-  const geo = new THREE.TorusKnotGeometry(1.1, 0.32, 140, 16);
   const mat = new THREE.MeshBasicMaterial({ color: 0x39ff6a, wireframe: true, transparent: true, opacity: 0.6 });
-  const mesh = new THREE.Mesh(geo, mat);
-  scene.add(mesh);
+
+  function buildDumbbell() {
+    const g = new THREE.Group();
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.3, 8), mat);
+    handle.rotation.z = Math.PI / 2;
+    g.add(handle);
+    [-0.72, 0.72].forEach((x) => {
+      const weight = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.26, 12), mat);
+      weight.rotation.z = Math.PI / 2;
+      weight.position.x = x;
+      g.add(weight);
+    });
+    return g;
+  }
+
+  function buildKettlebell() {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.58, 14, 10), mat);
+    g.add(body);
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.07, 8, 16, Math.PI), mat);
+    handle.position.y = 0.56;
+    handle.rotation.x = Math.PI;
+    g.add(handle);
+    return g;
+  }
+
+  function buildPlate() {
+    const g = new THREE.Group();
+    const plate = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.2, 10, 22), mat);
+    g.add(plate);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.22, 12), mat);
+    hub.rotation.x = Math.PI / 2;
+    g.add(hub);
+    return g;
+  }
+
+  function buildBall() {
+    const g = new THREE.Group();
+    const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(0.6, 1), mat);
+    g.add(ball);
+    return g;
+  }
+
+  // "Карусель" тренажерного інвентарю — кілька предметів по колу обличчям до камери
+  const carousel = new THREE.Group();
+  carousel.rotation.x = -0.32;
+  const items = [buildDumbbell(), buildKettlebell(), buildPlate(), buildBall()];
+  const radius = 1.4;
+  items.forEach((item, i) => {
+    const angle = (i / items.length) * Math.PI * 2;
+    item.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, 0);
+    carousel.add(item);
+  });
+  scene.add(carousel);
 
   function resize() {
     const size = el.clientWidth;
@@ -290,8 +341,11 @@ contactForm.addEventListener('submit', async (e) => {
   function animate() {
     requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
-    mesh.rotation.x = t * 0.25;
-    mesh.rotation.y = t * 0.35;
+    carousel.rotation.z = t * 0.35;
+    items.forEach((item, i) => {
+      item.rotation.x = -t * 0.5 - i;
+      item.rotation.y = t * 0.6 + i;
+    });
     renderer.render(scene, camera);
   }
 
