@@ -36,8 +36,6 @@
   const adminBarSync = $('#adminBarSync');
   const editToggleBtn = $('#adminEditToggle');
   const saveBtn = $('#adminSaveBtn');
-  const exportBtn = $('#adminExportBtn');
-  const importInput = $('#adminImportInput');
   const resetBtn = $('#adminResetBtn');
   const passwordBtn = $('#adminPasswordBtn');
   const logoutBtn = $('#adminLogoutBtn');
@@ -417,79 +415,6 @@
     }
     showToast('Скинуто. Перезавантаження…');
     setTimeout(() => location.reload(), 600);
-  });
-
-  /* ---------- Експорт / імпорт у файл (резервна копія на диск) ---------- */
-  function buildBackup() {
-    return {
-      app: 'xfit-website-backup',
-      version: 1,
-      exportedAt: new Date().toISOString(),
-      content: JSON.parse(localStorage.getItem(STORAGE_CONTENT_KEY) || '{}'),
-      photos: JSON.parse(localStorage.getItem(PHOTO_STORAGE_KEY) || '{}'),
-      announcements: JSON.parse(localStorage.getItem(ANNOUNCEMENTS_KEY) || '{"enabled":false,"items":[]}'),
-    };
-  }
-
-  exportBtn.addEventListener('click', async () => {
-    if (isRemote) await syncFromRemote();
-    const backup = buildBackup();
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const stamp = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `xfit-backup-${stamp}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    showToast('Файл резервної копії збережено на диск ✓');
-  });
-
-  importInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onerror = () => showToast('Не вдалося прочитати файл');
-    reader.onload = async () => {
-      let data;
-      try {
-        data = JSON.parse(reader.result);
-      } catch (err) {
-        showToast('Файл пошкоджений або має невірний формат');
-        return;
-      }
-      if (!data || data.app !== 'xfit-website-backup') {
-        showToast('Це не файл резервної копії XFit');
-        return;
-      }
-      if (!confirm('Замінити весь поточний контент, фото та оголошення даними з файлу' + (isRemote ? ' (для всіх відвідувачів)?' : '?'))) return;
-      try {
-        const content = data.content || {};
-        const photos = data.photos || {};
-        const announcements = data.announcements || { enabled: false, items: [] };
-        localStorage.setItem(STORAGE_CONTENT_KEY, JSON.stringify(content));
-        localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
-        localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
-
-        if (isRemote) {
-          showToast('Завантажуємо дані в хмару…');
-          await remotePushContent(content);
-          await Promise.all(Object.entries(photos).map(([key, dataUrl]) => remotePushPhoto(key, dataUrl)));
-          await remotePushAnnouncementsEnabled(!!announcements.enabled);
-          await Promise.all((announcements.items || []).map((item, idx) => remoteUpsertAnnouncement({
-            ...item, sortOrder: item.sortOrder || (Date.now() - idx),
-          })));
-        }
-        showToast('Дані відновлено з файлу. Перезавантаження…');
-        setTimeout(() => location.reload(), 700);
-      } catch (err) {
-        showToast('Не вдалося застосувати дані з файлу');
-      }
-    };
-    reader.readAsText(file);
-    importInput.value = '';
   });
 
   passwordBtn.addEventListener('click', async () => {
