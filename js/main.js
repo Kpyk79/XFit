@@ -284,15 +284,29 @@ contactForm.addEventListener('submit', async (e) => {
     return g;
   }
 
-  function buildKettlebell() {
+  function buildTreadmill() {
     const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.58, 14, 10), mat);
-    g.add(body);
-    // Дуга ручки: theta 0→π у локальній XY-площині вигинається ВГОРУ (пік у +Y,
-    // кінці на y=0) — тож ставимо низ дуги на вершину кулі, без перевороту.
-    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.07, 8, 16, Math.PI), mat);
-    handle.position.y = 0.58;
-    g.add(handle);
+    // Біжуче полотно
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.12, 0.6), mat);
+    deck.position.y = -0.1;
+    g.add(deck);
+    // Бокові поручні
+    [-1, 1].forEach((side) => {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.07, 0.05), mat);
+      rail.position.set(-0.15, 0.2, side * 0.3);
+      g.add(rail);
+    });
+    // Стійка консолі
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.85, 0.07), mat);
+    arm.position.set(0.8, 0.35, 0);
+    arm.rotation.z = -0.35;
+    g.add(arm);
+    // Панель консолі
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.35, 0.06), mat);
+    panel.position.set(1.02, 0.76, 0);
+    panel.rotation.z = -0.35;
+    panel.rotation.x = -0.25;
+    g.add(panel);
     return g;
   }
 
@@ -320,7 +334,7 @@ contactForm.addEventListener('submit', async (e) => {
   // "Карусель" тренажерного інвентарю — кілька предметів по колу обличчям до камери
   const carousel = new THREE.Group();
   carousel.rotation.x = -0.32;
-  const items = [buildDumbbell(), buildKettlebell(), buildBarbell()];
+  const items = [buildDumbbell(), buildTreadmill(), buildBarbell()];
   const radius = 1.4;
   items.forEach((item, i) => {
     const angle = (i / items.length) * Math.PI * 2;
