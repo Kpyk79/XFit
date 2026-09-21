@@ -270,46 +270,6 @@ contactForm.addEventListener('submit', async (e) => {
 
   const mat = new THREE.MeshBasicMaterial({ color: 0x39ff6a, wireframe: true, transparent: true, opacity: 0.6 });
 
-  function buildDumbbell() {
-    const g = new THREE.Group();
-    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.3, 8), mat);
-    handle.rotation.z = Math.PI / 2;
-    g.add(handle);
-    [-0.72, 0.72].forEach((x) => {
-      const weight = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.26, 12), mat);
-      weight.rotation.z = Math.PI / 2;
-      weight.position.x = x;
-      g.add(weight);
-    });
-    return g;
-  }
-
-  function buildTreadmill() {
-    const g = new THREE.Group();
-    // Біжуче полотно
-    const deck = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.12, 0.6), mat);
-    deck.position.y = -0.1;
-    g.add(deck);
-    // Бокові поручні
-    [-1, 1].forEach((side) => {
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.07, 0.05), mat);
-      rail.position.set(-0.15, 0.2, side * 0.3);
-      g.add(rail);
-    });
-    // Стійка консолі
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.85, 0.07), mat);
-    arm.position.set(0.8, 0.35, 0);
-    arm.rotation.z = -0.35;
-    g.add(arm);
-    // Панель консолі
-    const panel = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.35, 0.06), mat);
-    panel.position.set(1.02, 0.76, 0);
-    panel.rotation.z = -0.35;
-    panel.rotation.x = -0.25;
-    g.add(panel);
-    return g;
-  }
-
   function buildBarbell() {
     const g = new THREE.Group();
     const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.9, 8), mat);
@@ -331,17 +291,8 @@ contactForm.addEventListener('submit', async (e) => {
     return g;
   }
 
-  // "Карусель" тренажерного інвентарю — кілька предметів по колу обличчям до камери
-  const carousel = new THREE.Group();
-  carousel.rotation.x = -0.32;
-  const items = [buildDumbbell(), buildTreadmill(), buildBarbell()];
-  const radius = 1.4;
-  items.forEach((item, i) => {
-    const angle = (i / items.length) * Math.PI * 2;
-    item.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, 0);
-    carousel.add(item);
-  });
-  scene.add(carousel);
+  const barbell = buildBarbell();
+  scene.add(barbell);
 
   function resize() {
     const size = el.clientWidth;
@@ -360,11 +311,8 @@ contactForm.addEventListener('submit', async (e) => {
   function animate() {
     requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
-    carousel.rotation.z = t * 0.35;
-    items.forEach((item, i) => {
-      item.rotation.x = -t * 0.5 - i;
-      item.rotation.y = t * 0.6 + i;
-    });
+    barbell.rotation.x = t * 0.25;
+    barbell.rotation.y = t * 0.35;
     renderer.render(scene, camera);
   }
 
