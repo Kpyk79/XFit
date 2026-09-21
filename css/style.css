@@ -394,6 +394,33 @@ body:not(.admin-editing) .photo-remove{ display:none !important; }
 .schedule-row span:last-child{ color: var(--green); }
 .center{ text-align:center; margin-left:auto; margin-right:auto; }
 
+/* ============ LOCATIONS ============ */
+.locations-grid{
+  display:grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 48px;
+  max-width: 900px; margin-left:auto; margin-right:auto;
+}
+.location-card{
+  position:relative; padding: 32px 30px; border-radius: var(--radius);
+  border:1px solid var(--border); background: var(--panel);
+  transition: transform .3s ease, border-color .3s ease;
+}
+.location-card:hover{ transform: translateY(-6px); border-color: rgba(57,255,106,0.35); }
+.location-card--soon{ opacity: .88; }
+.location-card h3{ font-size: 1.4rem; margin: 14px 0 8px; }
+.location-card__status{
+  display:inline-flex; align-items:center; gap:6px; font-size:.72rem; font-weight:800;
+  text-transform:uppercase; letter-spacing:.06em; padding: 6px 14px; border-radius:999px;
+}
+.location-card__status--open{ background: rgba(57,255,106,0.14); color: var(--green); border:1px solid rgba(57,255,106,0.4); }
+.location-card__status--soon{ background: rgba(255,176,32,0.12); color:#ffb020; border:1px solid rgba(255,176,32,0.35); }
+.location-card__address{ color: var(--muted); font-size:.92rem; margin-bottom: 20px; }
+.location-card__row{
+  display:flex; justify-content:space-between; align-items:center; gap:12px;
+  padding: 12px 0; border-top: 1px solid var(--border); font-size:.9rem;
+}
+.location-card__label{ color: var(--muted); text-transform:uppercase; font-size:.72rem; letter-spacing:.06em; }
+.location-card__row a:hover{ color: var(--green); }
+
 /* ============ CONTACT ============ */
 .contact__grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items:start; }
 .contact-info{ display:flex; flex-direction:column; gap: 24px; margin-top: 28px; }
@@ -521,7 +548,7 @@ body.admin-mode .announcements__admin-hint{ display:block; }
 @media (max-width: 640px){
   .container{ padding: 0 18px; }
   .section{ padding: 72px 0; }
-  .cards-grid, .trainers-grid, .gallery-grid, .announcements-grid, .features__grid{ grid-template-columns: 1fr; }
+  .cards-grid, .trainers-grid, .gallery-grid, .announcements-grid, .features__grid, .locations-grid{ grid-template-columns: 1fr; }
   .photo-upload{ opacity:1; background: rgba(4,5,4,0.35); }
   .photo-upload__btn{ font-size:.72rem; padding:7px 12px; }
   .features__col{ grid-column: auto; }

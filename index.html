@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>XFit — Твоя нова спортсім'я</title>
-<meta name="description" content="XFit Podilsk — сучасний тренажерний зал. Тренажери, кросфіт, персональні тренування та групові заняття.">
+<meta name="description" content="XFit — мережа сучасних тренажерних залів у Подільську та Балті. Тренажери, кросфіт, персональні тренування та групові заняття.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%2339ff6a%22>X</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,6 +27,7 @@
     <nav class="nav-links" id="navLinks">
       <a href="#announcements" class="nav-link nav-link--announce" id="navAnnounceLink">Анонси</a>
       <a href="#about" class="nav-link">Про нас</a>
+      <a href="#locations" class="nav-link">Локації</a>
       <a href="#programs" class="nav-link">Програми</a>
       <a href="#trainers" class="nav-link">Тренери</a>
       <a href="#gallery" class="nav-link">Галерея</a>
@@ -46,6 +47,7 @@
 <div class="mobile-menu" id="mobileMenu">
   <a href="#announcements" class="mobile-link mobile-link--announce" id="mobileAnnounceLink">Анонси</a>
   <a href="#about" class="mobile-link">Про нас</a>
+  <a href="#locations" class="mobile-link">Локації</a>
   <a href="#programs" class="mobile-link">Програми</a>
   <a href="#trainers" class="mobile-link">Тренери</a>
   <a href="#gallery" class="mobile-link">Галерея</a>
@@ -64,15 +66,16 @@
   <div class="hero__glow hero__glow--2"></div>
 
   <div class="container hero__content">
-    <p class="eyebrow reveal"><span class="dot"></span> <span data-edit-key="hero.eyebrow">XFIT_PODILSK · ТВОЯ НОВА СПОРТСІМ'Я</span></p>
+    <p class="eyebrow reveal"><span class="dot"></span> <span data-edit-key="hero.eyebrow">XFIT · ПОДІЛЬСЬК · БАЛТА · ТВОЯ НОВА СПОРТСІМ'Я</span></p>
     <h1 class="hero__title reveal">
       <span data-edit-key="hero.title1">СИЛА.</span><br>
       <span class="text-outline" data-edit-key="hero.title2">ФОРМА.</span><br>
       <span class="text-glow" data-edit-key="hero.title3">XFIT.</span>
     </h1>
     <p class="hero__subtitle reveal" data-edit-key="hero.subtitle">
-      Тренажерний зал нового покоління у Подільську. Обладнання преміум-класу,
-      круті тренери та атмосфера, яка заряджає на результат.
+      Мережа тренажерних залів нового покоління. Обладнання преміум-класу,
+      круті тренери та атмосфера, яка заряджає на результат — у Подільську
+      та (незабаром) у Балті.
     </p>
     <div class="hero__actions reveal">
       <a href="#pricing" class="btn btn--primary btn--lg">Обрати абонемент</a>
@@ -426,26 +429,55 @@
   </div>
 </section>
 
+<!-- ===== LOCATIONS ===== -->
+<section class="section section--alt" id="locations">
+  <div class="container">
+    <p class="section-eyebrow reveal center">// ЛОКАЦІЇ</p>
+    <h2 class="section-title reveal center">Наша мережа</h2>
+    <p class="reveal center" style="max-width:520px;margin-left:auto;margin-right:auto;">
+      Два зали — дві спортсім'ї. У кожного міста своя сторінка в Instagram —
+      слідкуй за новинами саме свого залу.
+    </p>
+
+    <div class="locations-grid">
+      <article class="location-card reveal">
+        <span class="location-card__status location-card__status--open" data-edit-key="location1.status">Відкрито</span>
+        <h3 data-edit-key="location1.city">Подільськ</h3>
+        <p class="location-card__address" data-edit-key="location1.address">вул. Центральна (уточнюйте в Instagram)</p>
+        <div class="location-card__row">
+          <span class="location-card__label">Телефон</span>
+          <a href="tel:+380000000000" data-edit-key="location1.phone">+380 (00) 000-00-00</a>
+        </div>
+        <div class="location-card__row">
+          <span class="location-card__label">Instagram</span>
+          <a href="https://instagram.com/xfit_podilsk" target="_blank" rel="noopener" data-edit-key="location1.instagram">@xfit_podilsk</a>
+        </div>
+      </article>
+
+      <article class="location-card location-card--soon reveal">
+        <span class="location-card__status location-card__status--soon" data-edit-key="location2.status">Незабаром</span>
+        <h3 data-edit-key="location2.city">Балта</h3>
+        <p class="location-card__address" data-edit-key="location2.address">Адреса уточнюється</p>
+        <div class="location-card__row">
+          <span class="location-card__label">Телефон</span>
+          <a href="tel:+380000000000" data-edit-key="location2.phone">Скоро повідомимо</a>
+        </div>
+        <div class="location-card__row">
+          <span class="location-card__label">Instagram</span>
+          <a href="https://instagram.com/xfit_balta" target="_blank" rel="noopener" data-edit-key="location2.instagram">@xfit_balta</a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
 <!-- ===== CONTACT ===== -->
 <section class="section" id="contact">
   <div class="container contact__grid">
     <div class="reveal">
       <p class="section-eyebrow">// КОНТАКТИ</p>
       <h2 class="section-title">Чекаємо<br>на тебе</h2>
-      <div class="contact-info">
-        <div class="contact-info__item">
-          <span class="contact-info__label">Адреса</span>
-          <span data-edit-key="contact.address">м. Подільськ, вул. Центральна (уточнюйте в Instagram)</span>
-        </div>
-        <div class="contact-info__item">
-          <span class="contact-info__label">Телефон</span>
-          <a href="tel:+380000000000" data-edit-key="contact.phone">+380 (00) 000-00-00</a>
-        </div>
-        <div class="contact-info__item">
-          <span class="contact-info__label">Instagram</span>
-          <a href="https://instagram.com/xfit_podilsk" target="_blank" rel="noopener" data-edit-key="contact.instagram">@xfit_podilsk</a>
-        </div>
-      </div>
+      <p data-edit-key="contact.note">Залиш заявку — і ми зв'яжемось з тобою, щоб підібрати зал і програму тренувань.</p>
     </div>
 
     <form class="contact-form reveal" id="contactForm">
@@ -473,11 +505,12 @@
       <a href="#contact">Контакти</a>
     </nav>
     <div class="footer__social">
-      <a href="https://instagram.com/xfit_podilsk" target="_blank" rel="noopener">Instagram</a>
+      <a href="https://instagram.com/xfit_podilsk" target="_blank" rel="noopener">Instagram Подільськ</a>
+      <a href="https://instagram.com/xfit_balta" target="_blank" rel="noopener">Instagram Балта</a>
     </div>
   </div>
   <div class="container">
-    <p class="footer__copy" data-edit-key="footer.copy">© 2026 XFit Podilsk. Твоя нова спортсім'я.</p>
+    <p class="footer__copy" data-edit-key="footer.copy">© 2026 XFit. Мережа тренажерних залів у Подільську та Балті.</p>
   </div>
 </footer>
 
