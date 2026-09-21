@@ -288,34 +288,50 @@ contactForm.addEventListener('submit', async (e) => {
     const g = new THREE.Group();
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.58, 14, 10), mat);
     g.add(body);
-    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.07, 8, 16, Math.PI), mat);
-    handle.position.y = 0.56;
-    handle.rotation.x = Math.PI;
+    // Дуга ручки: theta 0→π у локальній XY-площині вигинається ВГОРУ (пік у +Y,
+    // кінці на y=0) — тож ставимо низ дуги на вершину кулі, без перевороту.
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.07, 8, 16, Math.PI), mat);
+    handle.position.y = 0.58;
     g.add(handle);
     return g;
   }
 
-  function buildPlate() {
+  function buildBarbell() {
     const g = new THREE.Group();
-    const plate = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.2, 10, 22), mat);
-    g.add(plate);
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.22, 12), mat);
-    hub.rotation.x = Math.PI / 2;
-    g.add(hub);
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.9, 8), mat);
+    bar.rotation.z = Math.PI / 2;
+    g.add(bar);
+    const plateConfigs = [
+      { radius: 0.42, width: 0.09, offset: 0.78 },
+      { radius: 0.32, width: 0.08, offset: 0.9 },
+      { radius: 0.24, width: 0.07, offset: 1.0 },
+    ];
+    [-1, 1].forEach((side) => {
+      plateConfigs.forEach((cfg) => {
+        const plate = new THREE.Mesh(new THREE.CylinderGeometry(cfg.radius, cfg.radius, cfg.width, 16), mat);
+        plate.rotation.z = Math.PI / 2;
+        plate.position.x = side * cfg.offset;
+        g.add(plate);
+      });
+    });
     return g;
   }
 
-  function buildBall() {
+  function buildBalanceBoard() {
     const g = new THREE.Group();
-    const ball = new THREE.Mesh(new THREE.IcosahedronGeometry(0.6, 1), mat);
-    g.add(ball);
+    // Вигнута дошка для балансу (кшталт "skillwood board") — частина тора,
+    // сплощена по товщині, щоб виглядати як вигнута дерев'яна платформа.
+    const board = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.16, 6, 24, Math.PI * 0.58), mat);
+    board.scale.set(1, 1, 0.3);
+    board.rotation.z = Math.PI * 0.71;
+    g.add(board);
     return g;
   }
 
   // "Карусель" тренажерного інвентарю — кілька предметів по колу обличчям до камери
   const carousel = new THREE.Group();
   carousel.rotation.x = -0.32;
-  const items = [buildDumbbell(), buildKettlebell(), buildPlate(), buildBall()];
+  const items = [buildDumbbell(), buildKettlebell(), buildBarbell(), buildBalanceBoard()];
   const radius = 1.4;
   items.forEach((item, i) => {
     const angle = (i / items.length) * Math.PI * 2;
