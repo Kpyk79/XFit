@@ -317,21 +317,10 @@ contactForm.addEventListener('submit', async (e) => {
     return g;
   }
 
-  function buildBalanceBoard() {
-    const g = new THREE.Group();
-    // Вигнута дошка для балансу (кшталт "skillwood board") — частина тора,
-    // сплощена по товщині, щоб виглядати як вигнута дерев'яна платформа.
-    const board = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.16, 6, 24, Math.PI * 0.58), mat);
-    board.scale.set(1, 1, 0.3);
-    board.rotation.z = Math.PI * 0.71;
-    g.add(board);
-    return g;
-  }
-
   // "Карусель" тренажерного інвентарю — кілька предметів по колу обличчям до камери
   const carousel = new THREE.Group();
   carousel.rotation.x = -0.32;
-  const items = [buildDumbbell(), buildKettlebell(), buildBarbell(), buildBalanceBoard()];
+  const items = [buildDumbbell(), buildKettlebell(), buildBarbell()];
   const radius = 1.4;
   items.forEach((item, i) => {
     const angle = (i / items.length) * Math.PI * 2;
