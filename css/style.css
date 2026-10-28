@@ -117,7 +117,10 @@ p{ color: var(--muted); line-height:1.7; margin:0 0 16px; }
   max-height: 64px; margin-top: 12px; overflow:hidden;
   transition: max-height .35s ease, margin .35s ease, opacity .3s ease;
 }
-.navbar.scrolled .ig-bar{ max-height:0; margin-top:0; opacity:0; pointer-events:none; }
+.navbar.scrolled .ig-bar, body.menu-open .ig-bar{ max-height:0; margin-top:0; opacity:0; pointer-events:none; }
+.mobile-menu__ig{ flex-direction:column; align-items:stretch; gap: 10px; margin-top: 4px; }
+.mobile-menu__ig .ig-pill{ height: 48px; }
+.mobile-menu__ig .ig-pill .ig-pill__arrow{ display:block; margin-left:auto; }
 .ig-bar__label{
   display:flex; align-items:center; gap:10px;
   font-size:.68rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color: var(--muted);
@@ -190,7 +193,7 @@ p{ color: var(--muted); line-height:1.7; margin:0 0 16px; }
   background: rgba(8,10,8,0.98); backdrop-filter: blur(20px);
   border-left: 1px solid var(--border);
   display:flex; flex-direction:column; gap: 22px;
-  padding: 100px 32px 40px;
+  padding: 100px 32px 40px; overflow-y:auto; overscroll-behavior: contain;
   transform: translateX(100%);
   transition: transform .4s cubic-bezier(.6,0,.2,1);
   z-index: 999;

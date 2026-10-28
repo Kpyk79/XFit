@@ -13,12 +13,15 @@ burger.addEventListener('click', () => {
   const open = mobileMenu.classList.toggle('open');
   burger.classList.toggle('active', open);
   burger.setAttribute('aria-expanded', String(open));
+  document.body.classList.toggle('menu-open', open);
   document.body.style.overflow = open ? 'hidden' : '';
 });
 mobileMenu.querySelectorAll('a').forEach(a => {
   a.addEventListener('click', () => {
     mobileMenu.classList.remove('open');
     burger.classList.remove('active');
+    burger.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('menu-open');
     document.body.style.overflow = '';
   });
 });
