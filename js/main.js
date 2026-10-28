@@ -161,17 +161,9 @@ contactForm.addEventListener('submit', async (e) => {
   scene.add(group);
 
   // Floating 3D XFIT logo
-  const logo = XFitLogo3D.create(THREE);
+  const logo = XFitLogo3D.create(THREE, { wireframe: true });
   logo.scale.setScalar(isSmall ? 0.5 : 0.68);
   group.add(logo);
-
-  scene.add(new THREE.AmbientLight(0xffffff, 0.35));
-  const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
-  keyLight.position.set(3, 4, 6);
-  scene.add(keyLight);
-  const rimLight = new THREE.PointLight(green, 2.2, 20);
-  rimLight.position.set(-4, -2, 3);
-  scene.add(rimLight);
 
   // Orbiting rings (torus)
   const ring1 = new THREE.Mesh(
