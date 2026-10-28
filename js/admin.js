@@ -20,6 +20,7 @@
   const PHOTO_STORAGE_KEY = 'xfit_photos_v1';
   const ANNOUNCEMENTS_KEY = 'xfit_announcements_v1';
   const TRAINERS_KEY = 'xfit_trainers_v1';
+  const LISTS_KEY = 'xfit_lists_v1';
   const MAX_PHOTO_DIMENSION = 1000;
   const PHOTO_QUALITY = 0.82;
 
@@ -278,6 +279,36 @@
     return !error;
   }
 
+  async function remotePullLists() {
+    const { data, error } = await sb.from('site_settings').select('key,value').like('key', 'list:%');
+    if (error) return null;
+    const lists = {};
+    (data || []).forEach((row) => {
+      try {
+        const ids = JSON.parse(row.value);
+        if (Array.isArray(ids)) lists[row.key.slice(5)] = ids;
+      } catch (e) { /* ignore */ }
+    });
+    return lists;
+  }
+
+  async function remotePushList(name, ids) {
+    const { error } = await sb.from('site_settings').upsert({ key: 'list:' + name, value: JSON.stringify(ids) });
+    return !error;
+  }
+
+  async function remoteDeleteListSettings(names) {
+    if (!names.length) return true;
+    const { error } = await sb.from('site_settings').delete().in('key', names.map((n) => 'list:' + n));
+    return !error;
+  }
+
+  async function remoteDeletePhotos(keys) {
+    if (!keys.length) return true;
+    const { error } = await sb.from('site_photos').delete().in('key', keys);
+    return !error;
+  }
+
   async function remoteDeleteContentKeys(keys) {
     const { error } = await sb.from('site_content').delete().in('key', keys);
     return !error;
@@ -287,15 +318,17 @@
   async function syncFromRemote() {
     if (!isRemote) return;
     try {
-      const [content, photos, announcements, trainers] = await Promise.all([
-        remotePullContent(), remotePullPhotos(), remotePullAnnouncements(), remotePullTrainers(),
+      const [content, photos, announcements, trainers, lists] = await Promise.all([
+        remotePullContent(), remotePullPhotos(), remotePullAnnouncements(), remotePullTrainers(), remotePullLists(),
       ]);
+      if (lists) localStorage.setItem(LISTS_KEY, JSON.stringify(lists));
       if (content) localStorage.setItem(STORAGE_CONTENT_KEY, JSON.stringify(content));
       if (photos) localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
       if (announcements) localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
       if (trainers) localStorage.setItem(TRAINERS_KEY, JSON.stringify(trainers));
       else if (trainers === undefined) localStorage.removeItem(TRAINERS_KEY);
       renderTrainers();
+      renderAllLists();
       applySavedContent();
       applySavedPhotos();
       renderAnnouncements();
@@ -469,6 +502,7 @@
     localStorage.removeItem(PHOTO_STORAGE_KEY);
     localStorage.removeItem(ANNOUNCEMENTS_KEY);
     localStorage.removeItem(TRAINERS_KEY);
+    localStorage.removeItem(LISTS_KEY);
     if (isRemote) {
       try {
         await Promise.all([
@@ -1217,6 +1251,224 @@
   })();
 
   /* ============================================================
+     Редаговані списки: програми, переваги, галерея, абонементи,
+     розклад, локації, пункти списків. Адмін додає «+» і видаляє «×».
+     Розмітка: контейнер [data-list="назва"], елементи [data-list-item="id"].
+     Ключі контенту/фото елемента — це його id або id + '.щось'.
+     ============================================================ */
+  const lists = {}; // назва → { el, template, templateId, defaults, addWrap }
+
+  function getListsStore() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(LISTS_KEY) || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function listItems(list) {
+    return Array.from(list.el.children).filter((c) => c.hasAttribute('data-list-item'));
+  }
+
+  function ownsKey(id, key) {
+    return key === id || key.startsWith(id + '.');
+  }
+
+  // Перейменовує всі ключі всередині копії елемента: program1.title → programs_ab12.title
+  function renameKeys(root, oldId, newId) {
+    const attrs = ['data-list-item', 'data-list', 'data-edit-key', 'data-photo-key', 'data-photo-input', 'data-photo-remove'];
+    [root, ...root.querySelectorAll('*')].forEach((el) => {
+      attrs.forEach((a) => {
+        const v = el.getAttribute(a);
+        if (v && ownsKey(oldId, v)) el.setAttribute(a, newId + v.slice(oldId.length));
+      });
+    });
+  }
+
+  function placeholderFor(el) {
+    if (el.dataset.editType === 'number') return '0';
+    if (/^H[1-6]$/.test(el.tagName)) return 'Нова назва';
+    if (el.tagName === 'LI' || el.parentElement.tagName === 'LI') return 'Новий пункт';
+    if (el.tagName === 'P') return 'Короткий опис';
+    return null; // лишаємо текст шаблону (час, ціна, статус…)
+  }
+
+  function addRemoveButton(item, name) {
+    if (item.querySelector(':scope > .list-item__remove')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'list-item__remove admin-round-btn admin-round-btn--remove';
+    btn.title = 'Видалити';
+    btn.setAttribute('aria-label', 'Видалити');
+    btn.innerHTML = ICON_CROSS;
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      deleteListItem(name, item.dataset.listItem);
+    });
+    item.appendChild(btn);
+  }
+
+  function registerLists(root) {
+    root.querySelectorAll('[data-list]').forEach((el) => {
+      const name = el.dataset.list;
+      if (lists[name] && lists[name].el === el) return;
+      const items = Array.from(el.children).filter((c) => c.hasAttribute('data-list-item'));
+      if (!items.length && !lists[name]) return;
+      const prev = lists[name];
+      const template = prev ? prev.template : items[0].cloneNode(true);
+      const templateId = prev ? prev.templateId : items[0].dataset.listItem;
+      if (!prev) {
+        template.classList.remove('is-visible');
+        template.querySelectorAll('.list-item__remove, .list-add').forEach((b) => b.remove());
+      }
+
+      const style = el.dataset.listStyle || 'card';
+      const addWrap = document.createElement('div');
+      addWrap.className = 'list-add list-add--' + style;
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'admin-round-btn admin-round-btn--add' + (style === 'card' ? '' : ' admin-round-btn--small');
+      addBtn.title = 'Додати';
+      addBtn.setAttribute('aria-label', 'Додати');
+      addBtn.innerHTML = ICON_PLUS;
+      addBtn.addEventListener('click', () => addListItem(name));
+      addWrap.appendChild(addBtn);
+      el.insertAdjacentElement('afterend', addWrap);
+
+      lists[name] = { el, template, templateId, defaults: items.map((i) => i.dataset.listItem), addWrap };
+      renderList(name);
+    });
+  }
+
+  function createListItem(name, id) {
+    const list = lists[name];
+    const item = list.template.cloneNode(true);
+    renameKeys(item, list.templateId, id);
+    item.classList.add('is-visible');
+    item.querySelectorAll('.is-visible').forEach((c) => c.classList.remove('is-visible'));
+    item.querySelectorAll('[data-edit-key]').forEach((el) => {
+      const text = placeholderFor(el);
+      if (text !== null) el.textContent = text;
+      if (el.dataset.editType === 'number') el.dataset.count = '0';
+      el.setAttribute('contenteditable', editing ? 'true' : 'false');
+      el.spellcheck = false;
+    });
+    item.querySelectorAll('.photo-slot, [data-list-item]').forEach((c) => c.classList.remove('has-photo'));
+    item.classList.remove('has-photo', 'price-card--featured');
+    item.querySelectorAll('.price-card__badge').forEach((b) => b.remove());
+    item.querySelectorAll('img.photo-img').forEach((img) => img.removeAttribute('src'));
+    return item;
+  }
+
+  function renderList(name) {
+    const list = lists[name];
+    if (!list) return;
+    const stored = getListsStore()[name];
+    const order = Array.isArray(stored) ? stored : list.defaults;
+    const current = {};
+    listItems(list).forEach((item) => { current[item.dataset.listItem] = item; });
+
+    order.forEach((id) => {
+      const item = current[id] || createListItem(name, id);
+      delete current[id];
+      list.el.appendChild(item); // переносить наявний вузол у правильне місце
+      addRemoveButton(item, name);
+    });
+    Object.values(current).forEach((item) => item.remove());
+
+    list.el.querySelectorAll(':scope > [data-list-item] [data-list-number]').forEach((el, i) => {
+      el.textContent = String(i + 1).padStart(2, '0');
+    });
+    registerLists(list.el);
+  }
+
+  function renderAllLists() {
+    Object.keys(lists).forEach(renderList);
+  }
+
+  async function saveListOrder(name, ids) {
+    const store = getListsStore();
+    store[name] = ids;
+    localStorage.setItem(LISTS_KEY, JSON.stringify(store));
+    if (isRemote) {
+      const ok = await remotePushList(name, ids);
+      if (!ok) showToast('Не вдалося зберегти зміни в хмарі');
+    }
+  }
+
+  async function addListItem(name) {
+    const list = lists[name];
+    const id = name + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    const ids = listItems(list).map((i) => i.dataset.listItem);
+    ids.push(id);
+    if (!editing) setEditing(true);
+    await saveListOrder(name, ids);
+    renderList(name);
+    const item = list.el.querySelector(`:scope > [data-list-item="${id}"]`);
+    // пункти вкладених списків нового елемента теж фіксуємо, щоб вони збереглися
+    if (item) {
+      for (const nested of item.querySelectorAll('[data-list]')) {
+        const nestedName = nested.dataset.list;
+        await saveListOrder(nestedName, Array.from(nested.children)
+          .filter((c) => c.hasAttribute('data-list-item')).map((c) => c.dataset.listItem));
+      }
+      const first = item.querySelector('[data-edit-key]');
+      if (first) {
+        first.focus({ preventScroll: true });
+        document.execCommand('selectAll', false, null);
+      }
+      item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+    showToast('Додано — заповни текст' + (item && item.querySelector('[data-photo-input]') ? ' і завантаж фото' : ''));
+  }
+
+  async function deleteListItem(name, id) {
+    const list = lists[name];
+    const item = list.el.querySelector(`:scope > [data-list-item="${id}"]`);
+    if (!item) return;
+    if (!confirm('Видалити цей елемент?')) return;
+
+    const contentKeys = Array.from(item.querySelectorAll('[data-edit-key]')).map((el) => el.dataset.editKey);
+    if (item.dataset.editKey) contentKeys.push(item.dataset.editKey);
+    const photoKeys = Array.from(item.querySelectorAll('[data-photo-key]')).map((el) => el.dataset.photoKey);
+    const nestedLists = Array.from(item.querySelectorAll('[data-list]')).map((el) => el.dataset.list);
+
+    await saveListOrder(name, listItems(list).map((i) => i.dataset.listItem).filter((x) => x !== id));
+    renderList(name);
+
+    const cache = getContentCache();
+    contentKeys.forEach((k) => delete cache[k]);
+    localStorage.setItem(STORAGE_CONTENT_KEY, JSON.stringify(cache));
+    const photos = getPhotoStore();
+    photoKeys.forEach((k) => delete photos[k]);
+    localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+    const store = getListsStore();
+    nestedLists.forEach((n) => { delete store[n]; delete lists[n]; });
+    localStorage.setItem(LISTS_KEY, JSON.stringify(store));
+
+    if (isRemote) {
+      await Promise.all([
+        remoteDeleteContentKeys(contentKeys), remoteDeletePhotos(photoKeys), remoteDeleteListSettings(nestedLists),
+      ]);
+    }
+    showToast('Видалено');
+  }
+
+  // Текст у доданих елементах зберігається одразу після редагування
+  document.addEventListener('focusout', (e) => {
+    if (!editing || !e.target.closest) return;
+    const el = e.target.closest('[data-edit-key]');
+    if (!el || !el.closest('[data-list-item]')) return;
+    saveContentKey(el.dataset.editKey, el.textContent.trim());
+    if (el.dataset.editType === 'number') {
+      const num = parseFloat(el.textContent);
+      if (!Number.isNaN(num)) el.dataset.count = String(num);
+    }
+  });
+
+  /* ============================================================
      Перегляд заявок з контактної форми (тільки для адміна)
      ============================================================ */
   function formatLeadDate(iso) {
@@ -1303,6 +1555,7 @@
 
   /* ---------- Ініціалізація ---------- */
   renderTrainers();
+  registerLists(document);
   applySavedContent();
   applySavedPhotos();
   renderAnnouncements();

@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=16">
-<link rel="stylesheet" href="css/admin.css?v=16">
+<link rel="stylesheet" href="css/style.css?v=17">
+<link rel="stylesheet" href="css/admin.css?v=17">
 </head>
 <body>
 
@@ -93,20 +93,20 @@
       <a href="#programs" class="btn btn--ghost btn--lg">Наші програми ↓</a>
     </div>
 
-    <div class="hero__stats reveal">
-      <div class="stat">
+    <div class="hero__stats reveal" data-list="stats" data-list-style="inline">
+      <div class="stat" data-list-item="stat.years">
         <span class="stat__num" data-count="1" data-edit-key="stat.years" data-edit-type="number">0</span><span class="stat__suffix">+</span>
         <span class="stat__label" data-edit-key="stat.years.label">рік на ринку</span>
       </div>
-      <div class="stat">
+      <div class="stat" data-list-item="stat.clients">
         <span class="stat__num" data-count="500" data-edit-key="stat.clients" data-edit-type="number">0</span><span class="stat__suffix">+</span>
         <span class="stat__label" data-edit-key="stat.clients.label">клієнтів</span>
       </div>
-      <div class="stat">
+      <div class="stat" data-list-item="stat.machines">
         <span class="stat__num" data-count="30" data-edit-key="stat.machines" data-edit-type="number">0</span><span class="stat__suffix">+</span>
         <span class="stat__label" data-edit-key="stat.machines.label">тренажерів</span>
       </div>
-      <div class="stat">
+      <div class="stat" data-list-item="stat.days">
         <span class="stat__num" data-count="7" data-edit-key="stat.days" data-edit-type="number">0</span>
         <span class="stat__label" data-edit-key="stat.days.label">днів на тиждень</span>
       </div>
@@ -163,11 +163,11 @@
         підтримки роблять тренування ефективними та приємними. Ми віримо, що спорт
         об'єднує, тому кожен клієнт для нас — частина великої команди.
       </p>
-      <ul class="check-list reveal">
-        <li data-edit-key="about.check1">Обладнання преміум-класу від провідних брендів</li>
-        <li data-edit-key="about.check2">Кваліфіковані тренери та персональний супровід</li>
-        <li data-edit-key="about.check3">Зручний графік — відкрито 7 днів на тиждень</li>
-        <li data-edit-key="about.check4">Чиста, доглянута та мотивуюча атмосфера</li>
+      <ul class="check-list reveal" data-list="about" data-list-style="row">
+        <li data-list-item="about.check1"><span data-edit-key="about.check1">Обладнання преміум-класу від провідних брендів</span></li>
+        <li data-list-item="about.check2"><span data-edit-key="about.check2">Кваліфіковані тренери та персональний супровід</span></li>
+        <li data-list-item="about.check3"><span data-edit-key="about.check3">Зручний графік — відкрито 7 днів на тиждень</span></li>
+        <li data-list-item="about.check4"><span data-edit-key="about.check4">Чиста, доглянута та мотивуюча атмосфера</span></li>
       </ul>
       <div class="reveal center" style="margin-top:8px;">
         <a href="#contact" class="btn btn--primary">Записатись на пробне</a>
@@ -182,31 +182,31 @@
     <p class="section-eyebrow reveal center">// НАПРЯМКИ</p>
     <h2 class="section-title reveal center">Обери свій формат</h2>
 
-    <div class="cards-grid">
-      <article class="tilt-card reveal">
+    <div class="cards-grid" data-list="programs">
+      <article class="tilt-card reveal" data-list-item="program1">
         <div class="tilt-card__inner">
-          <span class="tilt-card__num">01</span>
+          <span class="tilt-card__num" data-list-number>01</span>
           <h3 data-edit-key="program1.title">Тренажерний зал</h3>
           <p data-edit-key="program1.desc">Повний спектр силового та кардіо обладнання для будь-якого рівня підготовки.</p>
         </div>
       </article>
-      <article class="tilt-card reveal">
+      <article class="tilt-card reveal" data-list-item="program2">
         <div class="tilt-card__inner">
-          <span class="tilt-card__num">02</span>
+          <span class="tilt-card__num" data-list-number>02</span>
           <h3 data-edit-key="program2.title">Кросфіт</h3>
           <p data-edit-key="program2.desc">Високоінтенсивні функціональні тренування у групі під керівництвом коуча.</p>
         </div>
       </article>
-      <article class="tilt-card reveal">
+      <article class="tilt-card reveal" data-list-item="program3">
         <div class="tilt-card__inner">
-          <span class="tilt-card__num">03</span>
+          <span class="tilt-card__num" data-list-number>03</span>
           <h3 data-edit-key="program3.title">Персональні тренування</h3>
           <p data-edit-key="program3.desc">Індивідуальна програма, контроль техніки та швидкий прогрес до цілі.</p>
         </div>
       </article>
-      <article class="tilt-card reveal">
+      <article class="tilt-card reveal" data-list-item="program4">
         <div class="tilt-card__inner">
-          <span class="tilt-card__num">04</span>
+          <span class="tilt-card__num" data-list-number>04</span>
           <h3 data-edit-key="program4.title">Групові заняття</h3>
           <p data-edit-key="program4.desc">Йога, стретчинг, функціональні класи — заряд енергії у гарній компанії.</p>
         </div>
@@ -218,29 +218,29 @@
 <!-- ===== FEATURES ===== -->
 <section class="section" id="features">
   <div class="container">
-    <div class="features__grid">
+    <div class="features__grid" data-list="features">
       <div class="features__col reveal">
         <p class="section-eyebrow">// ЧОМУ XFIT</p>
         <h2 class="section-title">Все для твого<br>результату</h2>
         <p data-edit-key="features.text">Ми продумали кожну деталь простору, щоб тренування приносили максимум користі та задоволення.</p>
       </div>
 
-      <div class="feature reveal">
+      <div class="feature reveal" data-list-item="feature1">
         <div class="feature__icon">◈</div>
         <h4 data-edit-key="feature1.title">Преміум обладнання</h4>
         <p data-edit-key="feature1.desc">Сучасні тренажери провідних світових брендів, регулярне оновлення парку.</p>
       </div>
-      <div class="feature reveal">
+      <div class="feature reveal" data-list-item="feature2">
         <div class="feature__icon">◇</div>
         <h4 data-edit-key="feature2.title">Досвідчені тренери</h4>
         <p data-edit-key="feature2.desc">Сертифіковані фахівці, які підберуть програму під твою мету та рівень.</p>
       </div>
-      <div class="feature reveal">
+      <div class="feature reveal" data-list-item="feature3">
         <div class="feature__icon">◆</div>
         <h4 data-edit-key="feature3.title">Зручна локація</h4>
         <p data-edit-key="feature3.desc">Зал у центрі Подільська з парковкою та зручним під'їздом.</p>
       </div>
-      <div class="feature reveal">
+      <div class="feature reveal" data-list-item="feature4">
         <div class="feature__icon">✦</div>
         <h4 data-edit-key="feature4.title">Комʼюніті</h4>
         <p data-edit-key="feature4.desc">Спільнота однодумців, спільні активності та підтримка на кожному кроці.</p>
@@ -326,8 +326,8 @@
     <p class="section-eyebrow reveal center">// ГАЛЕРЕЯ</p>
     <h2 class="section-title reveal center">Атмосфера залу</h2>
 
-    <div class="gallery-grid">
-      <div class="gallery-tile reveal photo-slot" style="--hue:150">
+    <div class="gallery-grid" data-list="gallery">
+      <div class="gallery-tile reveal photo-slot" data-list-item="gallery1" style="--hue:150">
         <img class="photo-img" data-photo-key="gallery1" alt="Зал XFit">
         <label class="photo-upload">
           <input type="file" accept="image/*" data-photo-input="gallery1" hidden>
@@ -335,7 +335,7 @@
         </label>
         <button type="button" class="photo-remove" data-photo-remove="gallery1" title="Видалити фото">✕</button>
       </div>
-      <div class="gallery-tile reveal photo-slot" style="--hue:135">
+      <div class="gallery-tile reveal photo-slot" data-list-item="gallery2" style="--hue:135">
         <img class="photo-img" data-photo-key="gallery2" alt="Зал XFit">
         <label class="photo-upload">
           <input type="file" accept="image/*" data-photo-input="gallery2" hidden>
@@ -343,7 +343,7 @@
         </label>
         <button type="button" class="photo-remove" data-photo-remove="gallery2" title="Видалити фото">✕</button>
       </div>
-      <div class="gallery-tile reveal photo-slot" style="--hue:120">
+      <div class="gallery-tile reveal photo-slot" data-list-item="gallery3" style="--hue:120">
         <img class="photo-img" data-photo-key="gallery3" alt="Зал XFit">
         <label class="photo-upload">
           <input type="file" accept="image/*" data-photo-input="gallery3" hidden>
@@ -351,7 +351,7 @@
         </label>
         <button type="button" class="photo-remove" data-photo-remove="gallery3" title="Видалити фото">✕</button>
       </div>
-      <div class="gallery-tile reveal photo-slot" style="--hue:105">
+      <div class="gallery-tile reveal photo-slot" data-list-item="gallery4" style="--hue:105">
         <img class="photo-img" data-photo-key="gallery4" alt="Зал XFit">
         <label class="photo-upload">
           <input type="file" accept="image/*" data-photo-input="gallery4" hidden>
@@ -359,7 +359,7 @@
         </label>
         <button type="button" class="photo-remove" data-photo-remove="gallery4" title="Видалити фото">✕</button>
       </div>
-      <div class="gallery-tile reveal photo-slot" style="--hue:145">
+      <div class="gallery-tile reveal photo-slot" data-list-item="gallery5" style="--hue:145">
         <img class="photo-img" data-photo-key="gallery5" alt="Зал XFit">
         <label class="photo-upload">
           <input type="file" accept="image/*" data-photo-input="gallery5" hidden>
@@ -367,7 +367,7 @@
         </label>
         <button type="button" class="photo-remove" data-photo-remove="gallery5" title="Видалити фото">✕</button>
       </div>
-      <div class="gallery-tile reveal photo-slot" style="--hue:160">
+      <div class="gallery-tile reveal photo-slot" data-list-item="gallery6" style="--hue:160">
         <img class="photo-img" data-photo-key="gallery6" alt="Зал XFit">
         <label class="photo-upload">
           <input type="file" accept="image/*" data-photo-input="gallery6" hidden>
@@ -385,38 +385,38 @@
     <p class="section-eyebrow reveal center">// АБОНЕМЕНТИ</p>
     <h2 class="section-title reveal center">Обери свій план</h2>
 
-    <div class="pricing-grid">
-      <article class="price-card reveal">
+    <div class="pricing-grid" data-list="pricing">
+      <article class="price-card reveal" data-list-item="price1">
         <h3 data-edit-key="price1.name">Старт</h3>
         <p class="price-card__price"><span data-edit-key="price1.amount">499₴</span><span>/міс</span></p>
-        <ul>
-          <li data-edit-key="price1.item1">Доступ у будні дні</li>
-          <li data-edit-key="price1.item2">Тренажерний зал</li>
-          <li data-edit-key="price1.item3">Роздягальня + душ</li>
+        <ul data-list="price1.items" data-list-style="row">
+          <li data-list-item="price1.item1"><span data-edit-key="price1.item1">Доступ у будні дні</span></li>
+          <li data-list-item="price1.item2"><span data-edit-key="price1.item2">Тренажерний зал</span></li>
+          <li data-list-item="price1.item3"><span data-edit-key="price1.item3">Роздягальня + душ</span></li>
         </ul>
         <a href="#contact" class="btn btn--ghost">Обрати</a>
       </article>
 
-      <article class="price-card price-card--featured reveal">
+      <article class="price-card price-card--featured reveal" data-list-item="price2">
         <span class="price-card__badge">Популярний</span>
         <h3 data-edit-key="price2.name">Повний</h3>
         <p class="price-card__price"><span data-edit-key="price2.amount">799₴</span><span>/міс</span></p>
-        <ul>
-          <li data-edit-key="price2.item1">Доступ 7 днів на тиждень</li>
-          <li data-edit-key="price2.item2">Тренажерний зал + кросфіт</li>
-          <li data-edit-key="price2.item3">Групові заняття</li>
-          <li data-edit-key="price2.item4">1 персональна консультація</li>
+        <ul data-list="price2.items" data-list-style="row">
+          <li data-list-item="price2.item1"><span data-edit-key="price2.item1">Доступ 7 днів на тиждень</span></li>
+          <li data-list-item="price2.item2"><span data-edit-key="price2.item2">Тренажерний зал + кросфіт</span></li>
+          <li data-list-item="price2.item3"><span data-edit-key="price2.item3">Групові заняття</span></li>
+          <li data-list-item="price2.item4"><span data-edit-key="price2.item4">1 персональна консультація</span></li>
         </ul>
         <a href="#contact" class="btn btn--primary">Обрати</a>
       </article>
 
-      <article class="price-card reveal">
+      <article class="price-card reveal" data-list-item="price3">
         <h3 data-edit-key="price3.name">PRO</h3>
         <p class="price-card__price"><span data-edit-key="price3.amount">1299₴</span><span>/міс</span></p>
-        <ul>
-          <li data-edit-key="price3.item1">Все з плану «Повний»</li>
-          <li data-edit-key="price3.item2">4 персональні тренування</li>
-          <li data-edit-key="price3.item3">Індивідуальний план харчування</li>
+        <ul data-list="price3.items" data-list-style="row">
+          <li data-list-item="price3.item1"><span data-edit-key="price3.item1">Все з плану «Повний»</span></li>
+          <li data-list-item="price3.item2"><span data-edit-key="price3.item2">4 персональні тренування</span></li>
+          <li data-list-item="price3.item3"><span data-edit-key="price3.item3">Індивідуальний план харчування</span></li>
         </ul>
         <a href="#contact" class="btn btn--ghost">Обрати</a>
       </article>
@@ -430,10 +430,10 @@
   <div class="container cta__inner">
     <p class="section-eyebrow reveal center">// РОЗКЛАД</p>
     <h2 class="section-title reveal center">Відкрито щодня</h2>
-    <div class="schedule-grid reveal">
-      <div class="schedule-row"><span data-edit-key="schedule1.day">Пн — Пт</span><span data-edit-key="schedule1.hours">07:00 — 23:00</span></div>
-      <div class="schedule-row"><span data-edit-key="schedule2.day">Субота</span><span data-edit-key="schedule2.hours">09:00 — 21:00</span></div>
-      <div class="schedule-row"><span data-edit-key="schedule3.day">Неділя</span><span data-edit-key="schedule3.hours">09:00 — 20:00</span></div>
+    <div class="schedule-grid reveal" data-list="schedule" data-list-style="row">
+      <div class="schedule-row" data-list-item="schedule1"><span data-edit-key="schedule1.day">Пн — Пт</span><span data-edit-key="schedule1.hours">07:00 — 23:00</span></div>
+      <div class="schedule-row" data-list-item="schedule2"><span data-edit-key="schedule2.day">Субота</span><span data-edit-key="schedule2.hours">09:00 — 21:00</span></div>
+      <div class="schedule-row" data-list-item="schedule3"><span data-edit-key="schedule3.day">Неділя</span><span data-edit-key="schedule3.hours">09:00 — 20:00</span></div>
     </div>
     <p class="reveal center" style="margin-top:24px;">Приходь на безкоштовне пробне тренування — покажемо зал і підберемо програму.</p>
     <div class="reveal center" style="margin-top:24px;">
@@ -452,8 +452,8 @@
       слідкуй за новинами саме свого залу.
     </p>
 
-    <div class="locations-grid">
-      <article class="location-card reveal">
+    <div class="locations-grid" data-list="locations">
+      <article class="location-card reveal" data-list-item="location1">
         <span class="location-card__status location-card__status--open" data-edit-key="location1.status">Відкрито</span>
         <h3 data-edit-key="location1.city">Подільськ</h3>
         <p class="location-card__address" data-edit-key="location1.address">вул. Центральна (уточнюйте в Instagram)</p>
@@ -467,7 +467,7 @@
         </div>
       </article>
 
-      <article class="location-card location-card--soon reveal">
+      <article class="location-card location-card--soon reveal" data-list-item="location2">
         <span class="location-card__status location-card__status--soon" data-edit-key="location2.status">Незабаром</span>
         <h3 data-edit-key="location2.city">Балта</h3>
         <p class="location-card__address" data-edit-key="location2.address">Адреса уточнюється</p>
@@ -583,10 +583,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script src="js/supabase-config.js?v=16"></script>
-<script src="js/emailjs-config.js?v=16"></script>
-<script src="js/logo3d.js?v=16"></script>
-<script src="js/main.js?v=16"></script>
-<script src="js/admin.js?v=16"></script>
+<script src="js/supabase-config.js?v=17"></script>
+<script src="js/emailjs-config.js?v=17"></script>
+<script src="js/logo3d.js?v=17"></script>
+<script src="js/main.js?v=17"></script>
+<script src="js/admin.js?v=17"></script>
 </body>
 </html>

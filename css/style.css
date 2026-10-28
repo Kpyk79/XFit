@@ -569,6 +569,27 @@ body.admin-mode .admin-round-btn{ display:inline-flex; }
   background:#ff5c5c; color:#fff; border-color:#ff5c5c; transform: rotate(90deg);
   box-shadow: 0 0 22px -4px rgba(255,92,92,0.7);
 }
+/* Редаговані списки: «+» під списком, «×» на кожному елементі */
+.admin-round-btn--small{ width:36px; height:36px; }
+.list-add{ display:none; justify-content:center; }
+body.admin-mode .list-add{ display:flex; }
+.list-add--card{ margin-top: 28px; }
+.list-add--row{ margin: 4px 0 20px; }
+.list-add--inline{ justify-content:flex-start; margin-top: 16px; }
+.schedule-grid + .list-add{ margin-top: 16px; }
+.price-card .list-add{ margin: -16px 0 24px; }
+
+body.admin-mode [data-list-item]{ position:relative; }
+body.admin-mode .check-list{ width: fit-content; max-width:100%; margin-left:auto; margin-right:auto; }
+.list-item__remove{ position:absolute; z-index:5; top:-12px; right:-12px; }
+.gallery-tile > .list-item__remove{ top:10px; right:auto; left:10px; }
+.stat > .list-item__remove{ width:26px; height:26px; top:-14px; right:-18px; }
+body.admin-mode [data-list-style="row"] > [data-list-item]{ padding-right: 44px; }
+[data-list-style="row"] > [data-list-item] > .list-item__remove{
+  width:28px; height:28px; top:50%; right:8px; transform: translateY(-50%);
+}
+[data-list-style="row"] > [data-list-item] > .list-item__remove:hover{ transform: translateY(-50%) rotate(90deg); }
+
 .trainers__admin{ display:none; justify-content:center; margin-top: 28px; }
 body.admin-mode .trainers__admin{ display:flex; }
 .announcements__admin-hint{ display:none; }
