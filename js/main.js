@@ -304,8 +304,39 @@ contactForm.addEventListener('submit', async (e) => {
 (function initWebApp() {
   // Service worker працює лише на справжньому сайті (https або localhost)
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    // Була стара версія вебдодатка → після активації нової сторінка сама
+    // перезавантажиться один раз. Якщо людина саме заповнює форму чи
+    // редагує сайт — чекаємо, поки вона згорне сайт або перейде на іншу вкладку.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloadPending = false;
+    let reloaded = false;
+    const isBusy = () => {
+      if (document.body.classList.contains('admin-editing')) return true;
+      const form = document.getElementById('contactForm');
+      return !!form && [...form.elements].some((el) => (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el.value.trim());
+    };
+    const reloadNow = () => {
+      if (reloaded) return;
+      reloaded = true;
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController) return; // перше встановлення — сторінка й так свіжа
+      if (isBusy()) reloadPending = true;
+      else reloadNow();
+    });
+
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch((err) => console.warn('Service worker не зареєстровано:', err));
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+        // Перевіряємо оновлення, коли людина повертається на сайт
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') reg.update().catch(() => {});
+          else if (reloadPending && !isBusy()) reloadNow();
+        });
+        // Після надсилання заявки форма порожня — можна оновитись
+        const form = document.getElementById('contactForm');
+        if (form) form.addEventListener('submit', () => setTimeout(() => { if (reloadPending && !isBusy()) reloadNow(); }, 1500));
+      }).catch((err) => console.warn('Service worker не зареєстровано:', err));
     });
   }
 

@@ -132,6 +132,63 @@
       }
     });
     syncInstagramLinks();
+    syncStructuredData();
+  }
+
+  /* Структуровані дані для Google (schema.org у <head>): телефон, адреса й
+     години роботи беруться з тих самих текстів, що редагує адмін.
+     Заглушки на кшталт «000-00-00» чи «уточнюйте» не передаються. */
+  const DAY_CODES = [
+    [/^пн|^понед/, 'Monday'], [/^вт|^вівт/, 'Tuesday'], [/^ср|^серед/, 'Wednesday'], [/^чт|^четв/, 'Thursday'],
+    [/^пт|^п.ятн/, 'Friday'], [/^сб|^субот/, 'Saturday'], [/^нд|^неділ/, 'Sunday'],
+  ];
+  const WEEK = DAY_CODES.map((d) => d[1]);
+
+  function parseDays(text) {
+    const parts = text.toLowerCase().split(/\s*[—–-]\s*/).map((t) => t.trim());
+    const idx = parts.map((t) => DAY_CODES.findIndex(([re]) => re.test(t)));
+    if (idx.some((i) => i < 0)) return null;
+    if (idx.length === 1) return [WEEK[idx[0]]];
+    if (idx.length === 2 && idx[1] >= idx[0]) return WEEK.slice(idx[0], idx[1] + 1);
+    return null;
+  }
+
+  function editText(key) {
+    const el = document.querySelector(`[data-edit-key="${key}"]`);
+    return el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+  }
+
+  function syncStructuredData() {
+    const script = document.getElementById('structuredData');
+    if (!script) return;
+    let data;
+    try { data = JSON.parse(script.textContent); } catch (e) { return; }
+    const gym = (data['@graph'] || []).find((n) => n['@type'] === 'ExerciseGym');
+    if (!gym) return;
+
+    const phone = editText('location1.phone');
+    if (/\d{3}/.test(phone) && !/000-00-00|\(00\)/.test(phone)) gym.telephone = phone;
+    else delete gym.telephone;
+
+    const street = editText('location1.address');
+    if (street && !/уточн/i.test(street)) gym.address.streetAddress = street;
+    else delete gym.address.streetAddress;
+    const city = editText('location1.city');
+    if (city) gym.address.addressLocality = city;
+
+    const rows = Array.from(document.querySelectorAll('[data-list="schedule"] > [data-list-item]'));
+    const hours = rows.map((row) => {
+      const spans = row.querySelectorAll('[data-edit-key]');
+      if (spans.length < 2) return null;
+      const days = parseDays(spans[0].textContent.trim());
+      const times = spans[1].textContent.match(/(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})/);
+      if (!days || !times) return null;
+      const t = (h, m) => `${h.padStart(2, '0')}:${m}`;
+      return { '@type': 'OpeningHoursSpecification', dayOfWeek: days.length === 1 ? days[0] : days, opens: t(times[1], times[2]), closes: t(times[3], times[4]) };
+    });
+    if (hours.length && hours.every(Boolean)) gym.openingHoursSpecification = hours;
+
+    script.textContent = JSON.stringify(data, null, 2);
   }
 
   // Посилання на Instagram беруть адресу з редагованого @нікнейму в картках локацій
