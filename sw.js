@@ -3,12 +3,13 @@
    Сторінка береться з мережі в першу чергу, щоб зміни з адмінки
    з'являлись одразу; файли сайту — з кешу з оновленням у фоні.
    Запити до Supabase, EmailJS та інших сайтів не чіпаємо. */
-const CACHE = 'xfit-v1';
+const CACHE = 'xfit-v2'; // змінюй версію, коли міняються файли без ?v= (іконки, логотип)
 const CORE = [
   './',
   'index.html',
   'manifest.webmanifest',
   'assets/favicon.svg',
+  'assets/logo.svg',
   'assets/icon-192.png',
 ];
 

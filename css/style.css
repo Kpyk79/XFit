@@ -162,9 +162,11 @@ p{ color: var(--muted); line-height:1.7; margin:0 0 16px; }
 .ig-pill:hover .ig-pill__handle, .ig-pill:focus-visible .ig-pill__handle{ color: var(--green); }
 .ig-pill:hover .ig-pill__arrow, .ig-pill:focus-visible .ig-pill__arrow{ transform: translate(2px,-2px); }
 
-.logo{ display:flex; align-items:baseline; font-family: var(--font-display); font-size: 1.4rem; font-weight:900; gap:2px; }
-.logo__x{ color: var(--green); text-shadow: 0 0 16px var(--green-glow); }
-.logo__fit{ color: var(--white); }
+.logo{ display:flex; align-items:center; }
+.logo__svg{ display:block; height: 34px; width:auto; overflow:visible; }
+.logo__mark{ fill: var(--green); filter: drop-shadow(0 0 10px var(--green-glow)); }
+.logo__word{ fill: var(--white); }
+.footer .logo__svg{ height: 30px; }
 
 .nav-links{ display:flex; gap: 32px; margin-left: 48px; }
 .nav-link{
