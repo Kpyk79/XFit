@@ -142,7 +142,7 @@ contactForm.addEventListener('submit', async (e) => {
 /* ============ THREE.JS HERO SCENE ============ */
 (function initHero() {
   const canvas = document.getElementById('heroCanvas');
-  if (!canvas || typeof THREE === 'undefined') return;
+  if (!canvas || typeof THREE === 'undefined' || typeof XFitLogo3D === 'undefined') return;
 
   const isSmall = window.innerWidth < 720;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -157,18 +157,21 @@ contactForm.addEventListener('submit', async (e) => {
   const green = 0x39ff6a;
 
   const group = new THREE.Group();
+  if (isSmall) group.position.y = -3; else group.position.x = 3.1;
   scene.add(group);
 
-  // Central wireframe icosahedron (X-Fit core shape)
-  const coreGeo = new THREE.IcosahedronGeometry(2.1, 1);
-  const coreMat = new THREE.MeshBasicMaterial({ color: green, wireframe: true, transparent: true, opacity: 0.55 });
-  const core = new THREE.Mesh(coreGeo, coreMat);
-  group.add(core);
+  // Floating 3D XFIT logo
+  const logo = XFitLogo3D.create(THREE);
+  logo.scale.setScalar(isSmall ? 0.5 : 0.68);
+  group.add(logo);
 
-  const innerGeo = new THREE.IcosahedronGeometry(1.3, 0);
-  const innerMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.18 });
-  const innerMesh = new THREE.Mesh(innerGeo, innerMat);
-  group.add(innerMesh);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+  const keyLight = new THREE.DirectionalLight(0xffffff, 1.1);
+  keyLight.position.set(3, 4, 6);
+  scene.add(keyLight);
+  const rimLight = new THREE.PointLight(green, 2.2, 20);
+  rimLight.position.set(-4, -2, 3);
+  scene.add(rimLight);
 
   // Orbiting rings (torus)
   const ring1 = new THREE.Mesh(
@@ -226,10 +229,10 @@ contactForm.addEventListener('submit', async (e) => {
     rafId = requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
 
-    core.rotation.y = t * 0.18;
-    core.rotation.x = t * 0.09;
-    innerMesh.rotation.y = -t * 0.25;
-    innerMesh.rotation.x = t * 0.15;
+    logo.position.y = Math.sin(t * 0.8) * 0.18;
+    logo.rotation.y = Math.sin(t * 0.35) * 0.45;
+    logo.rotation.x = Math.sin(t * 0.5) * 0.08;
+    logo.rotation.z = Math.sin(t * 0.27) * 0.04;
     ring1.rotation.z = t * 0.12;
     ring2.rotation.z = -t * 0.09;
     particles.rotation.y = t * 0.03;
