@@ -935,7 +935,7 @@
   }
 
   function refreshTrainerClones() {
-    carousel.rebuildClones();
+    carousel.refresh();
   }
 
   async function deleteTrainer(id) {
@@ -992,111 +992,131 @@
     });
   }
 
+  // «Колесо»: картки стоять по колу 3D-барабана, який крутиться свайпом з інерцією
   const carousel = (function () {
     const root = trainersCarousel;
     const track = trainersTrack;
     const viewport = root ? root.querySelector('.trainers__viewport') : null;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const AUTOPLAY_MS = 4500;
+    const STIFFNESS = 0.075;
+    const DAMPING = 0.8;
     let active = false;
-    let perView = 1;
+    let cards = [];
     let count = 0;
-    let index = 0;
+    let theta = 0;     // кут між сусідніми картками, градуси
+    let radius = 0;
+    let angle = 0;     // поточний кут барабана
+    let target = 0;    // кут, до якого барабан доїжджає
+    let velocity = 0;
+    let raf = null;
     let timer = null;
     let hovering = false;
 
-    const noop = { setup() {}, rebuildClones() {}, showOriginal() {}, restartAutoplay() {} };
+    const noop = { setup() {}, refresh() {}, showOriginal() {}, restartAutoplay() {} };
     if (!root || !track || !viewport) return noop;
 
-    function originals() {
-      return Array.from(track.querySelectorAll('.trainer-card:not(.is-clone)'));
-    }
-
-    function makeClone(card) {
-      const clone = card.cloneNode(true);
-      clone.classList.add('is-clone');
-      clone.setAttribute('aria-hidden', 'true');
-      clone.querySelectorAll('.photo-upload, .photo-remove').forEach((el) => el.remove());
-      // На стику каруселі видно копію — кнопка «×» на ній видаляє оригінал
-      const del = clone.querySelector('.trainer-card__delete');
-      if (del) {
-        del.tabIndex = -1;
-        del.addEventListener('click', () => deleteTrainer(card.dataset.trainerId));
-      }
-      clone.querySelectorAll('[data-edit-key], [data-photo-key]').forEach((el) => {
-        el.removeAttribute('data-edit-key');
-        el.removeAttribute('data-photo-key');
-        el.removeAttribute('contenteditable');
-      });
-      clone.removeAttribute('data-trainer-id');
-      return clone;
-    }
-
-    function rebuildClones() {
-      track.querySelectorAll('.is-clone').forEach((c) => c.remove());
-      if (!active) return;
-      const cards = originals();
-      cards.slice(-perView).forEach((c) => track.insertBefore(makeClone(c), cards[0]));
-      cards.slice(0, perView).forEach((c) => track.appendChild(makeClone(c)));
-    }
-
-    function step() {
-      const first = track.querySelector('.trainer-card');
-      const gap = parseFloat(getComputedStyle(track).columnGap) || 24;
-      return first ? first.getBoundingClientRect().width + gap : 0;
-    }
-
-    function position(animate, dragOffset) {
-      track.classList.toggle('is-animating', !!animate);
-      track.style.transform = `translate3d(${-index * step() + (dragOffset || 0)}px, 0, 0)`;
-    }
-
-    function logicalIndex() {
-      return (((index - perView) % count) + count) % count;
+    function frontIndex() {
+      return ((Math.round(target / theta) % count) + count) % count;
     }
 
     function updateCounter() {
       if (!trainersCounter) return;
       const pad = (n) => String(n).padStart(2, '0');
-      trainersCounter.textContent = active ? `${pad(logicalIndex() + 1)} / ${pad(count)}` : '';
+      trainersCounter.textContent = active ? `${pad(frontIndex() + 1)} / ${pad(count)}` : '';
     }
 
-    // Якщо стоїмо на клоні — непомітно перескакуємо на відповідну оригінальну картку
-    function normalize() {
-      if (index >= perView + count || index < perView) {
-        index = perView + logicalIndex();
-        position(false);
-        void track.offsetWidth;
+    function render() {
+      track.style.transform = `translateZ(${-radius}px) rotateY(${-angle}deg)`;
+      cards.forEach((card, i) => {
+        let rel = (i * theta - angle) % 360;
+        if (rel > 180) rel -= 360;
+        if (rel < -180) rel += 360;
+        const dist = Math.abs(rel);
+        const visible = dist < 100;
+        card.style.opacity = visible ? Math.max(0, 1 - dist / 105).toFixed(3) : '0';
+        card.style.filter = dist > 4 ? `brightness(${Math.max(0.35, 1 - dist / 120).toFixed(3)})` : '';
+        card.style.pointerEvents = visible ? '' : 'none';
+        card.style.zIndex = String(1000 - Math.round(dist));
+        card.classList.toggle('is-front', dist < theta / 2);
+        card.setAttribute('aria-hidden', dist < theta / 2 ? 'false' : 'true');
+      });
+    }
+
+    function tick() {
+      raf = null;
+      if (dragging) return;
+      velocity = velocity * DAMPING + (target - angle) * STIFFNESS;
+      angle += velocity;
+      if (Math.abs(target - angle) < 0.05 && Math.abs(velocity) < 0.05) {
+        angle = target;
+        velocity = 0;
+        render();
+        return;
       }
+      render();
+      raf = requestAnimationFrame(tick);
+    }
+
+    function animate() {
+      if (reducedMotion) {
+        angle = target;
+        velocity = 0;
+        render();
+        return;
+      }
+      if (!raf) raf = requestAnimationFrame(tick);
     }
 
     function go(delta) {
       if (!active) return;
-      normalize();
-      index += delta;
-      position(true);
+      target = Math.round(target / theta) * theta + delta * theta;
       updateCounter();
+      animate();
     }
 
-    track.addEventListener('transitionend', (e) => {
-      if (e.target !== track) return;
-      track.classList.remove('is-animating');
-      normalize();
-    });
+    function spinTo(i) {
+      // найкоротший шлях до картки i
+      const current = Math.round(target / theta);
+      let diff = (i - current) % count;
+      if (diff > count / 2) diff -= count;
+      if (diff < -count / 2) diff += count;
+      go(diff);
+    }
+
+    function measure() {
+      if (!active) return;
+      const cardW = cards[0] ? cards[0].offsetWidth : 260;
+      const gap = cardW * 0.12;
+      radius = count > 2 ? Math.round((cardW / 2 + gap) / Math.tan(Math.PI / count)) : cardW;
+      track.style.height = Math.max(...cards.map((c) => c.offsetHeight)) + 'px';
+      render();
+    }
 
     function setup() {
-      const keep = active ? logicalIndex() : 0;
-      perView = parseInt(getComputedStyle(root).getPropertyValue('--per-view'), 10) || 1;
-      count = originals().length;
+      const keep = active ? frontIndex() : 0;
+      const perView = parseInt(getComputedStyle(root).getPropertyValue('--per-view'), 10) || 1;
+      cards = Array.from(track.querySelectorAll('.trainer-card'));
+      count = cards.length;
       active = count > perView;
-      root.classList.toggle('is-carousel', active);
-      rebuildClones();
+      root.classList.toggle('is-wheel', active);
       if (active) {
-        index = perView + Math.min(keep, count - 1);
-        position(false);
+        theta = 360 / count;
+        target = angle = Math.min(keep, count - 1) * theta;
+        velocity = 0;
+        measure();
+        cards.forEach((card, i) => {
+          card.style.transform = `rotateY(${i * theta}deg) translateZ(${radius}px)`;
+        });
+        render();
       } else {
         track.style.transform = '';
-        track.classList.remove('is-animating');
+        track.style.height = '';
+        cards.forEach((card) => {
+          ['transform', 'opacity', 'filter', 'pointerEvents', 'zIndex'].forEach((k) => { card.style[k] = ''; });
+          card.classList.remove('is-front');
+          card.removeAttribute('aria-hidden');
+        });
       }
       updateCounter();
       restartAutoplay();
@@ -1104,8 +1124,9 @@
 
     function showOriginal(i) {
       if (!active) return;
-      index = perView + Math.max(0, Math.min(i - perView + 1, count - 1));
-      position(false);
+      target = angle = i * theta;
+      velocity = 0;
+      render();
       updateCounter();
     }
 
@@ -1114,7 +1135,7 @@
       timer = null;
       if (!active || reducedMotion || document.body.classList.contains('admin-mode')) return;
       timer = setInterval(() => {
-        if (hovering || document.hidden || root.contains(document.activeElement)) return;
+        if (hovering || dragging || document.hidden || root.contains(document.activeElement)) return;
         go(1);
       }, AUTOPLAY_MS);
     }
@@ -1126,45 +1147,75 @@
     root.addEventListener('mouseenter', () => { hovering = true; });
     root.addEventListener('mouseleave', () => { hovering = false; });
 
-    // Свайп / перетягування
-    let dragStartX = null;
-    let dragDx = 0;
-    let dragged = false;
+    // Свайп: тягнеш — барабан крутиться за пальцем, відпускаєш — котиться за інерцією
+    let dragging = false;
+    let startX = 0;
+    let startAngle = 0;
+    let lastX = 0;
+    let lastT = 0;
+    let dragVelocity = 0; // градусів за мс
+    let moved = false;
+    let pressedCard = null;
+
+    function degPerPx() {
+      return theta / ((cards[0] && cards[0].offsetWidth) || 260);
+    }
+
     viewport.addEventListener('pointerdown', (e) => {
       if (!active || e.button !== 0) return;
       if (e.target.closest('[contenteditable="true"], button, label, input')) return;
-      normalize();
-      dragStartX = e.clientX;
-      dragDx = 0;
-      dragged = false;
+      dragging = true;
+      moved = false;
+      startX = lastX = e.clientX;
+      lastT = performance.now();
+      startAngle = angle;
+      dragVelocity = 0;
+      velocity = 0;
+      pressedCard = e.target.closest('.trainer-card');
     });
     window.addEventListener('pointermove', (e) => {
-      if (dragStartX === null) return;
-      dragDx = e.clientX - dragStartX;
-      if (!dragged && Math.abs(dragDx) > 6) {
-        dragged = true;
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      if (!moved && Math.abs(dx) > 6) {
+        moved = true;
         root.classList.add('is-dragging');
       }
-      if (dragged) position(false, dragDx);
+      if (!moved) return;
+      const now = performance.now();
+      const dt = Math.max(1, now - lastT);
+      const v = -(e.clientX - lastX) * degPerPx() / dt;
+      dragVelocity = dragVelocity * 0.6 + v * 0.4;
+      lastX = e.clientX;
+      lastT = now;
+      angle = startAngle - dx * degPerPx();
+      target = angle;
+      render();
     }, { passive: true });
     window.addEventListener('pointerup', () => {
-      if (dragStartX === null) return;
-      dragStartX = null;
+      if (!dragging) return;
+      dragging = false;
       root.classList.remove('is-dragging');
-      if (!dragged) return;
-      const threshold = step() * 0.18;
-      if (dragDx <= -threshold) go(1);
-      else if (dragDx >= threshold) go(-1);
-      else position(true);
+      if (!moved) {
+        // клік по боковій картці — докручуємо її в центр
+        if (pressedCard && !pressedCard.classList.contains('is-front')) spinTo(cards.indexOf(pressedCard));
+        return;
+      }
+      if (performance.now() - lastT > 120) dragVelocity = 0;
+      // інерція: чим швидше свайп, тим далі прокрутиться колесо
+      const fling = dragVelocity * 380;
+      target = Math.round((angle + fling) / theta) * theta;
+      velocity = dragVelocity * 16;
+      updateCounter();
+      animate();
     });
     viewport.addEventListener('click', (e) => {
-      if (dragged) {
+      const card = e.target.closest('.trainer-card');
+      if (moved || (active && card && !card.classList.contains('is-front') && !e.target.closest('button'))) {
         e.preventDefault();
         e.stopPropagation();
-        dragged = false;
+        moved = false;
       }
     }, true);
-    // Фокус усередині прихованого overflow не повинен прокручувати в'юпорт
     viewport.addEventListener('scroll', () => { viewport.scrollLeft = 0; });
 
     let resizeTimer = null;
@@ -1173,7 +1224,7 @@
       resizeTimer = setTimeout(setup, 150);
     });
 
-    return { setup, rebuildClones, showOriginal, restartAutoplay };
+    return { setup, refresh: measure, showOriginal, restartAutoplay };
   })();
 
   /* ============================================================

@@ -317,16 +317,26 @@ p{ color: var(--muted); line-height:1.7; margin:0 0 16px; }
 }
 .carousel-arrow:active{ transform: scale(.94); }
 
-/* Більше тренерів, ніж вміщується в рядок → безкінечна карусель */
-.trainers.is-carousel .trainers__viewport{
-  overflow:hidden; padding-top: 10px; margin-top: -10px; touch-action: pan-y;
-  mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+/* Більше тренерів, ніж вміщується в рядок → 3D-колесо, яке крутиться свайпом */
+.trainers.is-wheel .trainers__viewport{
+  perspective: 1600px; perspective-origin: 50% 40%;
+  overflow:hidden; padding: 16px 0 8px; margin-top: -16px; touch-action: pan-y; cursor: grab;
+  mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 88%, transparent 100%);
 }
-.trainers.is-carousel .trainers-grid{ display:flex; will-change: transform; user-select:none; }
-.trainers.is-carousel .trainers-grid.is-animating{ transition: transform .55s cubic-bezier(.6,0,.2,1); }
-.trainers.is-carousel .trainer-card{ flex: 0 0 calc((100% - (var(--per-view) - 1) * 24px) / var(--per-view)); }
-.trainers.is-carousel .trainers__controls{ display:flex; }
-.trainers.is-dragging .trainers-grid{ cursor:grabbing; }
+.trainers.is-wheel .trainers-grid{
+  display:block; position:relative; width: var(--wheel-card, 270px); margin: 0 auto;
+  transform-style: preserve-3d; user-select:none; will-change: transform;
+}
+.trainers.is-wheel .trainer-card{
+  position:absolute; top:0; left:0; width:100%;
+  backface-visibility: hidden; transform-style: preserve-3d; will-change: transform, opacity;
+}
+.trainers.is-wheel .trainer-card.is-front .trainer-card__photo{
+  box-shadow: 0 24px 60px -24px var(--green-glow); border-color: rgba(57,255,106,0.35);
+}
+.trainers.is-wheel .trainer-card:not(.is-front){ cursor:pointer; }
+.trainers.is-wheel .trainers__controls{ display:flex; }
+.trainers.is-dragging .trainers__viewport, .trainers.is-dragging .trainer-card{ cursor:grabbing; }
 .trainer-card img{ -webkit-user-drag:none; }
 .trainer-card__photo{
   aspect-ratio: 3/4; border-radius: var(--radius); margin-bottom: 18px;
@@ -607,7 +617,8 @@ body.admin-mode .announcements__admin-hint{ display:block; }
   .container{ padding: 0 18px; }
   .section{ padding: 72px 0; }
   .trainers{ --per-view: 1; }
-  .trainers__viewport{ max-width: 300px; margin-left:auto; margin-right:auto; }
+  .trainers{ --wheel-card: 200px; }
+  .trainers.is-wheel .trainers__viewport{ mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%); }
   .topbar__label{ display:none; }
   .topbar__inner{ justify-content:center; }
   .cards-grid, .trainers-grid, .gallery-grid, .announcements-grid, .features__grid, .locations-grid{ grid-template-columns: 1fr; }
