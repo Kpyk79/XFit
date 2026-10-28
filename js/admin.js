@@ -692,7 +692,9 @@
 
     announcementsSection.classList.toggle('is-active', store.enabled);
     announcementsGrid.innerHTML = '';
-    store.items.forEach((item) => announcementsGrid.appendChild(buildAnnouncementCard(item)));
+    [...store.items]
+      .sort((a, b) => (b.sortOrder || 0) - (a.sortOrder || 0))
+      .forEach((item) => announcementsGrid.appendChild(buildAnnouncementCard(item)));
 
     if (announcementsToggleBtn) {
       announcementsToggleBtn.textContent = `Оголошення: ${store.enabled ? 'Увімкнено' : 'Вимкнено'}`;
