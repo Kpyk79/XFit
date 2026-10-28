@@ -54,7 +54,6 @@
   const leadsClose = $('#adminLeadsClose');
   const trainersCarousel = $('#trainersCarousel');
   const trainersTrack = $('#trainersTrack');
-  const trainersCounter = $('#trainersCounter');
   const addTrainerBtn = $('#addTrainerBtn');
 
   const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
@@ -1020,12 +1019,6 @@
       return ((Math.round(target / theta) % count) + count) % count;
     }
 
-    function updateCounter() {
-      if (!trainersCounter) return;
-      const pad = (n) => String(n).padStart(2, '0');
-      trainersCounter.textContent = active ? `${pad(frontIndex() + 1)} / ${pad(count)}` : '';
-    }
-
     function render() {
       track.style.transform = `translateZ(${-radius}px) rotateY(${-angle}deg)`;
       cards.forEach((card, i) => {
@@ -1071,7 +1064,6 @@
     function go(delta) {
       if (!active) return;
       target = Math.round(target / theta) * theta + delta * theta;
-      updateCounter();
       animate();
     }
 
@@ -1118,7 +1110,6 @@
           card.removeAttribute('aria-hidden');
         });
       }
-      updateCounter();
       restartAutoplay();
     }
 
@@ -1127,7 +1118,6 @@
       target = angle = i * theta;
       velocity = 0;
       render();
-      updateCounter();
     }
 
     function restartAutoplay() {
@@ -1205,7 +1195,6 @@
       const fling = dragVelocity * 380;
       target = Math.round((angle + fling) / theta) * theta;
       velocity = dragVelocity * 16;
-      updateCounter();
       animate();
     });
     viewport.addEventListener('click', (e) => {

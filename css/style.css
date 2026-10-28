@@ -301,10 +301,6 @@ p{ color: var(--muted); line-height:1.7; margin:0 0 16px; }
 .trainers-grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
 .trainer-card{ position:relative; text-align:center; }
 .trainers__controls{ display:none; align-items:center; justify-content:center; gap: 18px; margin-top: 32px; }
-.trainers__counter{
-  font-family: var(--font-display); font-size:.8rem; letter-spacing:.12em; color: var(--muted);
-  min-width: 64px; text-align:center; font-variant-numeric: tabular-nums;
-}
 .carousel-arrow{
   width:48px; height:48px; border-radius:50%; border:1px solid var(--border); background: rgba(57,255,106,0.04);
   color: var(--white); cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
