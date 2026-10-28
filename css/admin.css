@@ -132,9 +132,10 @@ body.admin-editing [data-edit-key]:focus{
   z-index: 3100; background:#0c0f0c; border:1px solid rgba(57,255,106,0.5);
   color:#39ff6a; font-size:.85rem; font-weight:600; padding: 12px 22px;
   border-radius: 999px; box-shadow: 0 10px 30px -8px rgba(57,255,106,0.4);
-  transition: transform .35s ease; pointer-events:none;
+  transition: transform .35s ease, opacity .35s ease, visibility .35s; pointer-events:none;
+  opacity:0; visibility:hidden;
 }
-.admin-toast.show{ transform: translateX(-50%) translateY(0); }
+.admin-toast.show{ transform: translateX(-50%) translateY(0); opacity:1; visibility:visible; }
 
 @media (max-width: 640px){
   .admin-bar{ right: 12px; left: 12px; bottom: 12px; width:auto; }
