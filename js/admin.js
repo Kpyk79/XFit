@@ -19,6 +19,7 @@
   const DEFAULT_PASSWORD = 'xfit2026';
   const PHOTO_STORAGE_KEY = 'xfit_photos_v1';
   const ANNOUNCEMENTS_KEY = 'xfit_announcements_v1';
+  const TRAINERS_KEY = 'xfit_trainers_v1';
   const MAX_PHOTO_DIMENSION = 1000;
   const PHOTO_QUALITY = 0.82;
 
@@ -51,6 +52,13 @@
   const leadsModal = $('#adminLeadsModal');
   const leadsList = $('#adminLeadsList');
   const leadsClose = $('#adminLeadsClose');
+  const trainersCarousel = $('#trainersCarousel');
+  const trainersTrack = $('#trainersTrack');
+  const trainersCounter = $('#trainersCounter');
+  const addTrainerBtn = $('#addTrainerBtn');
+
+  const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+  const ICON_CROSS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
   let editing = false;
   let toastTimer = null;
@@ -123,6 +131,25 @@
         el.textContent = value;
       }
     });
+    syncInstagramLinks();
+  }
+
+  // Посилання на Instagram беруть адресу з редагованого @нікнейму в картках локацій
+  function instagramUrl(handle) {
+    const name = (handle || '').trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/\/.*$/, '');
+    return name ? 'https://instagram.com/' + encodeURIComponent(name) : null;
+  }
+
+  function syncInstagramLinks() {
+    document.querySelectorAll('a[data-edit-key$=".instagram"]').forEach((a) => {
+      const url = instagramUrl(a.textContent);
+      if (url) a.href = url;
+    });
+    document.querySelectorAll('[data-ig-handle-key]').forEach((a) => {
+      const source = document.querySelector(`[data-edit-key="${a.dataset.igHandleKey}"]`);
+      const url = source && instagramUrl(source.textContent);
+      if (url) a.href = url;
+    });
   }
 
   function getPhotoStore() {
@@ -145,6 +172,7 @@
         slot.classList.remove('has-photo');
       }
     });
+    refreshTrainerClones();
   }
 
   function getAnnouncementsStore() {
@@ -234,16 +262,41 @@
     return !error;
   }
 
+  async function remotePullTrainers() {
+    const { data, error } = await sb.from('site_settings').select('key,value').eq('key', 'trainers_list');
+    if (error) return null;
+    if (!data || !data[0]) return undefined;
+    try {
+      const ids = JSON.parse(data[0].value);
+      return Array.isArray(ids) ? ids : undefined;
+    } catch (e) {
+      return undefined;
+    }
+  }
+
+  async function remotePushTrainers(ids) {
+    const { error } = await sb.from('site_settings').upsert({ key: 'trainers_list', value: JSON.stringify(ids) });
+    return !error;
+  }
+
+  async function remoteDeleteContentKeys(keys) {
+    const { error } = await sb.from('site_content').delete().in('key', keys);
+    return !error;
+  }
+
   /* ---------- Синхронізація "з хмари" при завантаженні сторінки ---------- */
   async function syncFromRemote() {
     if (!isRemote) return;
     try {
-      const [content, photos, announcements] = await Promise.all([
-        remotePullContent(), remotePullPhotos(), remotePullAnnouncements(),
+      const [content, photos, announcements, trainers] = await Promise.all([
+        remotePullContent(), remotePullPhotos(), remotePullAnnouncements(), remotePullTrainers(),
       ]);
       if (content) localStorage.setItem(STORAGE_CONTENT_KEY, JSON.stringify(content));
       if (photos) localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
       if (announcements) localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
+      if (trainers) localStorage.setItem(TRAINERS_KEY, JSON.stringify(trainers));
+      else if (trainers === undefined) localStorage.removeItem(TRAINERS_KEY);
+      renderTrainers();
       applySavedContent();
       applySavedPhotos();
       renderAnnouncements();
@@ -349,6 +402,7 @@
     adminBar.classList.add('open');
     document.body.classList.add('admin-mode');
     renderAnnouncements();
+    carousel.restartAutoplay();
     showToast(isRemote ? 'Адмін-режим активовано (хмара Supabase)' : 'Адмін-режим активовано (локальний режим)');
   }
 
@@ -356,6 +410,7 @@
     setEditing(false);
     adminBar.classList.remove('open');
     document.body.classList.remove('admin-mode');
+    carousel.restartAutoplay();
     if (isRemote) {
       await sb.auth.signOut();
     } else {
@@ -414,6 +469,7 @@
     localStorage.removeItem(STORAGE_CONTENT_KEY);
     localStorage.removeItem(PHOTO_STORAGE_KEY);
     localStorage.removeItem(ANNOUNCEMENTS_KEY);
+    localStorage.removeItem(TRAINERS_KEY);
     if (isRemote) {
       try {
         await Promise.all([
@@ -510,8 +566,11 @@
     }
   }
 
-  document.querySelectorAll('[data-photo-input]').forEach((input) => {
-    input.addEventListener('change', async (e) => {
+  // Делегування: працює і для карток, доданих пізніше (нові тренери)
+  document.addEventListener('change', async (e) => {
+    const input = e.target.closest && e.target.closest('[data-photo-input]');
+    if (!input) return;
+    {
       const key = input.dataset.photoInput;
       const file = e.target.files[0];
       if (!file) return;
@@ -532,21 +591,21 @@
       } finally {
         input.value = '';
       }
-    });
+    }
   });
 
-  document.querySelectorAll('[data-photo-remove]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const key = btn.dataset.photoRemove;
-      const photos = getPhotoStore();
-      if (!photos[key]) return;
-      if (!confirm('Видалити це фото?')) return;
-      delete photos[key];
-      localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
-      applySavedPhotos();
-      if (isRemote) await remoteDeletePhoto(key);
-      showToast('Фото видалено');
-    });
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest && e.target.closest('[data-photo-remove]');
+    if (!btn) return;
+    const key = btn.dataset.photoRemove;
+    const photos = getPhotoStore();
+    if (!photos[key]) return;
+    if (!confirm('Видалити це фото?')) return;
+    delete photos[key];
+    localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+    applySavedPhotos();
+    if (isRemote) await remoteDeletePhoto(key);
+    showToast('Фото видалено');
   });
 
   /* ============================================================
@@ -674,9 +733,10 @@
 
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
-    deleteBtn.className = 'announcement-card__delete';
+    deleteBtn.className = 'announcement-card__delete admin-round-btn admin-round-btn--remove';
     deleteBtn.title = 'Видалити оголошення';
-    deleteBtn.textContent = '🗑';
+    deleteBtn.setAttribute('aria-label', 'Видалити оголошення');
+    deleteBtn.innerHTML = ICON_CROSS;
     deleteBtn.addEventListener('click', () => deleteAnnouncement(item.id));
 
     card.appendChild(poster);
@@ -736,6 +796,385 @@
       showToast('Оголошення додано — заповни деталі');
     });
   }
+
+  /* ============================================================
+     Тренери: додавання / видалення + безкінечна карусель
+     ============================================================ */
+  // Початкові тренери беруться з HTML-розмітки
+  const trainerDefaults = {};
+  const defaultTrainerIds = [];
+  document.querySelectorAll('#trainersTrack .trainer-card[data-trainer-id]').forEach((card) => {
+    const id = card.dataset.trainerId;
+    const photo = card.querySelector('.trainer-card__photo');
+    defaultTrainerIds.push(id);
+    trainerDefaults[id] = {
+      name: card.querySelector('h3').textContent.trim(),
+      role: card.querySelector('.trainer-card__role').textContent.trim(),
+      hue: photo ? parseInt(photo.style.getPropertyValue('--hue'), 10) : 140,
+    };
+  });
+
+  function getContentCache() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_CONTENT_KEY) || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  async function saveContentKey(key, value) {
+    const cache = getContentCache();
+    if (cache[key] === value) return;
+    cache[key] = value;
+    localStorage.setItem(STORAGE_CONTENT_KEY, JSON.stringify(cache));
+    if (isRemote) await remotePushContent({ [key]: value });
+  }
+
+  function getTrainerIds() {
+    try {
+      const ids = JSON.parse(localStorage.getItem(TRAINERS_KEY) || 'null');
+      if (Array.isArray(ids)) return ids;
+    } catch (e) { /* ignore */ }
+    return defaultTrainerIds.slice();
+  }
+
+  async function saveTrainerIds(ids) {
+    localStorage.setItem(TRAINERS_KEY, JSON.stringify(ids));
+    if (isRemote) {
+      const ok = await remotePushTrainers(ids);
+      if (!ok) showToast('Не вдалося зберегти список тренерів у хмарі');
+    }
+  }
+
+  function trainerHue(id) {
+    if (trainerDefaults[id]) return trainerDefaults[id].hue;
+    let h = 0;
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
+    return 95 + (h % 70); // зелені відтінки, як у решти карток
+  }
+
+  function buildTrainerCard(id, content, photos) {
+    const defaults = trainerDefaults[id] || { name: 'Новий тренер', role: 'Напрям тренувань' };
+    const name = content[id + '.name'] != null ? content[id + '.name'] : defaults.name;
+    const role = content[id + '.role'] != null ? content[id + '.role'] : defaults.role;
+
+    const card = document.createElement('article');
+    card.className = 'trainer-card';
+    card.dataset.trainerId = id;
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'trainer-card__delete admin-round-btn admin-round-btn--remove';
+    del.title = 'Видалити тренера';
+    del.setAttribute('aria-label', 'Видалити тренера');
+    del.innerHTML = ICON_CROSS;
+    del.addEventListener('click', () => deleteTrainer(id));
+
+    const photo = document.createElement('div');
+    photo.className = 'trainer-card__photo photo-slot' + (photos[id] ? ' has-photo' : '');
+    photo.style.setProperty('--hue', trainerHue(id));
+
+    const img = document.createElement('img');
+    img.className = 'photo-img';
+    img.dataset.photoKey = id;
+    img.alt = name;
+    if (photos[id]) img.src = photos[id];
+
+    const label = document.createElement('label');
+    label.className = 'photo-upload';
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.hidden = true;
+    input.dataset.photoInput = id;
+    const uploadBtn = document.createElement('span');
+    uploadBtn.className = 'photo-upload__btn';
+    uploadBtn.textContent = '📷 Фото';
+    label.appendChild(input);
+    label.appendChild(uploadBtn);
+
+    const removePhoto = document.createElement('button');
+    removePhoto.type = 'button';
+    removePhoto.className = 'photo-remove';
+    removePhoto.dataset.photoRemove = id;
+    removePhoto.title = 'Видалити фото';
+    removePhoto.textContent = '✕';
+
+    photo.appendChild(img);
+    photo.appendChild(label);
+    photo.appendChild(removePhoto);
+
+    const nameEl = document.createElement('h3');
+    nameEl.dataset.editKey = id + '.name';
+    nameEl.textContent = name;
+
+    const roleEl = document.createElement('span');
+    roleEl.className = 'trainer-card__role';
+    roleEl.dataset.editKey = id + '.role';
+    roleEl.textContent = role;
+
+    [nameEl, roleEl].forEach((el) => {
+      el.setAttribute('contenteditable', editing ? 'true' : 'false');
+      el.spellcheck = false;
+    });
+
+    card.appendChild(del);
+    card.appendChild(photo);
+    card.appendChild(nameEl);
+    card.appendChild(roleEl);
+    return card;
+  }
+
+  function renderTrainers() {
+    if (!trainersTrack) return;
+    const content = getContentCache();
+    const photos = getPhotoStore();
+    trainersTrack.innerHTML = '';
+    getTrainerIds().forEach((id) => trainersTrack.appendChild(buildTrainerCard(id, content, photos)));
+    carousel.setup();
+  }
+
+  function refreshTrainerClones() {
+    carousel.rebuildClones();
+  }
+
+  async function deleteTrainer(id) {
+    const nameEl = trainersTrack.querySelector(`[data-edit-key="${id}.name"]`);
+    const name = nameEl ? nameEl.textContent.trim() : 'цього тренера';
+    if (!confirm(`Видалити тренера «${name}»?`)) return;
+
+    await saveTrainerIds(getTrainerIds().filter((t) => t !== id));
+
+    const photos = getPhotoStore();
+    if (photos[id]) {
+      delete photos[id];
+      localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+    }
+    const keys = [id + '.name', id + '.role'];
+    const cache = getContentCache();
+    keys.forEach((k) => delete cache[k]);
+    localStorage.setItem(STORAGE_CONTENT_KEY, JSON.stringify(cache));
+    renderTrainers();
+    if (isRemote) await Promise.all([remoteDeletePhoto(id), remoteDeleteContentKeys(keys)]);
+    showToast('Тренера видалено');
+  }
+
+  if (addTrainerBtn) {
+    addTrainerBtn.addEventListener('click', async () => {
+      const id = 'trainer_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      const ids = getTrainerIds();
+      ids.push(id);
+      await saveTrainerIds(ids);
+      if (!editing) setEditing(true);
+      renderTrainers();
+      carousel.showOriginal(ids.length - 1);
+      const nameEl = trainersTrack.querySelector(`[data-edit-key="${id}.name"]`);
+      if (nameEl) {
+        nameEl.focus({ preventScroll: true });
+        document.execCommand('selectAll', false, null);
+      }
+      showToast('Тренера додано — введи імʼя, напрям і завантаж фото');
+    });
+  }
+
+  if (trainersTrack) {
+    // Зміни імені/напряму тренера зберігаються одразу, як і в оголошеннях
+    trainersTrack.addEventListener('focusout', (e) => {
+      const el = e.target.closest('[data-edit-key]');
+      if (!el || !editing) return;
+      const value = el.textContent.trim();
+      saveContentKey(el.dataset.editKey, value);
+      if (el.tagName === 'H3') {
+        const img = el.closest('.trainer-card').querySelector('.photo-img');
+        if (img) img.alt = value;
+      }
+      refreshTrainerClones();
+    });
+  }
+
+  const carousel = (function () {
+    const root = trainersCarousel;
+    const track = trainersTrack;
+    const viewport = root ? root.querySelector('.trainers__viewport') : null;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const AUTOPLAY_MS = 4500;
+    let active = false;
+    let perView = 1;
+    let count = 0;
+    let index = 0;
+    let timer = null;
+    let hovering = false;
+
+    const noop = { setup() {}, rebuildClones() {}, showOriginal() {}, restartAutoplay() {} };
+    if (!root || !track || !viewport) return noop;
+
+    function originals() {
+      return Array.from(track.querySelectorAll('.trainer-card:not(.is-clone)'));
+    }
+
+    function makeClone(card) {
+      const clone = card.cloneNode(true);
+      clone.classList.add('is-clone');
+      clone.setAttribute('aria-hidden', 'true');
+      clone.querySelectorAll('.photo-upload, .photo-remove').forEach((el) => el.remove());
+      // На стику каруселі видно копію — кнопка «×» на ній видаляє оригінал
+      const del = clone.querySelector('.trainer-card__delete');
+      if (del) {
+        del.tabIndex = -1;
+        del.addEventListener('click', () => deleteTrainer(card.dataset.trainerId));
+      }
+      clone.querySelectorAll('[data-edit-key], [data-photo-key]').forEach((el) => {
+        el.removeAttribute('data-edit-key');
+        el.removeAttribute('data-photo-key');
+        el.removeAttribute('contenteditable');
+      });
+      clone.removeAttribute('data-trainer-id');
+      return clone;
+    }
+
+    function rebuildClones() {
+      track.querySelectorAll('.is-clone').forEach((c) => c.remove());
+      if (!active) return;
+      const cards = originals();
+      cards.slice(-perView).forEach((c) => track.insertBefore(makeClone(c), cards[0]));
+      cards.slice(0, perView).forEach((c) => track.appendChild(makeClone(c)));
+    }
+
+    function step() {
+      const first = track.querySelector('.trainer-card');
+      const gap = parseFloat(getComputedStyle(track).columnGap) || 24;
+      return first ? first.getBoundingClientRect().width + gap : 0;
+    }
+
+    function position(animate, dragOffset) {
+      track.classList.toggle('is-animating', !!animate);
+      track.style.transform = `translate3d(${-index * step() + (dragOffset || 0)}px, 0, 0)`;
+    }
+
+    function logicalIndex() {
+      return (((index - perView) % count) + count) % count;
+    }
+
+    function updateCounter() {
+      if (!trainersCounter) return;
+      const pad = (n) => String(n).padStart(2, '0');
+      trainersCounter.textContent = active ? `${pad(logicalIndex() + 1)} / ${pad(count)}` : '';
+    }
+
+    // Якщо стоїмо на клоні — непомітно перескакуємо на відповідну оригінальну картку
+    function normalize() {
+      if (index >= perView + count || index < perView) {
+        index = perView + logicalIndex();
+        position(false);
+        void track.offsetWidth;
+      }
+    }
+
+    function go(delta) {
+      if (!active) return;
+      normalize();
+      index += delta;
+      position(true);
+      updateCounter();
+    }
+
+    track.addEventListener('transitionend', (e) => {
+      if (e.target !== track) return;
+      track.classList.remove('is-animating');
+      normalize();
+    });
+
+    function setup() {
+      const keep = active ? logicalIndex() : 0;
+      perView = parseInt(getComputedStyle(root).getPropertyValue('--per-view'), 10) || 1;
+      count = originals().length;
+      active = count > perView;
+      root.classList.toggle('is-carousel', active);
+      rebuildClones();
+      if (active) {
+        index = perView + Math.min(keep, count - 1);
+        position(false);
+      } else {
+        track.style.transform = '';
+        track.classList.remove('is-animating');
+      }
+      updateCounter();
+      restartAutoplay();
+    }
+
+    function showOriginal(i) {
+      if (!active) return;
+      index = perView + Math.max(0, Math.min(i - perView + 1, count - 1));
+      position(false);
+      updateCounter();
+    }
+
+    function restartAutoplay() {
+      clearInterval(timer);
+      timer = null;
+      if (!active || reducedMotion || document.body.classList.contains('admin-mode')) return;
+      timer = setInterval(() => {
+        if (hovering || document.hidden || root.contains(document.activeElement)) return;
+        go(1);
+      }, AUTOPLAY_MS);
+    }
+
+    const prevBtn = document.getElementById('trainersPrev');
+    const nextBtn = document.getElementById('trainersNext');
+    if (prevBtn) prevBtn.addEventListener('click', () => go(-1));
+    if (nextBtn) nextBtn.addEventListener('click', () => go(1));
+    root.addEventListener('mouseenter', () => { hovering = true; });
+    root.addEventListener('mouseleave', () => { hovering = false; });
+
+    // Свайп / перетягування
+    let dragStartX = null;
+    let dragDx = 0;
+    let dragged = false;
+    viewport.addEventListener('pointerdown', (e) => {
+      if (!active || e.button !== 0) return;
+      if (e.target.closest('[contenteditable="true"], button, label, input')) return;
+      normalize();
+      dragStartX = e.clientX;
+      dragDx = 0;
+      dragged = false;
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (dragStartX === null) return;
+      dragDx = e.clientX - dragStartX;
+      if (!dragged && Math.abs(dragDx) > 6) {
+        dragged = true;
+        root.classList.add('is-dragging');
+      }
+      if (dragged) position(false, dragDx);
+    }, { passive: true });
+    window.addEventListener('pointerup', () => {
+      if (dragStartX === null) return;
+      dragStartX = null;
+      root.classList.remove('is-dragging');
+      if (!dragged) return;
+      const threshold = step() * 0.18;
+      if (dragDx <= -threshold) go(1);
+      else if (dragDx >= threshold) go(-1);
+      else position(true);
+    });
+    viewport.addEventListener('click', (e) => {
+      if (dragged) {
+        e.preventDefault();
+        e.stopPropagation();
+        dragged = false;
+      }
+    }, true);
+    // Фокус усередині прихованого overflow не повинен прокручувати в'юпорт
+    viewport.addEventListener('scroll', () => { viewport.scrollLeft = 0; });
+
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(setup, 150);
+    });
+
+    return { setup, rebuildClones, showOriginal, restartAutoplay };
+  })();
 
   /* ============================================================
      Перегляд заявок з контактної форми (тільки для адміна)
@@ -823,6 +1262,7 @@
   }
 
   /* ---------- Ініціалізація ---------- */
+  renderTrainers();
   applySavedContent();
   applySavedPhotos();
   renderAnnouncements();

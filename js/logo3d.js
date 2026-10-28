@@ -59,7 +59,7 @@
       white: 0xf4f6f4,
       edges: true,
       curveSegments: 24,
-      wireframe: false // true → transparent mesh drawn as thin green polygon lines
+      wireframe: false // true → transparent mesh drawn as thin polygon lines (green X, white FIT)
     }, opts || {});
     if (o.wireframe) Object.assign(o, { bevel: 0, edges: false, curveSegments: Math.min(o.curveSegments, 10) });
 
@@ -85,7 +85,7 @@
       : new THREE.MeshStandardMaterial({ color: o.green, emissive: o.green, emissiveIntensity: 0.35, metalness: 0.4, roughness: 0.3 });
     greenMat.name = 'XFit_Green';
     const whiteMat = o.wireframe
-      ? new THREE.MeshBasicMaterial({ color: o.green, wireframe: true, transparent: true, opacity: 0.45 })
+      ? new THREE.MeshBasicMaterial({ color: o.white, wireframe: true, transparent: true, opacity: 0.4 })
       : new THREE.MeshStandardMaterial({ color: o.white, emissive: 0x2a2e2a, metalness: 0.2, roughness: 0.35 });
     whiteMat.name = 'XFit_White';
 
