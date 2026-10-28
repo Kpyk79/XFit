@@ -92,6 +92,48 @@ if (window.matchMedia('(pointer: fine)').matches) {
 /* ============ CONTACT FORM ============ */
 const contactForm = document.getElementById('contactForm');
 const formNote = document.getElementById('formNote');
+const planSelect = document.getElementById('planSelect');
+
+/* Абонемент у заявці: список береться з карток розділу «Абонементи»
+   (адмін може їх додавати й перейменовувати), кнопка «Обрати» на картці
+   одразу підставляє цей абонемент у форму. */
+function planLabel(card) {
+  const name = card.querySelector('h3');
+  const price = card.querySelector('.price-card__price');
+  const nameText = name ? name.textContent.trim() : '';
+  const priceText = price ? price.textContent.replace(/\s+/g, ' ').trim() : '';
+  return [nameText, priceText].filter(Boolean).join(' — ');
+}
+
+function refreshPlanOptions() {
+  if (!planSelect) return;
+  const current = planSelect.value;
+  const labels = [...document.querySelectorAll('#pricing .price-card')].map(planLabel).filter(Boolean);
+  while (planSelect.options.length > 1) planSelect.remove(1);
+  labels.forEach((label) => planSelect.add(new Option(label, label)));
+  if (labels.includes(current)) planSelect.value = current;
+}
+
+const pricingGrid = document.querySelector('#pricing .pricing-grid');
+if (pricingGrid && planSelect) {
+  let planTimer = null;
+  new MutationObserver(() => {
+    clearTimeout(planTimer);
+    planTimer = setTimeout(refreshPlanOptions, 200);
+  }).observe(pricingGrid, { childList: true, subtree: true, characterData: true });
+  refreshPlanOptions();
+
+  pricingGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('a[href="#contact"]');
+    const card = btn && btn.closest('.price-card');
+    if (!card) return;
+    refreshPlanOptions();
+    planSelect.value = planLabel(card);
+    planSelect.classList.remove('is-picked');
+    void planSelect.offsetWidth;
+    planSelect.classList.add('is-picked');
+  });
+}
 
 const LEADS_URL = window.XFIT_SUPABASE_URL || '';
 const LEADS_KEY = window.XFIT_SUPABASE_ANON_KEY || '';
@@ -118,7 +160,11 @@ contactForm.addEventListener('submit', async (e) => {
   const formData = new FormData(contactForm);
   const name = (formData.get('name') || '').toString().trim();
   const phone = (formData.get('phone') || '').toString().trim();
-  const message = (formData.get('message') || '').toString().trim();
+  const note = (formData.get('message') || '').toString().trim();
+  const plan = (formData.get('plan') || '').toString().trim();
+  // Абонемент іде першим рядком повідомлення — так він видно і в листі,
+  // і в заявках адмінки без змін у шаблоні EmailJS чи таблиці leads
+  const message = plan ? `Абонемент: ${plan}` + (note ? `\n\n${note}` : '') : note;
 
   if (submitBtn) submitBtn.disabled = true;
 
@@ -129,7 +175,7 @@ contactForm.addEventListener('submit', async (e) => {
     tasks.push(leadsClient.from('leads').insert({ name, phone, message }));
   }
   if (emailjsReady) {
-    tasks.push(window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { name, phone, message }));
+    tasks.push(window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { name, phone, message, plan: plan || 'не обрано' }));
   }
 
   const results = await Promise.allSettled(tasks);
