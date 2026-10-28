@@ -253,3 +253,75 @@ contactForm.addEventListener('submit', async (e) => {
   });
 })();
 
+
+/* ============ WEB APP (PWA) ============ */
+(function initWebApp() {
+  // Service worker працює лише на справжньому сайті (https або localhost)
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch((err) => console.warn('Service worker не зареєстровано:', err));
+    });
+  }
+
+  const installButtons = document.querySelectorAll('[data-install]');
+  const sheet = document.getElementById('installSheet');
+  const sheetClose = document.getElementById('installSheetClose');
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let deferredPrompt = null;
+  const fab = document.getElementById('installFab');
+  const fabClose = document.getElementById('installFabClose');
+  const FAB_DISMISSED_KEY = 'xfit_install_fab_dismissed';
+  let fabDismissed = false;
+  try { fabDismissed = localStorage.getItem(FAB_DISMISSED_KEY) === '1'; } catch (e) { /* ignore */ }
+
+  const showButtons = (show) => {
+    installButtons.forEach((btn) => { btn.hidden = !show; });
+    if (fab) fab.hidden = !show || fabDismissed;
+  };
+
+  if (fabClose) {
+    fabClose.addEventListener('click', () => {
+      fabDismissed = true;
+      if (fab) fab.hidden = true;
+      try { localStorage.setItem(FAB_DISMISSED_KEY, '1'); } catch (e) { /* ignore */ }
+    });
+  }
+
+  if (isStandalone) return; // уже відкрито як додаток
+
+  // Android / Chrome / Edge: браузер сам пропонує встановлення — показуємо свою кнопку
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    showButtons(true);
+  });
+
+  // iPhone / iPad: кнопки встановлення в Safari немає — показуємо інструкцію
+  if (isIOS) showButtons(true);
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    showButtons(false);
+  });
+
+  const closeSheet = () => { if (sheet) sheet.hidden = true; };
+  if (sheetClose) sheetClose.addEventListener('click', closeSheet);
+  if (sheet) {
+    sheet.addEventListener('click', (e) => { if (e.target === sheet) closeSheet(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+  }
+
+  installButtons.forEach((btn) => btn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      if (outcome === 'accepted') showButtons(false);
+    } else if (isIOS && sheet) {
+      sheet.hidden = false;
+      if (sheetClose) sheetClose.focus();
+    }
+  }));
+})();
