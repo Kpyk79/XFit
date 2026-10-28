@@ -1,9 +1,10 @@
 /* XFit — service worker: робить сайт встановлюваним додатком і дає
    йому працювати без інтернету (показує останню завантажену версію).
-   Сторінка береться з мережі в першу чергу, щоб зміни з адмінки
-   з'являлись одразу; файли сайту — з кешу з оновленням у фоні.
-   Запити до Supabase, EmailJS та інших сайтів не чіпаємо. */
-const CACHE = 'xfit-v3'; // змінюй версію, коли міняються файли без ?v= (іконки, логотип)
+   Коли інтернет є, сторінка і файли сайту завжди перевіряються на
+   свіжість (кеш — лише запасний варіант офлайн), тож оновлення сайту
+   видно одразу. Бібліотеки з CDN мають версію в адресі — їх беремо з
+   кешу. Запити до Supabase, EmailJS та інших сайтів не чіпаємо. */
+const CACHE = 'xfit-v4'; // змінюй версію, коли міняєш сам sw.js
 const CORE = [
   './',
   'index.html',
@@ -34,19 +35,26 @@ self.addEventListener('fetch', (event) => {
   const cdn = /^(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|fonts\.(googleapis|gstatic)\.com)$/.test(url.hostname);
   if (!sameOrigin && !cdn) return;
 
-  if (req.mode === 'navigate') {
+  // Сторінка і файли сайту: спершу мережа з перевіркою свіжості (no-cache
+  // = браузер питає сервер, чи файл змінився; якщо ні — відповідь миттєва)
+  if (sameOrigin) {
+    const isPage = req.mode === 'navigate';
+    const key = isPage ? 'index.html' : req;
     event.respondWith(
-      fetch(req)
+      fetch(isPage ? req.url : req, { cache: 'no-cache', credentials: 'same-origin' })
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put('index.html', copy));
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(key, copy));
+          }
           return res;
         })
-        .catch(() => caches.match('index.html'))
+        .catch(() => caches.match(key).then((cached) => cached || (isPage ? caches.match('./') : undefined)))
     );
     return;
   }
 
+  // CDN: з кешу, з оновленням у фоні
   event.respondWith(
     caches.match(req).then((cached) => {
       const network = fetch(req)
