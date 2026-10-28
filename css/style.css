@@ -117,7 +117,10 @@ p{ color: var(--muted); line-height:1.7; margin:0 0 16px; }
   max-height: 64px; margin-top: 12px; overflow:hidden;
   transition: max-height .35s ease, margin .35s ease, opacity .3s ease;
 }
-.navbar.scrolled .ig-bar{ max-height:0; margin-top:0; opacity:0; pointer-events:none; }
+.navbar.scrolled .ig-bar, body.menu-open .ig-bar{ max-height:0; margin-top:0; opacity:0; pointer-events:none; }
+.mobile-menu__ig{ flex-direction:column; align-items:stretch; gap: 10px; margin-top: 4px; }
+.mobile-menu__ig .ig-pill{ height: 48px; }
+.mobile-menu__ig .ig-pill .ig-pill__arrow{ display:block; margin-left:auto; }
 .ig-bar__label{
   display:flex; align-items:center; gap:10px;
   font-size:.68rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color: var(--muted);
@@ -190,7 +193,7 @@ p{ color: var(--muted); line-height:1.7; margin:0 0 16px; }
   background: rgba(8,10,8,0.98); backdrop-filter: blur(20px);
   border-left: 1px solid var(--border);
   display:flex; flex-direction:column; gap: 22px;
-  padding: 100px 32px 40px;
+  padding: 100px 32px 40px; overflow-y:auto; overscroll-behavior: contain;
   transform: translateX(100%);
   transition: transform .4s cubic-bezier(.6,0,.2,1);
   z-index: 999;
@@ -625,6 +628,80 @@ body.admin-mode .announcements__admin-hint{ display:block; }
 
 .nav-link--announce, .mobile-link--announce{ display:none; }
 .nav-link--announce.is-visible, .mobile-link--announce.is-visible{ display:inline-flex; }
+
+/* ============ WEB APP: кнопка встановлення та інструкція для iPhone ============ */
+.install-btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  height: 44px; padding: 0 20px 0 16px; border-radius:999px; cursor:pointer;
+  font: 600 .88rem var(--font-body); color: var(--white);
+  border:1px dashed rgba(57,255,106,0.55); background: rgba(57,255,106,0.06);
+  transition: background .25s, border-color .25s, color .25s, transform .25s, box-shadow .25s;
+}
+.install-btn[hidden]{ display:none; }
+.install-btn svg{ width:18px; height:18px; fill:none; stroke: var(--green); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; transition: stroke .25s; }
+.install-btn:hover, .install-btn:focus-visible{
+  border-style:solid; border-color: var(--green); color: var(--green); outline:none;
+  box-shadow: 0 10px 30px -12px var(--green-glow); transform: translateY(-2px);
+}
+.install-btn--block{ width:100%; height: 48px; margin-top: 2px; }
+
+/* Плаваюча кнопка «Встановити додаток» (ліворуч унизу, з'являється лише там, де можна встановити) */
+.install-fab{
+  position:fixed; z-index: 900;
+  left: max(16px, env(safe-area-inset-left, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  display:flex; align-items:center; gap:6px;
+  animation: fabIn .5s cubic-bezier(.2,.8,.2,1) 2s both;
+}
+.install-fab[hidden], body.admin-mode .install-fab, body.menu-open .install-fab{ display:none; }
+@keyframes fabIn{ from{ transform: translateY(24px); opacity:0; } to{ transform:none; opacity:1; } }
+.install-fab__btn{
+  display:inline-flex; align-items:center; gap:10px; height: 46px; padding: 0 18px 0 9px;
+  border-radius:999px; border:1px solid var(--green); cursor:pointer;
+  background: var(--green); color:#04140a; font: 700 .86rem var(--font-body);
+  box-shadow: 0 12px 34px -10px var(--green-glow), 0 0 0 0 var(--green-glow);
+  animation: fabGlow 3s ease-in-out 3s infinite;
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.install-fab__btn[hidden]{ display:none; }
+.install-fab__btn img{ border-radius: 8px; box-shadow: 0 0 0 1px rgba(4,20,10,0.35); }
+.install-fab__btn:hover, .install-fab__btn:focus-visible{ transform: translateY(-2px); outline:none; box-shadow: 0 16px 40px -10px var(--green-glow); }
+@keyframes fabGlow{ 0%,100%{ box-shadow: 0 12px 34px -10px var(--green-glow), 0 0 0 0 rgba(57,255,106,0.45); } 50%{ box-shadow: 0 12px 34px -10px var(--green-glow), 0 0 0 8px rgba(57,255,106,0); } }
+.install-fab__close{
+  width:30px; height:30px; border-radius:50%; cursor:pointer; padding:0;
+  display:inline-flex; align-items:center; justify-content:center;
+  background: rgba(10,12,10,0.85); border:1px solid var(--border); color: var(--muted); backdrop-filter: blur(6px);
+  transition: color .2s, border-color .2s;
+}
+.install-fab__close svg{ width:14px; height:14px; fill:none; stroke: currentColor; stroke-width:2.2; stroke-linecap:round; }
+.install-fab__close:hover, .install-fab__close:focus-visible{ color: var(--white); border-color: rgba(255,255,255,0.3); outline:none; }
+
+.install-sheet{
+  position:fixed; inset:0; z-index: 3000; display:flex; align-items:flex-end; justify-content:center;
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+}
+.install-sheet[hidden]{ display:none; }
+.install-sheet__box{
+  width: min(420px, 100%); padding: 28px 24px 22px; border-radius: 24px; text-align:center;
+  background: var(--panel); border:1px solid rgba(57,255,106,0.3);
+  box-shadow: 0 -10px 60px -20px var(--green-glow);
+  animation: sheetUp .35s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes sheetUp{ from{ transform: translateY(40px); opacity:0; } to{ transform:none; opacity:1; } }
+.install-sheet__icon{ display:block; margin: 0 auto 14px; border-radius: 14px; box-shadow: 0 0 24px -6px var(--green-glow); }
+.install-sheet h3{ font-size: 1.1rem; margin-bottom: 18px; }
+.install-sheet__steps{
+  list-style:none; counter-reset: step; margin: 0 0 22px; padding:0; text-align:left;
+  display:flex; flex-direction:column; gap: 12px;
+}
+.install-sheet__steps li{ counter-increment: step; position:relative; padding-left: 38px; color: var(--muted); line-height:1.5; font-size:.92rem; }
+.install-sheet__steps li::before{
+  content: counter(step); position:absolute; left:0; top:-1px; width:26px; height:26px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.8rem;
+  background: rgba(57,255,106,0.12); color: var(--green); border:1px solid rgba(57,255,106,0.4);
+}
+.install-sheet__steps b{ color: var(--white); font-weight:600; }
+.install-sheet__share{ width:18px; height:18px; vertical-align:-3px; fill:none; stroke: var(--green); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
 /* ============ FOOTER ============ */
 .footer{ padding: 48px 0 24px; border-top: 1px solid var(--border); }
