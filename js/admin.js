@@ -148,7 +148,10 @@
     document.querySelectorAll('[data-ig-handle-key]').forEach((a) => {
       const source = document.querySelector(`[data-edit-key="${a.dataset.igHandleKey}"]`);
       const url = source && instagramUrl(source.textContent);
-      if (url) a.href = url;
+      if (!url) return;
+      a.href = url;
+      const handleEl = a.querySelector('[data-ig-handle-text]');
+      if (handleEl) handleEl.textContent = '@' + decodeURIComponent(url.split('/').pop());
     });
   }
 
@@ -1025,7 +1028,8 @@
     });
   }
 
-  // «Колесо»: картки стоять по колу 3D-барабана, який крутиться свайпом з інерцією
+  // «Колесо»: картки стоять на 3D-барабані, видно кілька (5 на комп'ютері, 3 на телефоні),
+  // барабан крутиться свайпом з інерцією і нескінченно
   const carousel = (function () {
     const root = trainersCarousel;
     const track = trainersTrack;
@@ -1037,46 +1041,52 @@
     let active = false;
     let cards = [];
     let count = 0;
-    let theta = 0;     // кут між сусідніми картками, градуси
+    let half = 2;       // скільки карток видно з кожного боку від центральної
+    let step = 34;      // кут між сусідніми картками, градуси
     let radius = 0;
-    let angle = 0;     // поточний кут барабана
-    let target = 0;    // кут, до якого барабан доїжджає
+    let pos = 0;        // поточна позиція барабана в картках (дробова)
+    let target = 0;
     let velocity = 0;
     let raf = null;
     let timer = null;
     let hovering = false;
+    let dragging = false;
 
     const noop = { setup() {}, refresh() {}, showOriginal() {}, restartAutoplay() {} };
     if (!root || !track || !viewport) return noop;
 
+    const mod = (n, m) => ((n % m) + m) % m;
+
     function frontIndex() {
-      return ((Math.round(target / theta) % count) + count) % count;
+      return mod(Math.round(target), count);
     }
 
     function render() {
-      track.style.transform = `translateZ(${-radius}px) rotateY(${-angle}deg)`;
       cards.forEach((card, i) => {
-        let rel = (i * theta - angle) % 360;
-        if (rel > 180) rel -= 360;
-        if (rel < -180) rel += 360;
+        // зсув картки від центру по найкоротшому шляху по колу
+        let rel = mod(i - pos + count / 2, count) - count / 2;
         const dist = Math.abs(rel);
-        const visible = dist < 100;
-        card.style.opacity = visible ? Math.max(0, 1 - dist / 105).toFixed(3) : '0';
-        card.style.filter = dist > 4 ? `brightness(${Math.max(0.35, 1 - dist / 120).toFixed(3)})` : '';
-        card.style.pointerEvents = visible ? '' : 'none';
-        card.style.zIndex = String(1000 - Math.round(dist));
-        card.classList.toggle('is-front', dist < theta / 2);
-        card.setAttribute('aria-hidden', dist < theta / 2 ? 'false' : 'true');
+        const hidden = dist > half + 0.5;
+        let opacity = 1 - Math.min(dist, half) * 0.14;
+        if (dist > half) opacity *= Math.max(0, 1 - (dist - half) * 2);
+        card.style.transform = `rotateY(${(rel * step).toFixed(3)}deg) translateZ(${radius}px)`;
+        card.style.opacity = hidden ? '0' : opacity.toFixed(3);
+        card.style.filter = dist > 0.05 ? `brightness(${Math.max(0.4, 1 - dist * 0.24).toFixed(3)})` : '';
+        card.style.visibility = hidden ? 'hidden' : '';
+        card.style.zIndex = String(100 - Math.round(dist * 10));
+        const front = dist < 0.5;
+        card.classList.toggle('is-front', front);
+        card.setAttribute('aria-hidden', front ? 'false' : 'true');
       });
     }
 
     function tick() {
       raf = null;
       if (dragging) return;
-      velocity = velocity * DAMPING + (target - angle) * STIFFNESS;
-      angle += velocity;
-      if (Math.abs(target - angle) < 0.05 && Math.abs(velocity) < 0.05) {
-        angle = target;
+      velocity = velocity * DAMPING + (target - pos) * STIFFNESS;
+      pos += velocity;
+      if (Math.abs(target - pos) < 0.001 && Math.abs(velocity) < 0.001) {
+        pos = target;
         velocity = 0;
         render();
         return;
@@ -1087,7 +1097,7 @@
 
     function animate() {
       if (reducedMotion) {
-        angle = target;
+        pos = target;
         velocity = 0;
         render();
         return;
@@ -1097,49 +1107,45 @@
 
     function go(delta) {
       if (!active) return;
-      target = Math.round(target / theta) * theta + delta * theta;
+      target = Math.round(target) + delta;
       animate();
     }
 
     function spinTo(i) {
-      // найкоротший шлях до картки i
-      const current = Math.round(target / theta);
-      let diff = (i - current) % count;
+      let diff = mod(i - Math.round(target), count);
       if (diff > count / 2) diff -= count;
-      if (diff < -count / 2) diff += count;
       go(diff);
     }
 
     function measure() {
       if (!active) return;
       const cardW = cards[0] ? cards[0].offsetWidth : 260;
-      const gap = cardW * 0.12;
-      radius = count > 2 ? Math.round((cardW / 2 + gap) / Math.tan(Math.PI / count)) : cardW;
+      radius = Math.round((cardW / 2 + cardW * 0.08) / Math.tan((step * Math.PI) / 360));
+      track.style.transform = `translateZ(${-radius}px)`;
       track.style.height = Math.max(...cards.map((c) => c.offsetHeight)) + 'px';
       render();
     }
 
     function setup() {
       const keep = active ? frontIndex() : 0;
-      const perView = parseInt(getComputedStyle(root).getPropertyValue('--per-view'), 10) || 1;
+      const css = getComputedStyle(root);
+      const perView = parseInt(css.getPropertyValue('--per-view'), 10) || 1;
+      const visible = parseInt(css.getPropertyValue('--wheel-visible'), 10) || 5;
+      step = parseFloat(css.getPropertyValue('--wheel-step')) || 34;
       cards = Array.from(track.querySelectorAll('.trainer-card'));
       count = cards.length;
       active = count > perView;
+      half = Math.floor((Math.min(visible, count) - 1) / 2);
       root.classList.toggle('is-wheel', active);
       if (active) {
-        theta = 360 / count;
-        target = angle = Math.min(keep, count - 1) * theta;
+        target = pos = Math.min(keep, count - 1);
         velocity = 0;
         measure();
-        cards.forEach((card, i) => {
-          card.style.transform = `rotateY(${i * theta}deg) translateZ(${radius}px)`;
-        });
-        render();
       } else {
         track.style.transform = '';
         track.style.height = '';
         cards.forEach((card) => {
-          ['transform', 'opacity', 'filter', 'pointerEvents', 'zIndex'].forEach((k) => { card.style[k] = ''; });
+          ['transform', 'opacity', 'filter', 'visibility', 'zIndex'].forEach((k) => { card.style[k] = ''; });
           card.classList.remove('is-front');
           card.removeAttribute('aria-hidden');
         });
@@ -1149,7 +1155,7 @@
 
     function showOriginal(i) {
       if (!active) return;
-      target = angle = i * theta;
+      target = pos = i;
       velocity = 0;
       render();
     }
@@ -1172,17 +1178,16 @@
     root.addEventListener('mouseleave', () => { hovering = false; });
 
     // Свайп: тягнеш — барабан крутиться за пальцем, відпускаєш — котиться за інерцією
-    let dragging = false;
     let startX = 0;
-    let startAngle = 0;
+    let startPos = 0;
     let lastX = 0;
     let lastT = 0;
-    let dragVelocity = 0; // градусів за мс
+    let dragVelocity = 0; // карток за мс
     let moved = false;
     let pressedCard = null;
 
-    function degPerPx() {
-      return theta / ((cards[0] && cards[0].offsetWidth) || 260);
+    function cardsPerPx() {
+      return 1 / ((cards[0] && cards[0].offsetWidth) || 260);
     }
 
     viewport.addEventListener('pointerdown', (e) => {
@@ -1192,7 +1197,7 @@
       moved = false;
       startX = lastX = e.clientX;
       lastT = performance.now();
-      startAngle = angle;
+      startPos = pos;
       dragVelocity = 0;
       velocity = 0;
       pressedCard = e.target.closest('.trainer-card');
@@ -1207,15 +1212,15 @@
       if (!moved) return;
       const now = performance.now();
       const dt = Math.max(1, now - lastT);
-      const v = -(e.clientX - lastX) * degPerPx() / dt;
+      const v = -(e.clientX - lastX) * cardsPerPx() / dt;
       dragVelocity = dragVelocity * 0.6 + v * 0.4;
       lastX = e.clientX;
       lastT = now;
-      angle = startAngle - dx * degPerPx();
-      target = angle;
+      pos = startPos - dx * cardsPerPx();
+      target = pos;
       render();
     }, { passive: true });
-    window.addEventListener('pointerup', () => {
+    function endDrag() {
       if (!dragging) return;
       dragging = false;
       root.classList.remove('is-dragging');
@@ -1226,11 +1231,12 @@
       }
       if (performance.now() - lastT > 120) dragVelocity = 0;
       // інерція: чим швидше свайп, тим далі прокрутиться колесо
-      const fling = dragVelocity * 380;
-      target = Math.round((angle + fling) / theta) * theta;
+      target = Math.round(pos + dragVelocity * 380);
       velocity = dragVelocity * 16;
       animate();
-    });
+    }
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
     viewport.addEventListener('click', (e) => {
       const card = e.target.closest('.trainer-card');
       if (moved || (active && card && !card.classList.contains('is-front') && !e.target.closest('button'))) {
@@ -1242,7 +1248,11 @@
     viewport.addEventListener('scroll', () => { viewport.scrollLeft = 0; });
 
     let resizeTimer = null;
+    let lastWidth = window.innerWidth;
     window.addEventListener('resize', () => {
+      // на телефонах resize спрацьовує і від ховання адресного рядка — реагуємо лише на зміну ширини
+      if (window.innerWidth === lastWidth) return;
+      lastWidth = window.innerWidth;
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(setup, 150);
     });
