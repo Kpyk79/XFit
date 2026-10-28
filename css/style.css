@@ -109,6 +109,29 @@ p{ color: var(--muted); line-height:1.7; margin:0 0 16px; }
 }
 .navbar__inner{ display:flex; align-items:center; gap: 20px; }
 
+.topbar{
+  max-height: 40px; overflow:hidden; margin: -10px 0 10px;
+  transition: max-height .3s ease, margin .3s ease, opacity .3s ease;
+}
+.navbar.scrolled .topbar{ max-height:0; margin:0; opacity:0; }
+.topbar__inner{ display:flex; align-items:center; justify-content:flex-end; gap: 10px; height: 34px; }
+.topbar__label{
+  font-size:.68rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color: var(--muted);
+  margin-right: 4px;
+}
+.ig-link{
+  display:inline-flex; align-items:center; gap:7px; height: 28px; padding: 0 12px 0 8px;
+  border:1px solid var(--border); border-radius:999px; background: rgba(57,255,106,0.04);
+  font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color: var(--white);
+  transition: border-color .25s, color .25s, background .25s, box-shadow .25s;
+}
+.ig-link:hover, .ig-link:focus-visible{
+  border-color: rgba(57,255,106,0.6); color: var(--green); background: rgba(57,255,106,0.1);
+  box-shadow: 0 0 18px -6px var(--green-glow);
+}
+.ig-icon{ width:16px; height:16px; fill:none; stroke: var(--green); stroke-width:1.8; filter: drop-shadow(0 0 4px var(--green-glow)); }
+.ig-icon__dot{ fill: var(--green); stroke:none; }
+
 .logo{ display:flex; align-items:baseline; font-family: var(--font-display); font-size: 1.4rem; font-weight:900; gap:2px; }
 .logo__x{ color: var(--green); text-shadow: 0 0 16px var(--green-glow); }
 .logo__fit{ color: var(--white); }
@@ -273,8 +296,44 @@ p{ color: var(--muted); line-height:1.7; margin:0 0 16px; }
 .feature p{ font-size:.9rem; margin:0; }
 
 /* ============ TRAINERS ============ */
-.trainers-grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 56px; }
-.trainer-card{ text-align:center; }
+.trainers{ margin-top: 56px; --per-view: 4; }
+.trainers__viewport{ position:relative; }
+.trainers-grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+.trainer-card{ position:relative; text-align:center; }
+.trainers__controls{ display:none; align-items:center; justify-content:center; gap: 18px; margin-top: 32px; }
+.carousel-arrow{
+  width:48px; height:48px; border-radius:50%; border:1px solid var(--border); background: rgba(57,255,106,0.04);
+  color: var(--white); cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+  transition: border-color .25s, color .25s, background .25s, transform .25s, box-shadow .25s;
+}
+.carousel-arrow svg{ width:20px; height:20px; fill:none; stroke: currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.carousel-arrow:hover, .carousel-arrow:focus-visible{
+  border-color: var(--green); color: var(--green); background: rgba(57,255,106,0.1);
+  box-shadow: 0 0 22px -6px var(--green-glow); outline:none;
+}
+.carousel-arrow:active{ transform: scale(.94); }
+
+/* Більше тренерів, ніж вміщується в рядок → 3D-колесо, яке крутиться свайпом */
+.trainers.is-wheel .trainers__viewport{
+  perspective: 1600px; perspective-origin: 50% 40%;
+  overflow:hidden; padding: 16px 0 8px; margin-top: -16px; touch-action: pan-y; cursor: grab;
+  mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 88%, transparent 100%);
+}
+.trainers.is-wheel .trainers-grid{
+  display:block; position:relative; width: var(--wheel-card, 270px); margin: 0 auto;
+  transform-style: preserve-3d; user-select:none; will-change: transform;
+}
+.trainers.is-wheel .trainer-card{
+  position:absolute; top:0; left:0; width:100%;
+  backface-visibility: hidden; transform-style: preserve-3d; will-change: transform, opacity;
+}
+.trainers.is-wheel .trainer-card.is-front .trainer-card__photo{
+  box-shadow: 0 24px 60px -24px var(--green-glow); border-color: rgba(57,255,106,0.35);
+}
+.trainers.is-wheel .trainer-card:not(.is-front){ cursor:pointer; }
+.trainers.is-wheel .trainers__controls{ display:flex; }
+.trainers.is-dragging .trainers__viewport, .trainers.is-dragging .trainer-card{ cursor:grabbing; }
+.trainer-card img{ -webkit-user-drag:none; }
 .trainer-card__photo{
   aspect-ratio: 3/4; border-radius: var(--radius); margin-bottom: 18px;
   background:
@@ -482,16 +541,36 @@ body.admin-mode .announcements:not(.is-active)::before{
 }
 .announcement-card [contenteditable="true"]:focus{ outline: 2px solid #39ff6a; background: rgba(57,255,106,0.1); }
 
-.announcement-card__delete{
-  display:none; position:absolute; top:10px; left:10px; z-index:3;
-  width:30px; height:30px; border-radius:50%; border:1px solid rgba(255,92,92,0.4);
-  background: rgba(6,7,6,0.8); color:#ff8080; font-size:.85rem; cursor:pointer;
-  align-items:center; justify-content:center;
-}
-body.admin-editing .announcement-card__delete{ display:flex; }
+.announcement-card__delete, .trainer-card__delete{ position:absolute; top:10px; left:10px; z-index:4; }
 
-.admin-only-control{ display:none; }
-body.admin-editing .admin-only-control{ display:inline-flex; }
+/* ============ ADMIN "+" / "×" BUTTONS ============ */
+.admin-round-btn{
+  display:none; align-items:center; justify-content:center; flex-shrink:0;
+  border-radius:50%; cursor:pointer; padding:0;
+  transition: transform .25s ease, background .25s, color .25s, border-color .25s, box-shadow .25s;
+}
+body.admin-mode .admin-round-btn{ display:inline-flex; }
+.admin-round-btn svg{ width:55%; height:55%; fill:none; stroke: currentColor; stroke-width:2.2; stroke-linecap:round; }
+.admin-round-btn:focus-visible{ outline:2px solid var(--green); outline-offset:3px; }
+.admin-round-btn--add{
+  width:52px; height:52px; color: var(--green);
+  border:1px dashed rgba(57,255,106,0.7); background: rgba(57,255,106,0.08);
+  box-shadow: 0 0 24px -8px var(--green-glow), inset 0 0 14px -6px var(--green-glow);
+}
+.admin-round-btn--add:hover{
+  background: var(--green); color:#04140a; border-style: solid; transform: rotate(90deg);
+  box-shadow: 0 0 30px -4px var(--green-glow);
+}
+.admin-round-btn--remove{
+  width:34px; height:34px; color:#ff8080;
+  border:1px solid rgba(255,92,92,0.55); background: rgba(6,7,6,0.85); backdrop-filter: blur(4px);
+}
+.admin-round-btn--remove:hover{
+  background:#ff5c5c; color:#fff; border-color:#ff5c5c; transform: rotate(90deg);
+  box-shadow: 0 0 22px -4px rgba(255,92,92,0.7);
+}
+.trainers__admin{ display:none; justify-content:center; margin-top: 28px; }
+body.admin-mode .trainers__admin{ display:flex; }
 .announcements__admin-hint{ display:none; }
 body.admin-mode .announcements__admin-hint{ display:block; }
 
@@ -513,6 +592,7 @@ body.admin-mode .announcements__admin-hint{ display:block; }
 @media (max-width: 1080px){
   .cards-grid{ grid-template-columns: repeat(2,1fr); }
   .trainers-grid{ grid-template-columns: repeat(2,1fr); }
+  .trainers{ --per-view: 2; }
   .gallery-grid{ grid-template-columns: repeat(2,1fr); }
   .announcements-grid{ grid-template-columns: repeat(2,1fr); }
   .features__grid{ grid-template-columns: repeat(2,1fr); }
@@ -532,6 +612,11 @@ body.admin-mode .announcements__admin-hint{ display:block; }
 @media (max-width: 640px){
   .container{ padding: 0 18px; }
   .section{ padding: 72px 0; }
+  .trainers{ --per-view: 1; }
+  .trainers{ --wheel-card: 200px; }
+  .trainers.is-wheel .trainers__viewport{ mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%); }
+  .topbar__label{ display:none; }
+  .topbar__inner{ justify-content:center; }
   .cards-grid, .trainers-grid, .gallery-grid, .announcements-grid, .features__grid, .locations-grid{ grid-template-columns: 1fr; }
   .photo-upload{ opacity:1; background: rgba(4,5,4,0.35); }
   .photo-upload__btn{ font-size:.72rem; padding:7px 12px; }
