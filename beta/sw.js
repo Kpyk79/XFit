@@ -9,7 +9,7 @@ const CORE = [
   './',
   'index.html',
   'train.html',
-  'css/style.css?v=29',
+  'css/style.css?v=30',
   'css/train.css?v=4',
   'js/train.js?v=3',
   'card.html',
