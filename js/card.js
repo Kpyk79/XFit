@@ -16,7 +16,7 @@
   }
   const daysBetween = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / DAY);
 
-  // Номер карти: 16 цифр з контрольною цифрою Луна, як у банківських карт
+  // Внутрішній номер карти (16 цифр, контрольна цифра Луна): зашитий у штрих-код і для пошуку в адмінці, клієнту не показується
   function luhnDigit(digits) {
     let sum = 0;
     for (let i = 0; i < digits.length; i++) {
@@ -70,7 +70,6 @@
   }
 
   const LOGO = '<svg class="xcard__logo" viewBox="314 60 792 435" aria-label="XFit" role="img"><use class="m" href="#xfMark"/><use class="w" href="#xfWord"/></svg>';
-  const NFC = '<svg class="xcard__nfc" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 7.5a6 6 0 0 1 0 9M12 5a9.5 9.5 0 0 1 0 14M15.5 2.5a13 13 0 0 1 0 19"/></svg>';
 
   function render(el, m) {
     const st = stateOf(m);
@@ -79,31 +78,36 @@
     el.tabIndex = 0;
     el.setAttribute('role', 'button');
     el.setAttribute('aria-label', 'Карта клієнта XFit. Натисни, щоб перевернути');
+    const pending = st.state === 'pending';
+    // на карті — лише назва абонемента («PRO»), ціна — у деталях під картою
+    const planName = String(m.plan || m.desired_plan || '').split(' — ')[0].trim();
     el.innerHTML = `
       <div class="xcard__inner">
         <div class="xcard__face xcard__front">
           <div class="xcard__grid"></div>
+          <span class="xcard__band" aria-hidden="true"></span>
           <svg class="xcard__watermark" viewBox="314 60 540 430" aria-hidden="true"><use href="#xfMark"/></svg>
-          <div class="xcard__top">${LOGO}<span class="xcard__plan">${esc(m.plan || (st.state === 'pending' ? 'Новий клієнт' : 'Абонемент'))}</span></div>
-          <div class="xcard__mid"><span class="xcard__chip"></span>${NFC}<span class="xcard__status" style="margin-left:auto">${st.label}</span></div>
-          <div class="xcard__number">${esc(groupNumber(m.card_number))}</div>
+          <div class="xcard__top">${LOGO}<span class="xcard__status">${st.label}</span></div>
+          <div class="xcard__plan-block">
+            <span class="xcard__kicker">${pending ? 'Обраний абонемент' : 'Абонемент'}</span>
+            <b class="xcard__plan">${esc(planName || (pending ? 'Ще не обрано' : '—'))}</b>
+          </div>
           <div class="xcard__bottom">
-            <div class="xcard__field"><span>Власник карти</span><b>${esc(m.full_name || '—')}</b></div>
-            <div class="xcard__field xcard__field--right"><span>Дійсна до</span><b>${esc(fmtMMYY(m.valid_to))}</b></div>
+            <div class="xcard__field"><span>Клієнт XFit</span><b>${esc(m.full_name || '—')}</b></div>
+            <div class="xcard__field xcard__field--right"><span>${pending ? 'Активація' : 'Діє до'}</span><b>${pending ? 'після оплати' : esc(fmtShortDate(m.valid_to))}</b></div>
           </div>
         </div>
         <div class="xcard__face xcard__back">
           <div class="xcard__grid"></div>
-          <div class="xcard__stripe"></div>
           <div class="xcard__backbody">
             <div class="xcard__qr">${m.token ? qrSvg(cardUrl(m.token)) : ''}</div>
             <div class="xcard__info">
-              <div class="xcard__field"><span>Власник</span><b>${esc(m.full_name || '—')}</b></div>
-              <div class="xcard__field"><span>Телефон</span><b>${esc(m.phone_masked || maskPhone(m.phone))}</b></div>
-              <p class="xcard__hint">Покажи QR-код або штрих-код на рецепції XFit</p>
+              <div class="xcard__field"><span>Клієнт</span><b>${esc(m.full_name || '—')}</b></div>
+              <div class="xcard__field"><span>${pending ? 'Обрано' : 'Абонемент'}</span><b>${esc(planName || '—')}</b></div>
+              <p class="xcard__hint">${pending ? 'Оплати абонемент на рецепції — адміністратор активує карту' : 'Покажи QR-код або штрих-код на рецепції'}</p>
             </div>
           </div>
-          <div class="xcard__barcode"><svg class="xcard__barsvg"></svg><span class="xcard__barnum">${esc(m.card_number || '')}</span></div>
+          <div class="xcard__barcode"><svg class="xcard__barsvg"></svg></div>
         </div>
       </div>`;
     const bar = el.querySelector('.xcard__barsvg');
@@ -191,10 +195,10 @@
     const note = document.getElementById('cardNote');
     if (st.state === 'pending') {
       details.innerHTML = `
-        <div class="card-row"><span>Статус</span><b>Абонемент ще не активовано</b></div>
-        <div class="card-row"><span>Номер карти</span><b>${esc(groupNumber(m.card_number))}</b></div>
+        <div class="card-row"><span>Статус</span><b>Чекає оплати на рецепції</b></div>
+        <div class="card-row"><span>Обраний абонемент</span><b>${esc(m.desired_plan || m.plan || '—')}</b></div>
         ${m.gym ? `<div class="card-row"><span>Зал</span><b>${esc(m.gym)}</b></div>` : ''}`;
-      note.textContent = opts.offline ? 'Немає з\'єднання — показано збережену карту.' : 'Покажи цю карту на рецепції XFit — адміністратор активує твій абонемент, і тут з\'являться його дати.';
+      note.textContent = opts.offline ? 'Немає з\'єднання — показано збережену карту.' : 'Оплати абонемент на рецепції XFit (готівкою або карткою) — адміністратор активує карту, і тут з\'являться дати абонемента. Після активації відкриються таймер і щоденник тренувань.';
       document.getElementById('demoBadge').hidden = !opts.demo;
       return;
     }
@@ -207,7 +211,6 @@
       </div>
       <div class="card-row"><span>Абонемент</span><b>${esc(m.plan || '—')}</b></div>
       <div class="card-row"><span>Діє</span><b>${esc(fmtShortDate(m.valid_from))} — ${esc(fmtShortDate(m.valid_to))}</b></div>
-      <div class="card-row"><span>Номер карти</span><b>${esc(groupNumber(m.card_number))}</b></div>
       ${m.gym ? `<div class="card-row"><span>Зал</span><b>${esc(m.gym)}</b></div>` : ''}`;
     note.textContent = opts.offline
       ? 'Немає з\'єднання — показано збережену карту' + (m.fetched_at ? ' від ' + new Date(m.fetched_at).toLocaleDateString('uk-UA') : '') + '.'
@@ -280,6 +283,43 @@
     }
   })();
 
+  /* ---------- Абонементи для форми: ті самі, що в розділі «Абонементи» на сайті ---------- */
+  async function loadPlans() {
+    const select = document.getElementById('regPlan');
+    if (!select) return;
+    const DEFAULT_IDS = ['price1', 'price2', 'price3'];
+    let ids = DEFAULT_IDS;
+    let content = {};
+    try {
+      const lists = JSON.parse(localStorage.getItem('xfit_lists_v1') || '{}');
+      if (Array.isArray(lists.pricing)) ids = lists.pricing;
+      content = JSON.parse(localStorage.getItem('xfit_content_v1') || '{}');
+    } catch (e) { /* ignore */ }
+    const url = window.XFIT_SUPABASE_URL || '';
+    const key = window.XFIT_SUPABASE_ANON_KEY || '';
+    if (window.supabase && url && key && !url.includes('YOUR-PROJECT')) {
+      try {
+        const sb = window.supabase.createClient(url, key);
+        const lst = await sb.from('site_settings').select('value').eq('key', 'list:pricing');
+        if (!lst.error && lst.data && lst.data[0]) ids = JSON.parse(lst.data[0].value);
+        const keys = ids.flatMap((id) => [id + '.name', id + '.amount']);
+        const rows = await sb.from('site_content').select('key,value').in('key', keys);
+        if (!rows.error) rows.data.forEach((r) => { content[r.key] = r.value; });
+      } catch (e) { /* лишаємо типові */ }
+    }
+    const DEFAULTS = { price1: ['Старт', '499₴'], price2: ['Повний', '799₴'], price3: ['PRO', '1299₴'] };
+    const options = ids.map((id) => {
+      const name = content[id + '.name'] || (DEFAULTS[id] || [])[0];
+      const amount = content[id + '.amount'] || (DEFAULTS[id] || [])[1];
+      return name ? name + (amount ? ' — ' + amount + '/міс' : '') : null;
+    }).filter(Boolean);
+    if (!options.length) return;
+    const prev = select.value;
+    select.innerHTML = options.map((o) => `<option value="${esc(o)}">${esc(o)}</option>`).join('');
+    select.value = options.includes(prev) ? prev : (options[1] || options[0]);
+  }
+  loadPlans();
+
   /* ---------- Реєстрація клієнта ---------- */
   const regForm = document.getElementById('regForm');
   const regError = document.getElementById('regError');
@@ -295,7 +335,7 @@
     if (!window.supabase || !url || !key || url.includes('YOUR-PROJECT')) return null;
     const sb = window.supabase.createClient(url, key);
     const { data, error } = await sb.rpc('register_member', {
-      p_full_name: f.full_name, p_phone: '+' + f.phone, p_gym: f.gym, p_birth_date: f.birth_date || null, p_email: f.email,
+      p_full_name: f.full_name, p_phone: '+' + f.phone, p_gym: f.gym, p_birth_date: f.birth_date || null, p_email: f.email, p_plan: f.plan,
     });
     if (error) {
       if (/phone_exists/.test(error.message)) throw new Error('Цей номер уже зареєстровано. Якщо загубив посилання на свою карту — звернись на рецепцію XFit.');
@@ -304,7 +344,7 @@
     }
     const row = Array.isArray(data) ? data[0] : data;
     const res = await fetchRemote(row.token);
-    return res.member || { token: row.token, card_number: row.card_number, full_name: f.full_name, gym: f.gym, status: 'pending' };
+    return res.member || { token: row.token, card_number: row.card_number, full_name: f.full_name, gym: f.gym, status: 'pending', desired_plan: f.plan };
   }
   function registerLocal(f) {
     // локальний режим (Supabase не налаштовано) — клієнт зберігається в цьому браузері
@@ -314,7 +354,7 @@
     const m = {
       id: (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()), card_number: newCardNumber(), token: newToken() + newToken(),
       full_name: f.full_name, phone: '+' + f.phone, gym: f.gym, birth_date: f.birth_date || null, email: f.email,
-      plan: '', valid_from: null, valid_to: null, status: 'pending', consent_at: new Date().toISOString(), created_at: new Date().toISOString(),
+      plan: '', desired_plan: f.plan, valid_from: null, valid_to: null, status: 'pending', consent_at: new Date().toISOString(), created_at: new Date().toISOString(),
     };
     list.unshift(m);
     localStorage.setItem('xfit_members_v1', JSON.stringify(list));
@@ -331,6 +371,7 @@
       birth_date: String(fd.get('birth_date') || ''),
       email: String(fd.get('email') || '').trim(),
       gym: String(fd.get('gym') || ''),
+      plan: String(fd.get('plan') || ''),
     };
     const bad = (name, msg) => { const el = regForm.elements[name]; el.setAttribute('aria-invalid', 'true'); el.focus(); regError.textContent = msg; };
     regForm.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));

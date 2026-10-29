@@ -750,10 +750,73 @@
     renderHistory();
   }
 
+  /* ============================================================
+     ДОСТУП: таймер і щоденник відкриваються з активною картою клієнта
+     (адміністратор активує карту після оплати абонемента на рецепції)
+     ============================================================ */
+  const CARD_KEY = 'xfit_card_v1';
+  function cardAccess(m) {
+    if (!m || !m.token) return 'none';
+    if (m.status === 'pending' && !m.valid_to) return 'pending';
+    if (!m.valid_to || m.valid_to < todayISO()) return 'expired';
+    return 'active';
+  }
+  function showLock(state) {
+    const lock = $('#trainLock');
+    const main = $('.train-main');
+    const open = state === 'active';
+    lock.hidden = open;
+    main.hidden = !open;
+    document.body.classList.toggle('is-locked', !open);
+    if (open) return;
+    const steps = $$('.train-lock__steps li', lock);
+    steps.forEach((li, i) => li.classList.toggle('is-done', (state === 'pending' && i === 0) || (state === 'expired' && i < 2)));
+    const text = {
+      none: ['Таймер і щоденник — для клієнтів XFit', 'Вони відкриваються разом з активною картою клієнта.', 'Отримати карту клієнта'],
+      pending: ['Майже готово', 'Твоя карта чекає оплати. Оплати обраний абонемент на рецепції — після активації таймер і щоденник відкриються автоматично.', 'Показати мою карту'],
+      expired: ['Абонемент закінчився', 'Продовж абонемент на рецепції, щоб знову користуватися таймером і щоденником. Твої записи збережено.', 'Показати мою карту'],
+    }[state];
+    $('#trainLockTitle').textContent = text[0];
+    $('#trainLockText').textContent = text[1];
+    $('#trainLockCta').textContent = text[2];
+  }
+  function readCard() {
+    try { return JSON.parse(localStorage.getItem(CARD_KEY) || 'null'); } catch (e) { return null; }
+  }
+  async function refreshCard(card) {
+    if (!card || !card.token) return card;
+    const url = window.XFIT_SUPABASE_URL || '';
+    const key = window.XFIT_SUPABASE_ANON_KEY || '';
+    try {
+      if (window.supabase && url && key && !url.includes('YOUR-PROJECT')) {
+        const sb = window.supabase.createClient(url, key);
+        const { data, error } = await sb.rpc('get_member_card', { p_token: card.token });
+        if (error) return card;
+        const row = Array.isArray(data) ? data[0] : data;
+        if (!row) return null; // карту видалено
+        const fresh = { ...card, ...row, token: card.token, fetched_at: Date.now() };
+        localStorage.setItem(CARD_KEY, JSON.stringify(fresh));
+        return fresh;
+      }
+      // локальний режим (без Supabase): статус береться з клієнтів цього браузера
+      const list = JSON.parse(localStorage.getItem('xfit_members_v1') || '[]');
+      const m = list.find((x) => x.token === card.token);
+      if (m) { const fresh = { ...card, ...m }; localStorage.setItem(CARD_KEY, JSON.stringify(fresh)); return fresh; }
+    } catch (e) { /* немає мережі — довіряємо збереженій карті */ }
+    return card;
+  }
+
   /* ---------- Старт ---------- */
   renderSettings();
   renderIdle();
   showTab(location.hash === '#log' ? 'log' : 'timer');
+  const cached = readCard();
+  showLock(cardAccess(cached));
+  refreshCard(cached).then((c) => showLock(cardAccess(c)));
+  // повернувся в додаток після активації на рецепції — перевіряємо знову
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') refreshCard(readCard()).then((c) => showLock(cardAccess(c)));
+  });
 
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {}));

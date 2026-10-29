@@ -758,6 +758,23 @@ body.admin-mode .reels:not(.is-configured){ opacity:.75; }
 .reels__follow{ display:flex; justify-content:center; gap: 10px; flex-wrap: wrap; margin: 24px 0 32px; }
 .reels__widget{ min-height: 0; }
 .reels.is-configured .reels__widget{ min-height: 320px; }
+.reels__strip{ position:relative; }
+.reels__strip[hidden]{ display:none; }
+.reels__track{
+  display:flex; gap: 18px; overflow-x:auto; scroll-snap-type: x mandatory; padding: 4px 4px 16px;
+  scrollbar-width: thin; scrollbar-color: rgba(57,255,106,0.4) transparent;
+}
+.reel{ flex: 0 0 min(340px, 86vw); scroll-snap-align: center; }
+.reel .instagram-media{ margin: 0 !important; min-width: 0 !important; width: 100% !important; border-radius: 16px !important; }
+.reel blockquote.instagram-media{
+  min-height: 520px; background: var(--panel) !important; border: 1px solid var(--border) !important;
+  display:flex; align-items:center; justify-content:center;
+}
+.reel blockquote.instagram-media a{ color: var(--green); font-weight: 600; }
+.reels__arrow{ position:absolute; top: 50%; transform: translateY(-50%); z-index: 2; background: rgba(6,7,6,0.85); backdrop-filter: blur(6px); }
+.reels__arrow--prev{ left: -8px; }
+.reels__arrow--next{ right: -8px; }
+@media (max-width: 640px){ .reels__arrow{ display:none; } }
 .reels-setup{ display:none; margin-top: 24px; padding: 18px 20px; border-radius: var(--radius); border: 1px dashed rgba(255,176,32,0.45); background: rgba(255,176,32,0.05); }
 body.admin-mode .reels-setup{ display:flex; flex-direction:column; gap: 12px; }
 .reels-setup__status{ margin:0; font-size:.9rem; color:#ffb020; }

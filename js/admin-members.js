@@ -25,7 +25,7 @@
     if (libsReady) return libsReady;
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'css/card.css?v=2';
+    css.href = 'css/card.css?v=3';
     document.head.appendChild(css);
     const load = (src) => new Promise((res, rej) => {
       const s = document.createElement('script');
@@ -36,7 +36,7 @@
     });
     libsReady = load('js/vendor/qrcode-generator-1.4.4.js')
       .then(() => load('js/vendor/jsbarcode-3.11.6.min.js'))
-      .then(() => load('js/card.js?v=2'));
+      .then(() => load('js/card.js?v=3'));
     return libsReady;
   }
 
@@ -123,7 +123,7 @@
         <div class="mem-row" data-id="${esc(m.id)}">
           <div class="mem-row__main">
             <b>${esc(m.full_name || 'Без імені')}</b>
-            <span>${m.status === 'pending' && !m.valid_to ? 'Зареєструвався сам · ' + esc(m.phone || '') : esc(m.plan || '—') + ' · до ' + fmt(m.valid_to)} · ${esc(C().groupNumber(m.card_number))}</span>
+            <span>${m.status === 'pending' && !m.valid_to ? 'Обрав: ' + esc(m.desired_plan || '—') + ' · ' + esc(m.phone || '') : esc(m.plan || '—') + ' · до ' + fmt(m.valid_to)} · ${esc(C().groupNumber(m.card_number))}</span>
           </div>
           ${statePill(m)}
           <div class="mem-row__actions">
@@ -149,7 +149,7 @@
         <label>ПІБ<input name="full_name" required maxlength="80" value="${esc(m ? m.full_name : '')}" placeholder="Прізвище та імʼя"></label>
         <label>Телефон<input name="phone" type="tel" maxlength="20" value="${esc(m ? m.phone : '')}" placeholder="+380…"></label>
         <div class="mem-form__row">
-          <label>Абонемент<input name="plan" list="memPlans" maxlength="40" value="${esc((m && m.plan) || p[1] || p[0] || '')}" required></label>
+          <label>Абонемент${m && m.desired_plan && !m.plan ? ` <span class="mem-hint">обрав: ${esc(m.desired_plan)}</span>` : ''}<input name="plan" list="memPlans" maxlength="40" value="${esc((m && m.plan) || matchPlan(m && m.desired_plan, p) || p[1] || p[0] || '')}" required></label>
           <label>Зал<input name="gym" list="memGyms" maxlength="40" value="${esc((m && m.gym) || g[0] || 'Подільськ')}"></label>
         </div>
         <datalist id="memPlans">${p.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
@@ -189,6 +189,13 @@
       }
     });
     form.full_name.focus();
+  }
+
+  // «Повний — 799₴/міс» → «Повний», якщо такий абонемент є в розділі «Абонементи»
+  function matchPlan(desired, list) {
+    if (!desired) return '';
+    const name = desired.split(' — ')[0].trim();
+    return list.find((x) => x.toLowerCase() === name.toLowerCase()) || name;
   }
 
   function uniqueNumber() {

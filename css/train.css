@@ -217,3 +217,25 @@
   .settings{ padding: 6px 14px; }
   .stepper output{ min-width: 54px; }
 }
+
+/* ---------- Доступ лише з активною картою ---------- */
+.train-lock{ padding-top: 40px; padding-bottom: 40px; max-width: 520px; }
+.train-lock[hidden]{ display:none; }
+.train-lock__box{
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 30px 24px;
+  display:flex; flex-direction:column; gap: 16px; text-align:center; align-items:center;
+}
+.train-lock__icon{ width: 64px; height: 64px; border-radius: 20px; display:flex; align-items:center; justify-content:center; background: rgba(57,255,106,0.1); border:1px solid rgba(57,255,106,0.35); }
+.train-lock__icon svg{ width: 30px; height: 30px; fill:none; stroke: var(--green); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.train-lock__title{ font-size: 1.3rem; line-height: 1.2; text-wrap: balance; }
+.train-lock__text{ margin: 0; max-width: 40ch; }
+.train-lock__steps{ list-style:none; counter-reset: s; margin: 4px 0 8px; padding: 0; display:flex; flex-direction:column; gap: 10px; text-align:left; width:100%; }
+.train-lock__steps li{ counter-increment: s; position:relative; padding-left: 38px; color: var(--muted); font-size:.92rem; line-height:1.45; }
+.train-lock__steps li::before{
+  content: counter(s); position:absolute; left:0; top:-1px; width: 26px; height: 26px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.8rem;
+  background: rgba(57,255,106,0.12); color: var(--green); border: 1px solid rgba(57,255,106,0.4);
+}
+.train-lock__steps li.is-done{ color: var(--white); }
+.train-lock__steps li.is-done::before{ content: "✓"; background: var(--green); color: #04140a; }
+body.is-locked .train-tabs{ visibility: hidden; }

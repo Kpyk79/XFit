@@ -125,18 +125,19 @@ alter table members add column if not exists birth_date date;
 alter table members add column if not exists email text not null default '';
 alter table members add column if not exists status text not null default 'active'; -- 'pending' = зареєструвався сам, абонемент ще не активовано
 alter table members add column if not exists consent_at timestamptz;
+alter table members add column if not exists desired_plan text not null default ''; -- що клієнт обрав при реєстрації
 
 -- Клієнт бачить лише свою карту — за секретним кодом з особистого посилання.
 -- Повертаються тільки дані для карти (телефон частково приховано, без нотаток).
 drop function if exists get_member_card(text);
 create or replace function get_member_card(p_token text)
-returns table (card_number text, full_name text, phone_masked text, plan text, gym text, valid_from date, valid_to date, status text)
+returns table (card_number text, full_name text, phone_masked text, plan text, gym text, valid_from date, valid_to date, status text, desired_plan text)
 language sql stable security definer set search_path = public as $$
   select m.card_number, m.full_name,
     case when length(d.digits) >= 7
       then '+' || left(d.digits, 3) || ' •• ••• ' || substr(right(d.digits, 4), 1, 2) || ' ' || right(d.digits, 2)
       else '' end,
-    m.plan, m.gym, m.valid_from, m.valid_to, m.status
+    m.plan, m.gym, m.valid_from, m.valid_to, m.status, m.desired_plan
   from members m
   cross join lateral (select regexp_replace(m.phone, '\D', '', 'g') as digits) d
   where length(p_token) >= 16 and m.token = p_token;
@@ -147,7 +148,8 @@ grant execute on function get_member_card(text) to anon, authenticated;
 
 -- Реєстрація клієнта самим клієнтом (з додатку). Номер карти й секретний код
 -- генерує сервер; один номер телефону — одна карта.
-create or replace function register_member(p_full_name text, p_phone text, p_gym text, p_birth_date date, p_email text)
+drop function if exists register_member(text, text, text, date, text);
+create or replace function register_member(p_full_name text, p_phone text, p_gym text, p_birth_date date, p_email text, p_plan text default '')
 returns table (token text, card_number text)
 language plpgsql volatile security definer set search_path = public as $$
 declare
@@ -182,11 +184,11 @@ begin
     v_num := v_body || ((10 - v_sum % 10) % 10)::text;
     exit when not exists (select 1 from members m where m.card_number = v_num);
   end loop;
-  insert into members (card_number, token, full_name, phone, gym, birth_date, email, status, consent_at, plan)
-  values (v_num, v_token, v_name, '+' || v_digits, left(coalesce(p_gym, ''), 40), p_birth_date, left(coalesce(p_email, ''), 120), 'pending', now(), '');
+  insert into members (card_number, token, full_name, phone, gym, birth_date, email, status, consent_at, plan, desired_plan)
+  values (v_num, v_token, v_name, '+' || v_digits, left(coalesce(p_gym, ''), 40), p_birth_date, left(coalesce(p_email, ''), 120), 'pending', now(), '', left(coalesce(p_plan, ''), 60));
   return query select v_token, v_num;
 end;
 $$;
 
-revoke all on function register_member(text, text, text, date, text) from public;
-grant execute on function register_member(text, text, text, date, text) to anon, authenticated;
+revoke all on function register_member(text, text, text, date, text, text) from public;
+grant execute on function register_member(text, text, text, date, text, text) to anon, authenticated;
