@@ -288,6 +288,11 @@ p{ color: var(--muted); line-height:1.7; margin:0 0 16px; }
 
 /* ============ ABOUT ============ */
 .about__text--centered{ max-width: 640px; margin: 0 auto; }
+.about__insta{ margin-top: 56px; }
+.about__insta-title{
+  text-align:center; margin: 0 0 20px; font-size:.78rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color: var(--green);
+}
+.about__insta behold-widget{ display:block; min-height: 200px; }
 
 .check-list{ margin: 24px 0 32px; display:flex; flex-direction:column; gap: 14px; }
 .check-list li{ position:relative; padding-left: 30px; color: var(--white); font-weight:500; }
