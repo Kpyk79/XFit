@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=29">
-<link rel="stylesheet" href="css/train.css?v=2">
+<link rel="stylesheet" href="css/train.css?v=4">
 </head>
 <body class="train-page">
 
@@ -71,7 +71,7 @@
         <div class="timer__center">
           <span class="timer__phase" id="timerPhase">Готовий?</span>
           <span class="timer__time" id="timerTime" aria-live="off">00:20</span>
-          <span class="timer__round" id="timerRound">8 раундів</span>
+          <span class="timer__round" id="timerRound">8 підходів</span>
         </div>
       </div>
       <p class="timer__total" id="timerTotal"></p>
@@ -106,7 +106,7 @@
         <div class="stepper"><button data-step="-15" aria-label="Менше">−</button><output data-value></output><button data-step="15" aria-label="Більше">+</button></div>
       </div>
       <div class="setting" data-field="rounds">
-        <span class="setting__label" data-rounds-label>Раунди</span>
+        <span class="setting__label" data-rounds-label>Підходи</span>
         <div class="stepper"><button data-step="-1" aria-label="Менше">−</button><output data-value></output><button data-step="1" aria-label="Більше">+</button></div>
       </div>
       <div class="setting setting--presets" data-field="restPreset">
@@ -125,6 +125,7 @@
 
   <!-- ===== ЩОДЕННИК ===== -->
   <section class="train-panel" id="panelLog" role="tabpanel" aria-labelledby="tabLog" hidden>
+    <p class="stats__caption">За останні 7 днів</p>
     <div class="stats" id="logStats"></div>
 
     <form class="log-form" id="logForm" autocomplete="off">
@@ -192,6 +193,6 @@
 
 <script src="js/supabase-config.js?v=27"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/train.js?v=2"></script>
+<script src="js/train.js?v=3"></script>
 </body>
 </html>

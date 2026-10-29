@@ -125,10 +125,11 @@
 
 /* ---------- Щоденник ---------- */
 .log-h{ font-size: 1rem; margin: 0 0 14px; }
+.stats__caption{ margin: 0 0 10px; font-size:.72rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color: var(--muted); }
 .stats{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-bottom: 22px; }
-.stat-tile{ background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px 14px 12px; min-width:0; }
-.stat-tile b{ display:block; font-family: var(--font-display); font-size: 1.35rem; color: var(--white); font-variant-numeric: tabular-nums; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
-.stat-tile span{ font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.stat-tile{ background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px 12px 12px; min-width:0; }
+.stat-tile b{ display:block; font-family: var(--font-display); font-size: clamp(1rem, 4.6vw, 1.35rem); line-height:1.15; color: var(--white); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat-tile span{ display:block; font-size: clamp(.68rem, 3.3vw, .8rem); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .log-form, .log-section{
   background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
@@ -172,7 +173,7 @@
 .chart-empty{ display:flex; align-items:center; justify-content:center; min-height: 160px; text-align:center; color: var(--muted); font-size: .9rem; border: 1px dashed var(--border); border-radius: 14px; padding: 16px; }
 .chart-stats{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
 .chart-stats div{ background: var(--bg); border-radius: 12px; padding: 10px 12px; min-width:0; }
-.chart-stats b{ display:block; font-family: var(--font-display); font-size: 1rem; color: var(--white); font-variant-numeric: tabular-nums; }
+.chart-stats b{ display:block; font-family: var(--font-display); font-size: clamp(.85rem, 3.8vw, 1rem); line-height:1.2; color: var(--white); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .chart-stats span{ font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 
 .history{ display:flex; flex-direction:column; gap: 16px; }
@@ -213,7 +214,6 @@
   .train-tab{ padding: 8px 14px; font-size: .84rem; }
   .train-bar__back .logo__svg{ height: 24px; }
   .log-form__row:first-of-type{ grid-template-columns: minmax(0,1fr); }
-  .stat-tile b{ font-size: 1.1rem; }
   .settings{ padding: 6px 14px; }
   .stepper output{ min-width: 54px; }
 }

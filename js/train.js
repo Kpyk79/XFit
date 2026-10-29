@@ -232,7 +232,7 @@
     setPhase('idle');
     timeEl.textContent = fmt(first ? first.dur : 0);
     if (cfg.mode === 'rest') roundEl.textContent = 'Відпочинок між підходами';
-    else roundEl.textContent = (first && first.rounds) + ' ' + plural(first && first.rounds, ['раунд', 'раунди', 'раундів']);
+    else roundEl.textContent = (first && first.rounds) + ' ' + plural(first && first.rounds, ['підхід', 'підходи', 'підходів']);
     const total = phases.reduce((s, p) => s + p.dur, 0);
     totalEl.textContent = cfg.mode === 'rest' ? '' : 'Усього: ' + fmt(total);
     setProgress(1);
@@ -261,7 +261,7 @@
     setPhase(p.type);
     timeEl.textContent = fmt(left);
     setProgress(left / p.dur);
-    roundEl.textContent = p.rounds ? `Раунд ${p.round} / ${p.rounds}` : (p.type === 'prep' ? 'Старт за мить' : '');
+    roundEl.textContent = p.rounds ? `Підхід ${p.round} / ${p.rounds}` : (p.type === 'prep' ? 'Старт за мить' : '');
     totalEl.textContent = cfg.mode === 'rest' ? '' : 'Залишилось: ' + fmt(totalRemaining(now));
   }
 
@@ -412,7 +412,7 @@
       }
     });
     const roundsLabel = $('[data-rounds-label]', settingsEl);
-    if (roundsLabel) roundsLabel.textContent = cfg.mode === 'emom' ? 'Хвилин / раундів' : 'Раунди';
+    if (roundsLabel) roundsLabel.textContent = cfg.mode === 'emom' ? 'Підходи (хвилини)' : 'Підходи';
     $$('.presets button', settingsEl).forEach((b) => b.classList.toggle('is-active', cfg.mode === 'rest' && Number(b.dataset.preset) === cfg.rest.rest));
     $('#optSound').checked = cfg.sound;
     $('#optVibrate').checked = cfg.vibrate;
@@ -482,6 +482,8 @@
   };
   const fmtShort = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('uk-UA', { day: 'numeric', month: 'short' });
   const fmtKg = (n) => (Math.round(n * 10) / 10).toLocaleString('uk-UA');
+  // великий тоннаж — у тоннах: 10 507,5 кг → «10,5 т»
+  const fmtMass = (kg) => (kg >= 1000 ? (Math.round(kg / 100) / 10).toLocaleString('uk-UA') + ' т' : fmtKg(kg) + ' кг');
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   const form = $('#logForm');
@@ -552,9 +554,9 @@
     const days = new Set(week.map((s) => s.d)).size;
     const tonnage = week.reduce((sum, s) => sum + s.w * s.r, 0);
     $('#logStats').innerHTML = `
-      <div class="stat-tile"><b>${days}</b><span>${plural(days, ['тренування', 'тренування', 'тренувань'])} за 7 днів</span></div>
+      <div class="stat-tile"><b>${days}</b><span>${plural(days, ['тренування', 'тренування', 'тренувань'])}</span></div>
       <div class="stat-tile"><b>${week.length}</b><span>${plural(week.length, ['підхід', 'підходи', 'підходів'])}</span></div>
-      <div class="stat-tile"><b>${fmtKg(tonnage)}</b><span>кг піднято</span></div>`;
+      <div class="stat-tile"><b>${fmtMass(tonnage)}</b><span>піднято</span></div>`;
   }
 
   /* ---------- Історія ---------- */
@@ -626,7 +628,7 @@
     statsBox.innerHTML = `
       <div><b>${fmtKg(allTimeBest)} кг</b><span>рекорд</span></div>
       <div><b>${change > 0 ? '+' : ''}${fmtKg(change)} кг</b><span>за період</span></div>
-      <div><b>${fmtKg(volume)}</b><span>кг об'єм</span></div>`;
+      <div><b>${fmtMass(volume)}</b><span>об'єм</span></div>`;
 
     if (points.length < 2) {
       chart.innerHTML = `<div class="chart-empty">${points.length ? 'Ще одне тренування з цією вправою — і з\'явиться графік.' : 'За цей період немає записів цієї вправи.'}</div>`;
