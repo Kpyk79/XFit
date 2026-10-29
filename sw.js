@@ -4,11 +4,15 @@
    свіжість (кеш — лише запасний варіант офлайн), тож оновлення сайту
    видно одразу. Бібліотеки з CDN мають версію в адресі — їх беремо з
    кешу. Запити до Supabase, EmailJS та інших сайтів не чіпаємо. */
-const CACHE = 'xfit-v4'; // змінюй версію, коли міняєш сам sw.js
+const CACHE = 'xfit-v5'; // змінюй версію, коли міняєш сам sw.js
 const CORE = [
   './',
   'index.html',
-  'manifest.webmanifest?v=2',
+  'train.html',
+  'css/style.css?v=27',
+  'css/train.css?v=1',
+  'js/train.js?v=1',
+  'manifest.webmanifest?v=3',
   'assets/favicon.svg?v=2',
   'assets/logo.svg',
   'assets/icon-192.png?v=2',
@@ -39,7 +43,9 @@ self.addEventListener('fetch', (event) => {
   // = браузер питає сервер, чи файл змінився; якщо ні — відповідь миттєва)
   if (sameOrigin) {
     const isPage = req.mode === 'navigate';
-    const key = isPage ? 'index.html' : req;
+    // кожна сторінка кешується окремо (без ?source=… та #…)
+    const page = url.pathname.split('/').pop() || 'index.html';
+    const key = isPage ? page : req;
     event.respondWith(
       fetch(isPage ? req.url : req, { cache: 'no-cache', credentials: 'same-origin' })
         .then((res) => {
@@ -49,7 +55,7 @@ self.addEventListener('fetch', (event) => {
           }
           return res;
         })
-        .catch(() => caches.match(key).then((cached) => cached || (isPage ? caches.match('./') : undefined)))
+        .catch(() => caches.match(key).then((cached) => cached || (isPage ? caches.match('index.html') : undefined)))
     );
     return;
   }

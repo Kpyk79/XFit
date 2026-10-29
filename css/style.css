@@ -733,6 +733,23 @@ body.admin-mode .announcements__admin-hint{ display:block; }
 .install-sheet__steps b{ color: var(--white); font-weight:600; }
 .install-sheet__share{ width:18px; height:18px; vertical-align:-3px; fill:none; stroke: var(--green); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
+/* ============ ДОДАТОК: таймер і щоденник ============ */
+.app-promo__lead{ max-width: 560px; margin-left:auto; margin-right:auto; }
+.app-promo{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 24px; margin-top: 40px; }
+.app-card{
+  display:flex; flex-direction:column; gap: 10px; padding: 28px; border-radius: var(--radius);
+  background: var(--panel); border:1px solid var(--border); transition: transform .3s ease, border-color .3s ease, box-shadow .3s ease;
+}
+.app-card:hover, .app-card:focus-visible{ transform: translateY(-6px); border-color: rgba(57,255,106,0.45); box-shadow: 0 20px 50px -24px var(--green-glow); outline:none; }
+.app-card__icon{
+  width: 52px; height: 52px; border-radius: 16px; display:flex; align-items:center; justify-content:center;
+  background: rgba(57,255,106,0.1); border:1px solid rgba(57,255,106,0.35); margin-bottom: 6px;
+}
+.app-card__icon svg{ width: 26px; height: 26px; fill:none; stroke: var(--green); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.app-card h3{ font-size: 1.15rem; }
+.app-card p{ margin:0; font-size:.92rem; }
+.app-card__go{ margin-top: auto; padding-top: 8px; color: var(--green); font-weight: 600; font-size: .9rem; }
+
 /* ============ FOOTER ============ */
 .footer{ padding: 48px 0 24px; border-top: 1px solid var(--border); }
 .footer__inner{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap: 24px; margin-bottom: 32px; }
@@ -791,7 +808,7 @@ body.admin-mode .announcements__admin-hint{ display:block; }
   .trainers.is-wheel .trainers__viewport{ margin-left:-18px; margin-right:-18px; }
   .hero__stats{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); }
   .trainers.is-wheel .trainers__viewport{ mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%); }
-  .cards-grid, .trainers-grid, .announcements-grid, .features__grid, .locations-grid{ grid-template-columns: 1fr; }
+  .cards-grid, .trainers-grid, .announcements-grid, .features__grid, .locations-grid, .app-promo{ grid-template-columns: 1fr; }
   .gallery-grid{ gap: 12px; }
   .trainers.is-wheel .trainer-card h3{ font-size: .9rem; }
   .trainers.is-wheel .trainer-card__role{ font-size: .66rem; letter-spacing: .03em; }
