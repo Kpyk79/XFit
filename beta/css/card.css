@@ -1,0 +1,145 @@
+/* ============ XFIT — віртуальна карта клієнта ============ */
+.card-page{ min-height: 100vh; display:flex; flex-direction:column; }
+.card-main{ flex:1; width:100%; max-width: 460px; margin: 0 auto; padding: 24px max(18px, env(safe-area-inset-right, 0px)) max(32px, env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)); display:flex; flex-direction:column; gap: 22px; }
+.card-head{ display:flex; align-items:center; justify-content:space-between; padding-top: env(safe-area-inset-top, 0px); }
+.card-head a{ display:flex; align-items:center; gap:6px; color: var(--muted); font-size:.85rem; }
+.card-head .logo__svg{ height: 26px; }
+.card-head__title{ font-size:.72rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color: var(--green); }
+
+/* ---------- Сама карта ---------- */
+.xcard{
+  --mx: 50%; --my: 30%;
+  position:relative; width:100%; aspect-ratio: 1.586; perspective: 1400px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; user-select:none;
+}
+.xcard:focus-visible{ outline: 2px solid var(--green); outline-offset: 6px; border-radius: 22px; }
+.xcard__inner{ position:absolute; inset:0; transform-style: preserve-3d; transition: transform .7s cubic-bezier(.2,.8,.2,1); }
+.xcard.is-flipped .xcard__inner{ transform: rotateY(180deg); }
+.xcard__face{
+  position:absolute; inset:0; border-radius: 20px; overflow:hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(57,255,106,0.30), transparent 55%),
+    radial-gradient(80% 70% at 0% 100%, rgba(57,255,106,0.14), transparent 60%),
+    linear-gradient(135deg, #0f1a11 0%, #070907 52%, #0c160e 100%);
+  border: 1px solid rgba(57,255,106,0.28);
+  box-shadow: 0 30px 70px -30px rgba(57,255,106,0.55), 0 10px 30px -10px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.08);
+  color: var(--white);
+}
+/* блиск, що рухається за пальцем / нахилом */
+.xcard__face::after{
+  content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode: screen;
+  background: radial-gradient(60% 50% at var(--mx) var(--my), rgba(255,255,255,0.14), transparent 60%);
+}
+.xcard__grid{
+  position:absolute; inset:0; opacity:.55;
+  background-image: linear-gradient(rgba(57,255,106,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(57,255,106,0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(90% 90% at 80% 10%, #000 10%, transparent 75%);
+}
+.xcard__watermark{ position:absolute; right: -6%; bottom: -12%; width: 62%; opacity: .07; fill: var(--green); }
+
+.xcard__front{ padding: 6.2% 7%; display:flex; flex-direction:column; }
+.xcard__top{ position:relative; display:flex; align-items:flex-start; justify-content:space-between; }
+.xcard__logo{ height: clamp(22px, 7.5cqw, 32px); width:auto; overflow:visible; }
+.xcard__logo .m{ fill: var(--green); filter: drop-shadow(0 0 8px rgba(57,255,106,0.55)); }
+.xcard__logo .w{ fill: var(--white); }
+.xcard__band{
+  position:absolute; top:-30%; right: 18%; width: 22%; height: 170%; transform: rotate(32deg);
+  background: linear-gradient(180deg, rgba(57,255,106,0) 0%, rgba(57,255,106,0.16) 45%, rgba(57,255,106,0) 100%);
+  pointer-events:none;
+}
+.xcard__top .xcard__status{
+  padding: 5px 10px; border-radius: 999px; border: 1px solid currentColor; background: rgba(6,7,6,0.55);
+}
+.xcard__plan-block{ position:relative; margin-top: auto; display:flex; flex-direction:column; gap: 4px; }
+.xcard__kicker{ font-size: .56rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(244,246,244,0.55); }
+.xcard__plan{
+  font-family: var(--font-display); font-weight: 900; text-transform: uppercase; letter-spacing: .02em; line-height: 1;
+  font-size: clamp(1.5rem, 10cqw, 2.6rem); color: var(--white); text-shadow: 0 0 24px rgba(57,255,106,0.35);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.xcard[data-state="pending"] .xcard__plan{ color: rgba(244,246,244,0.75); text-shadow:none; }
+.xcard__bottom{ position:relative; display:flex; align-items:flex-end; justify-content:space-between; gap: 12px; margin-top: 6%; }
+.xcard__field{ display:flex; flex-direction:column; gap: 3px; min-width:0; }
+.xcard__field span{ font-size: .52rem; letter-spacing:.18em; text-transform:uppercase; color: rgba(244,246,244,0.55); }
+.xcard__field b{ font-weight: 700; font-size: clamp(.72rem, 3.6cqw, .95rem); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow: ellipsis; }
+.xcard__field--right{ text-align:right; flex-shrink:0; }
+.xcard{ container-type: inline-size; }
+
+.xcard__back{ transform: rotateY(180deg); display:flex; flex-direction:column; }
+.xcard__backbody{ position:relative; flex:1; display:flex; align-items:center; gap: 6%; padding: 6% 6% 0; min-height:0; }
+.xcard__qr{ flex-shrink:0; height: 92%; aspect-ratio:1; background:#fff; border-radius: 10px; padding: 3.5%; box-shadow: 0 0 0 3px rgba(57,255,106,0.35); }
+.xcard__qr svg, .xcard__qr img{ display:block; width:100%; height:100%; }
+.xcard__info{ display:flex; flex-direction:column; gap: 6px; min-width:0; }
+.xcard__info .xcard__field b{ font-size: clamp(.68rem, 3.3cqw, .88rem); }
+.xcard__hint{ font-size: .6rem; line-height:1.4; color: rgba(244,246,244,0.6); margin:0; }
+.xcard__barcode{ position:relative; margin: 4% 6% 6%; background:#fff; border-radius: 8px; padding: 2.4% 4%; height: 18%; display:flex; align-items:center; justify-content:center; }
+.xcard__barcode{ flex-direction:column; gap: 1px; cursor: zoom-in; }
+.xcard__barcode svg{ width:100%; flex:1; min-height:0; }
+.xcard__qr{ cursor: zoom-in; }
+
+.xcard-zoom{
+  position:fixed; inset:0; z-index: 200; display:flex; flex-direction:column; align-items:center; justify-content:center; gap: 18px;
+  padding: max(24px, env(safe-area-inset-top, 0px)) 20px max(24px, env(safe-area-inset-bottom, 0px));
+  background: rgba(0,0,0,0.88); backdrop-filter: blur(6px); cursor: zoom-out;
+}
+.xcard-zoom[hidden]{ display:none; }
+.xcard-zoom p{ color: var(--muted); font-size:.85rem; margin:0; }
+.xcard-zoom__sheet{ background:#fff; border-radius: 20px; padding: 22px; display:flex; flex-direction:column; align-items:center; gap: 10px; box-shadow: 0 0 0 4px rgba(57,255,106,0.4); }
+.xcard-zoom__sheet--qr{ width: min(82vw, 360px); aspect-ratio: 1; }
+.xcard-zoom__sheet--qr svg{ width:100%; height:100%; }
+.xcard-zoom__sheet--bar{ width: min(92vw, 520px); height: 180px; }
+.xcard-zoom__sheet--bar svg{ width:100%; flex:1; }
+
+/* стан абонемента */
+.xcard__status{ display:inline-flex; align-items:center; gap:6px; font-size:.6rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color: var(--green); }
+.xcard__status::before{ content:""; width:7px; height:7px; border-radius:50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+.xcard[data-state="soon"] .xcard__status{ color: #ffb020; }
+.xcard[data-state="expired"] .xcard__status{ color: #ff6b6b; }
+.xcard[data-state="expired"] .xcard__face{ filter: saturate(.35); }
+
+.card-flip-hint{ text-align:center; font-size:.8rem; color: var(--muted); margin: -8px 0 0; display:flex; align-items:center; justify-content:center; gap:6px; }
+.card-flip-hint svg{ width:14px; height:14px; fill:none; stroke: currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+/* ---------- Деталі під картою ---------- */
+.card-details{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; display:flex; flex-direction:column; gap: 14px; }
+.card-row{ display:flex; justify-content:space-between; gap: 16px; font-size:.92rem; }
+.card-row span{ color: var(--muted); }
+.card-row b{ font-weight:600; text-align:right; font-variant-numeric: tabular-nums; }
+.card-progress{ display:flex; flex-direction:column; gap: 8px; }
+.card-progress__bar{ height: 8px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow:hidden; }
+.card-progress__bar i{ display:block; height:100%; border-radius: 999px; background: var(--green); box-shadow: 0 0 12px var(--green-glow); transition: width .6s ease; }
+.xcard-wrap[data-state="soon"] .card-progress__bar i{ background:#ffb020; box-shadow:none; }
+.xcard-wrap[data-state="expired"] .card-progress__bar i{ background:#ff6b6b; box-shadow:none; }
+.card-progress__label{ display:flex; justify-content:space-between; font-size:.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.card-progress__label b{ color: var(--white); }
+.card-note{ font-size:.82rem; color: var(--muted); text-align:center; margin:0; }
+.card-actions{ display:flex; flex-direction:column; gap: 10px; }
+.card-state{ text-align:center; padding: 40px 18px; border:1px dashed var(--border); border-radius: var(--radius); color: var(--muted); }
+.card-state h2{ font-size: 1.1rem; color: var(--white); margin-bottom: 8px; }
+.card-demo-badge{ align-self:center; font-size:.7rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#ffb020; border:1px solid rgba(255,176,32,0.4); border-radius:999px; padding: 5px 12px; }
+
+@media (prefers-reduced-motion: reduce){ .xcard__inner{ transition: none; } }
+
+/* ---------- Реєстрація ---------- */
+.reg{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding: 22px 20px; display:flex; flex-direction:column; gap: 14px; }
+.reg[hidden]{ display:none; }
+.reg__title{ font-size: 1.25rem; line-height:1.2; margin-bottom: 8px; text-wrap: balance; }
+.reg__lead{ font-size:.9rem; margin:0; }
+.reg__row{ display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; }
+.reg__field{ display:flex; flex-direction:column; gap: 6px; min-width:0; }
+.reg__field > span{ font-size:.74rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color: var(--muted); }
+.reg__field i{ font-style:normal; text-transform:none; letter-spacing:0; opacity:.7; }
+.reg__field input, .reg__field select{
+  width:100%; min-width:0; background: var(--bg); border:1px solid var(--border); border-radius: 12px; color: var(--white);
+  font: 500 1rem var(--font-body); padding: 13px 14px; color-scheme: dark;
+}
+.reg__field input:focus, .reg__field select:focus{ outline:none; border-color: var(--green); }
+.reg__field input[aria-invalid="true"]{ border-color: #ff6b6b; }
+.reg__hp{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
+.reg__consent{ display:flex; gap: 10px; align-items:flex-start; font-size:.84rem; color: var(--muted); cursor:pointer; }
+.reg__consent input{ width:20px; height:20px; margin-top: 1px; accent-color: var(--green); flex-shrink:0; }
+.reg__error{ color:#ff8080; font-size:.85rem; margin:0; min-height: 1.1em; }
+.xcard[data-state="pending"] .xcard__status{ color: #ffb020; }
+.xcard-wrap[data-state="pending"] .card-progress__bar i{ background: rgba(255,255,255,0.25); box-shadow:none; }
+@media (max-width: 420px){ .reg__row{ grid-template-columns: minmax(0,1fr); } }

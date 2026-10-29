@@ -1,0 +1,405 @@
+/* ============ NAVBAR SCROLL STATE ============ */
+const navbar = document.getElementById('navbar');
+const onScrollNav = () => {
+  navbar.classList.toggle('scrolled', window.scrollY > 20);
+};
+onScrollNav();
+window.addEventListener('scroll', onScrollNav, { passive: true });
+
+/* ============ MOBILE MENU ============ */
+const burger = document.getElementById('burger');
+const mobileMenu = document.getElementById('mobileMenu');
+burger.addEventListener('click', () => {
+  const open = mobileMenu.classList.toggle('open');
+  burger.classList.toggle('active', open);
+  burger.setAttribute('aria-expanded', String(open));
+  document.body.classList.toggle('menu-open', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+});
+mobileMenu.querySelectorAll('a').forEach(a => {
+  a.addEventListener('click', () => {
+    mobileMenu.classList.remove('open');
+    burger.classList.remove('active');
+    burger.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('menu-open');
+    document.body.style.overflow = '';
+  });
+});
+
+/* ============ CURSOR GLOW ============ */
+const cursorGlow = document.getElementById('cursorGlow');
+if (window.matchMedia('(pointer: fine)').matches) {
+  window.addEventListener('mousemove', (e) => {
+    cursorGlow.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%,-50%)`;
+    cursorGlow.style.opacity = 0.12;
+  }, { passive: true });
+}
+
+/* ============ SCROLL REVEAL ============ */
+const revealEls = document.querySelectorAll('.reveal');
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      const el = entry.target;
+      setTimeout(() => el.classList.add('is-visible'), (i % 4) * 90);
+      revealObserver.unobserve(el);
+    }
+  });
+}, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+revealEls.forEach(el => revealObserver.observe(el));
+
+/* ============ COUNTERS ============ */
+const counters = document.querySelectorAll('.stat__num');
+const animateCounter = (el) => {
+  const target = parseInt(el.dataset.count, 10);
+  const duration = 1400;
+  const start = performance.now();
+  const tick = (now) => {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(eased * target);
+    if (progress < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+};
+const counterObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      animateCounter(entry.target);
+      counterObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.6 });
+counters.forEach(el => counterObserver.observe(el));
+
+/* ============ TILT CARDS ============ */
+const tiltCards = document.querySelectorAll('.tilt-card');
+if (window.matchMedia('(pointer: fine)').matches) {
+  tiltCards.forEach(card => {
+    const inner = card.querySelector('.tilt-card__inner');
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      inner.style.transform = `rotateY(${x * 14}deg) rotateX(${-y * 14}deg) translateZ(10px)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      inner.style.transform = 'rotateY(0deg) rotateX(0deg) translateZ(0)';
+    });
+  });
+}
+
+/* ============ CONTACT FORM ============ */
+const contactForm = document.getElementById('contactForm');
+const formNote = document.getElementById('formNote');
+const planSelect = document.getElementById('planSelect');
+
+/* Абонемент у заявці: список береться з карток розділу «Абонементи»
+   (адмін може їх додавати й перейменовувати), кнопка «Обрати» на картці
+   одразу підставляє цей абонемент у форму. */
+function planLabel(card) {
+  const name = card.querySelector('h3');
+  const price = card.querySelector('.price-card__price');
+  const nameText = name ? name.textContent.trim() : '';
+  const priceText = price ? price.textContent.replace(/\s+/g, ' ').trim() : '';
+  return [nameText, priceText].filter(Boolean).join(' — ');
+}
+
+function refreshPlanOptions() {
+  if (!planSelect) return;
+  const current = planSelect.value;
+  const labels = [...document.querySelectorAll('#pricing .price-card')].map(planLabel).filter(Boolean);
+  while (planSelect.options.length > 1) planSelect.remove(1);
+  labels.forEach((label) => planSelect.add(new Option(label, label)));
+  if (labels.includes(current)) planSelect.value = current;
+}
+
+const pricingGrid = document.querySelector('#pricing .pricing-grid');
+if (pricingGrid && planSelect) {
+  let planTimer = null;
+  new MutationObserver(() => {
+    clearTimeout(planTimer);
+    planTimer = setTimeout(refreshPlanOptions, 200);
+  }).observe(pricingGrid, { childList: true, subtree: true, characterData: true });
+  refreshPlanOptions();
+
+  pricingGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('a[href="#contact"]');
+    const card = btn && btn.closest('.price-card');
+    if (!card) return;
+    refreshPlanOptions();
+    planSelect.value = planLabel(card);
+    planSelect.classList.remove('is-picked');
+    void planSelect.offsetWidth;
+    planSelect.classList.add('is-picked');
+  });
+}
+
+const LEADS_URL = window.XFIT_SUPABASE_URL || '';
+const LEADS_KEY = window.XFIT_SUPABASE_ANON_KEY || '';
+const leadsRemoteReady = !!(
+  window.supabase && LEADS_URL && LEADS_KEY &&
+  !LEADS_URL.includes('YOUR-PROJECT') && !LEADS_KEY.includes('YOUR-ANON')
+);
+const leadsClient = leadsRemoteReady ? window.supabase.createClient(LEADS_URL, LEADS_KEY) : null;
+
+const EMAILJS_SERVICE_ID = window.XFIT_EMAILJS_SERVICE_ID || '';
+const EMAILJS_TEMPLATE_ID = window.XFIT_EMAILJS_TEMPLATE_ID || '';
+const EMAILJS_PUBLIC_KEY = window.XFIT_EMAILJS_PUBLIC_KEY || '';
+const emailjsReady = !!(
+  window.emailjs && EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY &&
+  !EMAILJS_SERVICE_ID.includes('YOUR_')
+);
+if (emailjsReady) {
+  window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+}
+
+contactForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const submitBtn = contactForm.querySelector('button[type="submit"]');
+  const formData = new FormData(contactForm);
+  const name = (formData.get('name') || '').toString().trim();
+  const phone = (formData.get('phone') || '').toString().trim();
+  const note = (formData.get('message') || '').toString().trim();
+  const plan = (formData.get('plan') || '').toString().trim();
+  // Абонемент іде першим рядком повідомлення — так він видно і в листі,
+  // і в заявках адмінки без змін у шаблоні EmailJS чи таблиці leads
+  const message = plan ? `Абонемент: ${plan}` + (note ? `\n\n${note}` : '') : note;
+
+  if (submitBtn) submitBtn.disabled = true;
+
+  const tasks = [];
+  // Важливо: .insert() БЕЗ .select() — інакше PostgREST спробує повернути
+  // рядок і впреться в RLS, бо читати "leads" може лише адмін.
+  if (leadsRemoteReady) {
+    tasks.push(leadsClient.from('leads').insert({ name, phone, message }));
+  }
+  if (emailjsReady) {
+    tasks.push(window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { name, phone, message, plan: plan || 'не обрано' }));
+  }
+
+  const results = await Promise.allSettled(tasks);
+  results.forEach((r) => {
+    if (r.status === 'rejected') console.error('Не вдалося доставити заявку:', r.reason);
+  });
+
+  formNote.textContent = 'Дякуємо! Ми звʼяжемось з тобою найближчим часом.';
+  contactForm.reset();
+  if (submitBtn) submitBtn.disabled = false;
+});
+
+/* ============ THREE.JS HERO SCENE ============ */
+(function initHero() {
+  const canvas = document.getElementById('heroCanvas');
+  if (!canvas || typeof THREE === 'undefined' || typeof XFitLogo3D === 'undefined') return;
+
+  const isSmall = window.innerWidth < 720;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(55, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+  camera.position.set(0, 0, isSmall ? 9 : 7.5);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const green = 0x39ff6a;
+
+  const group = new THREE.Group();
+  if (isSmall) group.position.y = -3; else group.position.x = 3.1;
+  scene.add(group);
+
+  // Floating 3D XFIT logo
+  const logo = XFitLogo3D.create(THREE, { wireframe: true });
+  logo.scale.setScalar(isSmall ? 0.5 : 0.68);
+  group.add(logo);
+
+  // Orbiting rings (torus)
+  const ring1 = new THREE.Mesh(
+    new THREE.TorusGeometry(3.1, 0.01, 8, 96),
+    new THREE.MeshBasicMaterial({ color: green, transparent: true, opacity: 0.35 })
+  );
+  ring1.rotation.x = Math.PI / 2.4;
+  group.add(ring1);
+
+  const ring2 = new THREE.Mesh(
+    new THREE.TorusGeometry(3.6, 0.008, 8, 96),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 })
+  );
+  ring2.rotation.x = Math.PI / 1.7;
+  ring2.rotation.y = Math.PI / 5;
+  group.add(ring2);
+
+  // Particle field
+  const particleCount = isSmall ? 220 : 520;
+  const positions = new Float32Array(particleCount * 3);
+  for (let i = 0; i < particleCount; i++) {
+    const r = 4 + Math.random() * 6;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos((Math.random() * 2) - 1);
+    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    positions[i * 3 + 2] = r * Math.cos(phi);
+  }
+  const particleGeo = new THREE.BufferGeometry();
+  particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const particleMat = new THREE.PointsMaterial({ color: green, size: 0.035, transparent: true, opacity: 0.55 });
+  const particles = new THREE.Points(particleGeo, particleMat);
+  scene.add(particles);
+
+  function resize() {
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  let mouseX = 0, mouseY = 0;
+  window.addEventListener('mousemove', (e) => {
+    mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+    mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+  }, { passive: true });
+
+  const clock = new THREE.Clock();
+  let rafId;
+
+  function animate() {
+    rafId = requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+
+    logo.position.y = Math.sin(t * 0.8) * 0.18;
+    logo.rotation.y = Math.sin(t * 0.35) * 0.45;
+    logo.rotation.x = Math.sin(t * 0.5) * 0.08;
+    logo.rotation.z = Math.sin(t * 0.27) * 0.04;
+    ring1.rotation.z = t * 0.12;
+    ring2.rotation.z = -t * 0.09;
+    particles.rotation.y = t * 0.03;
+
+    group.rotation.y += (mouseX * 0.3 - group.rotation.y) * 0.02;
+    group.rotation.x += (-mouseY * 0.2 - group.rotation.x) * 0.02;
+
+    renderer.render(scene, camera);
+  }
+
+  if (reducedMotion) {
+    renderer.render(scene, camera);
+  } else {
+    animate();
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      cancelAnimationFrame(rafId);
+    } else if (!reducedMotion) {
+      animate();
+    }
+  });
+})();
+
+
+/* ============ WEB APP (PWA) ============ */
+(function initWebApp() {
+  // Service worker працює лише на справжньому сайті (https або localhost)
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    // Була стара версія вебдодатка → після активації нової сторінка сама
+    // перезавантажиться один раз. Якщо людина саме заповнює форму чи
+    // редагує сайт — чекаємо, поки вона згорне сайт або перейде на іншу вкладку.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloadPending = false;
+    let reloaded = false;
+    const isBusy = () => {
+      if (document.body.classList.contains('admin-editing')) return true;
+      const form = document.getElementById('contactForm');
+      return !!form && [...form.elements].some((el) => (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el.value.trim());
+    };
+    const reloadNow = () => {
+      if (reloaded) return;
+      reloaded = true;
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController) return; // перше встановлення — сторінка й так свіжа
+      if (isBusy()) reloadPending = true;
+      else reloadNow();
+    });
+
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+        // Перевіряємо оновлення, коли людина повертається на сайт
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') reg.update().catch(() => {});
+          else if (reloadPending && !isBusy()) reloadNow();
+        });
+        // Після надсилання заявки форма порожня — можна оновитись
+        const form = document.getElementById('contactForm');
+        if (form) form.addEventListener('submit', () => setTimeout(() => { if (reloadPending && !isBusy()) reloadNow(); }, 1500));
+      }).catch((err) => console.warn('Service worker не зареєстровано:', err));
+    });
+  }
+
+  const installButtons = document.querySelectorAll('[data-install]');
+  const sheet = document.getElementById('installSheet');
+  const sheetClose = document.getElementById('installSheetClose');
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let deferredPrompt = null;
+  const fab = document.getElementById('installFab');
+  const fabClose = document.getElementById('installFabClose');
+  const FAB_DISMISSED_KEY = 'xfit_install_fab_dismissed';
+  let fabDismissed = false;
+  try { fabDismissed = localStorage.getItem(FAB_DISMISSED_KEY) === '1'; } catch (e) { /* ignore */ }
+
+  const showButtons = (show) => {
+    installButtons.forEach((btn) => { btn.hidden = !show; });
+    if (fab) fab.hidden = !show || fabDismissed;
+  };
+
+  if (fabClose) {
+    fabClose.addEventListener('click', () => {
+      fabDismissed = true;
+      if (fab) fab.hidden = true;
+      try { localStorage.setItem(FAB_DISMISSED_KEY, '1'); } catch (e) { /* ignore */ }
+    });
+  }
+
+  if (isStandalone) return; // уже відкрито як додаток
+
+  // Android / Chrome / Edge: браузер сам пропонує встановлення — показуємо свою кнопку
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    showButtons(true);
+  });
+
+  // iPhone / iPad: кнопки встановлення в Safari немає — показуємо інструкцію
+  if (isIOS) showButtons(true);
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    showButtons(false);
+  });
+
+  const closeSheet = () => { if (sheet) sheet.hidden = true; };
+  if (sheetClose) sheetClose.addEventListener('click', closeSheet);
+  if (sheet) {
+    sheet.addEventListener('click', (e) => { if (e.target === sheet) closeSheet(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+  }
+
+  installButtons.forEach((btn) => btn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      if (outcome === 'accepted') showButtons(false);
+    } else if (isIOS && sheet) {
+      sheet.hidden = false;
+      if (sheetClose) sheetClose.focus();
+    }
+  }));
+})();
+
