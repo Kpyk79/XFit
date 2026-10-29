@@ -19,6 +19,11 @@
   const LOCAL_LINKS_KEY = 'xfit_reels_links_v1';
   const strip = document.getElementById('reelsStrip');
   const track = document.getElementById('reelsTrack');
+  // Віджет за замовчуванням (Behold від власника сайту); адмін може замінити або вимкнути
+  let DEFAULT_WIDGET = null;
+  try { DEFAULT_WIDGET = JSON.parse(section.dataset.defaultWidget || 'null'); } catch (e) { DEFAULT_WIDGET = null; }
+  // збережене значення: конфіг віджета, 'off' (адмін вимкнув) або нічого (тоді — типовий)
+  const resolveStored = (v) => (v === 'off' ? null : v || DEFAULT_WIDGET);
   const DEFAULT_LINKS = track ? String(track.dataset.defaultReels || '').split(/\s+/).filter(Boolean) : [];
   const A = () => window.XFitAdmin || {};
 
@@ -137,7 +142,7 @@
       </form>`;
     setup.innerHTML = current
       ? `<p class="reels-setup__status">Підключено: <b>${PROVIDERS[current.provider].name}</b> · ID ${current.id}</p>
-         <div class="reels-setup__actions"><button type="button" class="btn btn--ghost" data-reels="change">Змінити віджет</button><button type="button" class="btn btn--ghost reels-setup__off" data-reels="off">Вимкнути блок</button></div>`
+         <div class="reels-setup__actions"><button type="button" class="btn btn--ghost" data-reels="change">Змінити віджет</button><button type="button" class="btn btn--ghost reels-setup__off" data-reels="off">Вимкнути віджет</button></div>`
       : (links.length ? `<p class="reels-setup__status">Показано <b>${links.length}</b> Reels за посиланнями. Підключи віджет, якщо хочеш, щоб нові Reels з'являлись автоматично.</p>` : `<p class="reels-setup__status">Блок приховано від відвідувачів: додай посилання на Reels або підключи віджет.</p>`) + linksForm;
     setup.insertAdjacentHTML('beforeend', `
       <form class="reels-setup__form" id="reelsForm" ${current ? 'hidden' : ''}>
@@ -171,8 +176,8 @@
     if (!b) return;
     if (b.dataset.reels === 'change') { setup.querySelector('#reelsForm').hidden = false; setup.querySelector('#reelsCode').focus(); }
     if (b.dataset.reels === 'off') {
-      if (!confirm('Прибрати блок Instagram із сайту?')) return;
-      try { await save(null); apply(null); A().showToast && A().showToast('Блок Instagram вимкнено'); }
+      if (!confirm('Вимкнути віджет? Блок покаже Reels за посиланнями (якщо вони додані).')) return;
+      try { await save(null); apply(null); A().showToast && A().showToast('Віджет вимкнено'); }
       catch (ex) { A().showToast && A().showToast(ex.message); }
     }
   });
@@ -180,12 +185,10 @@
   async function save(cfg) {
     const { sb, isRemote } = A();
     if (isRemote) {
-      const { error } = cfg
-        ? await sb.from('site_settings').upsert({ key: KEY, value: JSON.stringify(cfg) })
-        : await sb.from('site_settings').delete().eq('key', KEY);
+      const { error } = await sb.from('site_settings').upsert({ key: KEY, value: JSON.stringify(cfg || 'off') });
       if (error) throw new Error('Не вдалося зберегти в хмарі: ' + error.message);
     }
-    try { cfg ? localStorage.setItem(LOCAL_KEY, JSON.stringify(cfg)) : localStorage.removeItem(LOCAL_KEY); } catch (e) { /* ignore */ }
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(cfg || 'off')); } catch (e) { /* ignore */ }
   }
 
   async function saveLinks(list) {
@@ -200,7 +203,7 @@
   async function load() {
     try { const l = JSON.parse(localStorage.getItem(LOCAL_LINKS_KEY) || 'null'); if (Array.isArray(l)) links = l; } catch (e) { /* ignore */ }
     let cfg = null;
-    try { cfg = JSON.parse(localStorage.getItem(LOCAL_KEY) || 'null'); } catch (e) { cfg = null; }
+    try { cfg = resolveStored(JSON.parse(localStorage.getItem(LOCAL_KEY) || 'null')); } catch (e) { cfg = DEFAULT_WIDGET; }
     apply(cfg);
     const { sb, isRemote } = A();
     if (!isRemote) return;
@@ -216,9 +219,10 @@
           apply(cfg);
         }
       }
-      const remote = row(KEY) ? JSON.parse(row(KEY).value) : null;
+      const stored = row(KEY) ? JSON.parse(row(KEY).value) : null;
+      const remote = resolveStored(stored);
       if (JSON.stringify(remote) !== JSON.stringify(cfg)) {
-        try { remote ? localStorage.setItem(LOCAL_KEY, JSON.stringify(remote)) : localStorage.removeItem(LOCAL_KEY); } catch (e) { /* ignore */ }
+        try { stored ? localStorage.setItem(LOCAL_KEY, JSON.stringify(stored)) : localStorage.removeItem(LOCAL_KEY); } catch (e) { /* ignore */ }
         apply(remote);
       }
     } catch (e) { /* немає мережі — лишаємо збережене */ }
