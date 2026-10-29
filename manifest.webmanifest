@@ -38,6 +38,17 @@
   ],
   "shortcuts": [
     {
+      "name": "Моя карта XFit",
+      "short_name": "Моя карта",
+      "url": "./card.html?source=app",
+      "icons": [
+        {
+          "src": "assets/icon-192.png?v=2",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
       "name": "Таймер",
       "short_name": "Таймер",
       "url": "./train.html?source=app#timer",
@@ -52,16 +63,6 @@
       "name": "Щоденник тренувань",
       "short_name": "Щоденник",
       "url": "./train.html?source=app#log",
-      "icons": [
-        {
-          "src": "assets/icon-192.png?v=2",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "Абонементи",
-      "url": "./?source=app#pricing",
       "icons": [
         {
           "src": "assets/icon-192.png?v=2",

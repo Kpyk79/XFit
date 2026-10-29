@@ -98,6 +98,14 @@
   }
   updateSyncBadges();
 
+  // Доступ для інших модулів адмінки (напр. «Клієнти»)
+  window.XFitAdmin = {
+    sb,
+    isRemote,
+    showToast: (m) => showToast(m),
+    isAdmin: () => document.body.classList.contains('admin-mode'),
+  };
+
   async function hasRemoteSession() {
     if (!isRemote) return false;
     const { data } = await sb.auth.getSession();

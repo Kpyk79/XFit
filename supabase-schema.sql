@@ -93,3 +93,47 @@ create policy "Admin read leads" on leads for select
 drop policy if exists "Admin delete leads" on leads;
 create policy "Admin delete leads" on leads for delete
   using (auth.role() = 'authenticated');
+
+-- ============================================================
+-- Клієнти та віртуальні карти (додано в пакеті оновлень)
+-- Виконати в Supabase → SQL Editor (можна виконати весь файл ще раз)
+-- ============================================================
+create table if not exists members (
+  id uuid primary key default gen_random_uuid(),
+  card_number text unique not null,
+  token text unique not null,
+  full_name text not null default '',
+  phone text not null default '',
+  plan text not null default '',
+  gym text not null default '',
+  valid_from date,
+  valid_to date,
+  notes text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table members enable row level security;
+
+-- Список клієнтів бачить і змінює лише залогінений адміністратор
+drop policy if exists "Admin manage members" on members;
+create policy "Admin manage members" on members for all
+  using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+-- Клієнт бачить лише свою карту — за секретним кодом з особистого посилання.
+-- Повертаються тільки дані для карти (телефон частково приховано, без нотаток).
+create or replace function get_member_card(p_token text)
+returns table (card_number text, full_name text, phone_masked text, plan text, gym text, valid_from date, valid_to date)
+language sql stable security definer set search_path = public as $$
+  select m.card_number, m.full_name,
+    case when length(d.digits) >= 7
+      then '+' || left(d.digits, 3) || ' •• ••• ' || substr(right(d.digits, 4), 1, 2) || ' ' || right(d.digits, 2)
+      else '' end,
+    m.plan, m.gym, m.valid_from, m.valid_to
+  from members m
+  cross join lateral (select regexp_replace(m.phone, '\D', '', 'g') as digits) d
+  where length(p_token) >= 16 and m.token = p_token;
+$$;
+
+revoke all on function get_member_card(text) from public;
+grant execute on function get_member_card(text) to anon, authenticated;
