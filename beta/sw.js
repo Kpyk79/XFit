@@ -30,7 +30,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      // чистимо лише старі кеші бета-версії, кеш основного сайту не чіпаємо
+      // чистимо лише старі кеші основного сайту (xfit-v…), кеш тестової версії /beta/ не чіпаємо
       .then((keys) => Promise.all(keys.filter((k) => k.startsWith('xfit-beta-') && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
