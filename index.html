@@ -100,8 +100,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=27">
-<link rel="stylesheet" href="css/admin.css?v=27">
+<link rel="stylesheet" href="css/style.css?v=29">
+<link rel="stylesheet" href="css/admin.css?v=28">
 </head>
 <body>
 
@@ -160,7 +160,7 @@
   <a href="#pricing" class="mobile-link">Абонементи</a>
   <a href="#schedule" class="mobile-link">Розклад</a>
   <a href="#contact" class="mobile-link">Контакти</a>
-  <a href="card.html" class="mobile-link" data-my-card hidden>Моя карта</a>
+  <a href="card.html" class="mobile-link">Карта клієнта</a>
   <a href="train.html" class="mobile-link">Таймер і щоденник</a>
   <a href="#pricing" class="btn btn--primary" style="margin-top:20px;">Приєднатись</a>
   <div class="ig-bar__links mobile-menu__ig">
@@ -492,6 +492,21 @@
   </div>
 </section>
 
+<!-- ===== INSTAGRAM REELS (віджет) ===== -->
+<section class="section reels" id="reels">
+  <div class="container">
+    <p class="section-eyebrow reveal center">// INSTAGRAM</p>
+    <h2 class="section-title reveal center">Живе життя залу</h2>
+    <p class="reveal center reels__lead">Свіжі Reels з наших сторінок — тренування, події та атмосфера XFit.</p>
+    <div class="reels__follow">
+      <a class="ig-pill" href="https://www.instagram.com/xfit_podilsk/" target="_blank" rel="noopener" data-ig-handle-key="location1.instagram" aria-label="Instagram XFit Подільськ"><span class="ig-pill__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle class="ig-dot" cx="17.3" cy="6.7" r="1.1"/></svg></span><span class="ig-pill__text"><span class="ig-pill__city">Подільськ</span><span class="ig-pill__handle" data-ig-handle-text>@xfit_podilsk</span></span></a>
+      <a class="ig-pill" href="https://www.instagram.com/xfitbalta/" target="_blank" rel="noopener" data-ig-handle-key="location2.instagram" aria-label="Instagram XFit Балта"><span class="ig-pill__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle class="ig-dot" cx="17.3" cy="6.7" r="1.1"/></svg></span><span class="ig-pill__text"><span class="ig-pill__city">Балта</span><span class="ig-pill__handle" data-ig-handle-text>@xfitbalta</span></span></a>
+    </div>
+    <div class="reels__widget" id="reelsWidget"></div>
+    <div class="reels-setup" id="reelsSetup" aria-label="Налаштування блоку Instagram (лише для адміністратора)"></div>
+  </div>
+</section>
+
 <!-- ===== PRICING ===== -->
 <section class="section" id="pricing">
   <div class="container">
@@ -560,7 +575,7 @@
   <div class="container">
     <p class="section-eyebrow reveal center">// ДОДАТОК XFIT</p>
     <h2 class="section-title reveal center">Тренуйся з телефоном</h2>
-    <p class="reveal center app-promo__lead">Таймер і щоденник тренувань — прямо в залі, навіть без інтернету. Встанови XFit на головний екран і відкривай одним дотиком.</p>
+    <p class="reveal center app-promo__lead">Карта клієнта, таймер і щоденник тренувань — прямо в залі, навіть без інтернету. Встанови XFit на головний екран і відкривай одним дотиком.</p>
     <div class="app-promo">
       <a href="train.html#timer" class="app-card reveal">
         <span class="app-card__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 2M9.5 2.5h5M19 6l1.5-1.5"/></svg></span>
@@ -573,6 +588,12 @@
         <h3>Щоденник тренувань</h3>
         <p>Записуй вправи, вагу й повтори, дивись прогрес на графіку. Без реєстрації — дані лишаються на твоєму телефоні.</p>
         <span class="app-card__go">Відкрити щоденник →</span>
+      </a>
+      <a href="card.html" class="app-card reveal">
+        <span class="app-card__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M2.5 9.5h19M6 15h4"/></svg></span>
+        <h3>Карта клієнта</h3>
+        <p>Віртуальна карта XFit з QR- і штрих-кодом. Зареєструйся за хвилину — карта завжди в телефоні, навіть без інтернету.</p>
+        <span class="app-card__go">Отримати карту →</span>
       </a>
     </div>
   </div>
@@ -657,7 +678,7 @@
       <a href="#programs">Програми</a>
       <a href="#pricing">Абонементи</a>
       <a href="#contact">Контакти</a>
-      <a href="card.html" data-my-card hidden>Моя карта</a>
+      <a href="card.html">Карта клієнта</a>
       <a href="train.html">Таймер і щоденник</a>
     </nav>
     <div class="footer__social">
@@ -770,8 +791,9 @@
 <script src="js/supabase-config.js?v=24"></script>
 <script src="js/emailjs-config.js?v=24"></script>
 <script src="js/logo3d.js?v=24"></script>
-<script src="js/main.js?v=27"></script>
+<script src="js/main.js?v=28"></script>
 <script src="js/admin.js?v=27"></script>
-<script src="js/admin-members.js?v=1"></script>
+<script src="js/admin-members.js?v=2"></script>
+<script src="js/reels.js?v=1"></script>
 </body>
 </html>

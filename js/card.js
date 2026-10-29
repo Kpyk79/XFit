@@ -48,6 +48,7 @@
   const fmtMMYY = (iso) => (iso ? iso.slice(5, 7) + '/' + iso.slice(2, 4) : '—');
 
   function stateOf(m) {
+    if (m.status === 'pending' && !m.valid_to) return { state: 'pending', label: 'Очікує активації', left: 0 };
     if (!m.valid_to) return { state: 'expired', label: 'Неактивна', left: 0 };
     const left = daysBetween(todayISO(), m.valid_to);
     if (left < 0) return { state: 'expired', label: 'Неактивна', left };
@@ -83,7 +84,7 @@
         <div class="xcard__face xcard__front">
           <div class="xcard__grid"></div>
           <svg class="xcard__watermark" viewBox="314 60 540 430" aria-hidden="true"><use href="#xfMark"/></svg>
-          <div class="xcard__top">${LOGO}<span class="xcard__plan">${esc(m.plan || 'Абонемент')}</span></div>
+          <div class="xcard__top">${LOGO}<span class="xcard__plan">${esc(m.plan || (st.state === 'pending' ? 'Новий клієнт' : 'Абонемент'))}</span></div>
           <div class="xcard__mid"><span class="xcard__chip"></span>${NFC}<span class="xcard__status" style="margin-left:auto">${st.label}</span></div>
           <div class="xcard__number">${esc(groupNumber(m.card_number))}</div>
           <div class="xcard__bottom">
@@ -182,10 +183,24 @@
     const wrap = document.getElementById('cardWrap');
     wrap.dataset.state = st.state;
     wrap.hidden = false;
+    document.querySelector('.card-flip-hint').hidden = false;
     document.getElementById('cardState').hidden = true;
+    document.getElementById('regForm').hidden = true;
+    const details = document.getElementById('cardDetails');
+    details.hidden = false;
+    const note = document.getElementById('cardNote');
+    if (st.state === 'pending') {
+      details.innerHTML = `
+        <div class="card-row"><span>Статус</span><b>Абонемент ще не активовано</b></div>
+        <div class="card-row"><span>Номер карти</span><b>${esc(groupNumber(m.card_number))}</b></div>
+        ${m.gym ? `<div class="card-row"><span>Зал</span><b>${esc(m.gym)}</b></div>` : ''}`;
+      note.textContent = opts.offline ? 'Немає з\'єднання — показано збережену карту.' : 'Покажи цю карту на рецепції XFit — адміністратор активує твій абонемент, і тут з\'являться його дати.';
+      document.getElementById('demoBadge').hidden = !opts.demo;
+      return;
+    }
     const total = m.valid_from && m.valid_to ? Math.max(1, daysBetween(m.valid_from, m.valid_to)) : 1;
     const leftPct = Math.max(0, Math.min(100, (st.left / total) * 100));
-    document.getElementById('cardDetails').innerHTML = `
+    details.innerHTML = `
       <div class="card-progress">
         <div class="card-progress__label"><span>${st.state === 'expired' ? 'Абонемент закінчився' : 'Залишилось'}</span><b>${st.state === 'expired' ? fmtDate(m.valid_to) : st.left + ' ' + plural(st.left, ['день', 'дні', 'днів'])}</b></div>
         <div class="card-progress__bar"><i style="width:${leftPct}%"></i></div>
@@ -194,7 +209,6 @@
       <div class="card-row"><span>Діє</span><b>${esc(fmtShortDate(m.valid_from))} — ${esc(fmtShortDate(m.valid_to))}</b></div>
       <div class="card-row"><span>Номер карти</span><b>${esc(groupNumber(m.card_number))}</b></div>
       ${m.gym ? `<div class="card-row"><span>Зал</span><b>${esc(m.gym)}</b></div>` : ''}`;
-    const note = document.getElementById('cardNote');
     note.textContent = opts.offline
       ? 'Немає з\'єднання — показано збережену карту' + (m.fetched_at ? ' від ' + new Date(m.fetched_at).toLocaleDateString('uk-UA') : '') + '.'
       : st.state === 'expired' ? 'Щоб продовжити абонемент, звернись на рецепцію або залиш заявку на сайті.' : 'Збільш яскравість екрана, щоб QR-код легше сканувався.';
@@ -209,11 +223,14 @@
     return f[2];
   }
 
-  function showState(title, text) {
+  function showState(title, text, withForm) {
     document.getElementById('cardWrap').hidden = true;
+    document.getElementById('cardDetails').hidden = true;
+    document.querySelector('.card-flip-hint').hidden = true;
     const box = document.getElementById('cardState');
-    box.hidden = false;
-    box.innerHTML = `<h2>${esc(title)}</h2><p>${esc(text)}</p>`;
+    box.hidden = !title;
+    if (title) box.innerHTML = `<h2>${esc(title)}</h2><p>${esc(text)}</p>`;
+    document.getElementById('regForm').hidden = !withForm;
   }
 
   async function fetchRemote(t) {
@@ -236,11 +253,14 @@
   }
 
   (async () => {
-    if (demo) { show(DEMO, { demo: true }); return; }
+    if (demo) {
+      show(params.get('demo') === 'pending' ? { ...DEMO, plan: '', valid_from: null, valid_to: null, status: 'pending' } : DEMO, { demo: true });
+      return;
+    }
     const cached = readCache();
     const t = token || (cached && cached.token);
     if (!t) {
-      showState('Карти ще немає', 'Відкрий особисте посилання на карту, яке тобі надіслали в XFit, — і карта збережеться в додатку.');
+      showState('', '', true);
       return;
     }
     if (cached && cached.token === t) show(cached, { offline: !navigator.onLine });
@@ -253,12 +273,88 @@
         show(m);
         if (token) history.replaceState(null, '', 'card.html'); // посилання вже збережено — прибираємо код з адреси
       } else if (!(cached && cached.token === t)) {
-        showState('Карту не знайдено', 'Посилання недійсне або карту видалено. Звернись на рецепцію XFit.');
+        showState('Карту не знайдено', 'Посилання недійсне або карту видалено. Можеш зареєструватися заново нижче або звернутися на рецепцію XFit.', true);
       }
     } catch (e) {
       if (!(cached && cached.token === t)) showState('Немає з\'єднання', 'Відкрий карту, коли з\'явиться інтернет, — після цього вона працюватиме й офлайн.');
     }
   })();
+
+  /* ---------- Реєстрація клієнта ---------- */
+  const regForm = document.getElementById('regForm');
+  const regError = document.getElementById('regError');
+  function normalizePhone(v) {
+    let d = String(v || '').replace(/\D/g, '');
+    if (d.length === 10 && d[0] === '0') d = '38' + d;      // 067… → 38067…
+    if (d.length === 9) d = '380' + d;                      // 67… → 38067…
+    return d;
+  }
+  async function registerRemote(f) {
+    const url = window.XFIT_SUPABASE_URL || '';
+    const key = window.XFIT_SUPABASE_ANON_KEY || '';
+    if (!window.supabase || !url || !key || url.includes('YOUR-PROJECT')) return null;
+    const sb = window.supabase.createClient(url, key);
+    const { data, error } = await sb.rpc('register_member', {
+      p_full_name: f.full_name, p_phone: '+' + f.phone, p_gym: f.gym, p_birth_date: f.birth_date || null, p_email: f.email,
+    });
+    if (error) {
+      if (/phone_exists/.test(error.message)) throw new Error('Цей номер уже зареєстровано. Якщо загубив посилання на свою карту — звернись на рецепцію XFit.');
+      if (/invalid_data/.test(error.message)) throw new Error('Перевір імʼя та номер телефону.');
+      throw new Error('Не вдалося зареєструватися. Спробуй ще раз трохи згодом.');
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    const res = await fetchRemote(row.token);
+    return res.member || { token: row.token, card_number: row.card_number, full_name: f.full_name, gym: f.gym, status: 'pending' };
+  }
+  function registerLocal(f) {
+    // локальний режим (Supabase не налаштовано) — клієнт зберігається в цьому браузері
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem('xfit_members_v1') || '[]'); } catch (e) { list = []; }
+    if (list.some((m) => String(m.phone || '').replace(/\D/g, '').slice(-9) === f.phone.slice(-9))) throw new Error('Цей номер уже зареєстровано. Якщо загубив посилання на свою карту — звернись на рецепцію XFit.');
+    const m = {
+      id: (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()), card_number: newCardNumber(), token: newToken() + newToken(),
+      full_name: f.full_name, phone: '+' + f.phone, gym: f.gym, birth_date: f.birth_date || null, email: f.email,
+      plan: '', valid_from: null, valid_to: null, status: 'pending', consent_at: new Date().toISOString(), created_at: new Date().toISOString(),
+    };
+    list.unshift(m);
+    localStorage.setItem('xfit_members_v1', JSON.stringify(list));
+    return m;
+  }
+  regForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    regError.textContent = '';
+    const fd = new FormData(regForm);
+    if (fd.get('website')) return; // бот заповнив приховане поле
+    const f = {
+      full_name: String(fd.get('full_name') || '').trim().replace(/\s+/g, ' '),
+      phone: normalizePhone(fd.get('phone')),
+      birth_date: String(fd.get('birth_date') || ''),
+      email: String(fd.get('email') || '').trim(),
+      gym: String(fd.get('gym') || ''),
+    };
+    const bad = (name, msg) => { const el = regForm.elements[name]; el.setAttribute('aria-invalid', 'true'); el.focus(); regError.textContent = msg; };
+    regForm.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));
+    if (f.full_name.length < 3 || !/\s/.test(f.full_name)) return bad('full_name', 'Вкажи прізвище та імʼя.');
+    if (f.phone.length < 11 || f.phone.length > 13) return bad('phone', 'Вкажи номер телефону, напр. +380 67 123 45 67.');
+    if (f.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) return bad('email', 'Перевір email або залиш поле порожнім.');
+    if (f.birth_date && (f.birth_date > todayISO() || f.birth_date < '1920-01-01')) return bad('birth_date', 'Перевір дату народження.');
+    if (!fd.get('consent')) { regError.textContent = 'Потрібна згода на обробку персональних даних.'; return; }
+    const submit = document.getElementById('regSubmit');
+    submit.disabled = true;
+    submit.textContent = 'Створюємо карту…';
+    try {
+      const m = (await registerRemote(f)) || registerLocal(f);
+      writeCache(m);
+      document.getElementById('cardState').hidden = true;
+      show(m);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      regError.textContent = err.message;
+    } finally {
+      submit.disabled = false;
+      submit.textContent = 'Отримати карту';
+    }
+  });
 
   // Кнопка «Встановити»: Android/Chrome — системне вікно, iPhone — підказка
   const installBtn = document.querySelector('[data-install]');

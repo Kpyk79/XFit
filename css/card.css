@@ -129,3 +129,26 @@
 .card-demo-badge{ align-self:center; font-size:.7rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#ffb020; border:1px solid rgba(255,176,32,0.4); border-radius:999px; padding: 5px 12px; }
 
 @media (prefers-reduced-motion: reduce){ .xcard__inner{ transition: none; } }
+
+/* ---------- Реєстрація ---------- */
+.reg{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding: 22px 20px; display:flex; flex-direction:column; gap: 14px; }
+.reg[hidden]{ display:none; }
+.reg__title{ font-size: 1.25rem; line-height:1.2; margin-bottom: 8px; text-wrap: balance; }
+.reg__lead{ font-size:.9rem; margin:0; }
+.reg__row{ display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; }
+.reg__field{ display:flex; flex-direction:column; gap: 6px; min-width:0; }
+.reg__field > span{ font-size:.74rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color: var(--muted); }
+.reg__field i{ font-style:normal; text-transform:none; letter-spacing:0; opacity:.7; }
+.reg__field input, .reg__field select{
+  width:100%; min-width:0; background: var(--bg); border:1px solid var(--border); border-radius: 12px; color: var(--white);
+  font: 500 1rem var(--font-body); padding: 13px 14px; color-scheme: dark;
+}
+.reg__field input:focus, .reg__field select:focus{ outline:none; border-color: var(--green); }
+.reg__field input[aria-invalid="true"]{ border-color: #ff6b6b; }
+.reg__hp{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
+.reg__consent{ display:flex; gap: 10px; align-items:flex-start; font-size:.84rem; color: var(--muted); cursor:pointer; }
+.reg__consent input{ width:20px; height:20px; margin-top: 1px; accent-color: var(--green); flex-shrink:0; }
+.reg__error{ color:#ff8080; font-size:.85rem; margin:0; min-height: 1.1em; }
+.xcard[data-state="pending"] .xcard__status{ color: #f4f6f4; }
+.xcard-wrap[data-state="pending"] .card-progress__bar i{ background: rgba(255,255,255,0.25); box-shadow:none; }
+@media (max-width: 420px){ .reg__row{ grid-template-columns: minmax(0,1fr); } }

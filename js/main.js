@@ -403,8 +403,3 @@ contactForm.addEventListener('submit', async (e) => {
   }));
 })();
 
-/* ============ МОЯ КАРТА ============ */
-// Посилання «Моя карта» показуємо лише тим, кому вже видали карту в цьому браузері
-try {
-  if (localStorage.getItem('xfit_card_v1')) document.querySelectorAll('[data-my-card]').forEach((a) => { a.hidden = false; });
-} catch (e) { /* ignore */ }

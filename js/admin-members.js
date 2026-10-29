@@ -25,7 +25,7 @@
     if (libsReady) return libsReady;
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'css/card.css?v=1';
+    css.href = 'css/card.css?v=2';
     document.head.appendChild(css);
     const load = (src) => new Promise((res, rej) => {
       const s = document.createElement('script');
@@ -36,7 +36,7 @@
     });
     libsReady = load('js/vendor/qrcode-generator-1.4.4.js')
       .then(() => load('js/vendor/jsbarcode-3.11.6.min.js'))
-      .then(() => load('js/card.js?v=1'));
+      .then(() => load('js/card.js?v=2'));
     return libsReady;
   }
 
@@ -96,7 +96,7 @@
   const gyms = () => [...document.querySelectorAll('#locations .location-card h3')].map((h) => h.textContent.trim()).filter(Boolean);
   const statePill = (m) => {
     const st = C().stateOf(m);
-    const text = st.state === 'expired' ? 'Неактивна' : st.state === 'soon' ? `Ще ${st.left} дн.` : 'Активна';
+    const text = st.state === 'pending' ? 'Нова реєстрація' : st.state === 'expired' ? 'Неактивна' : st.state === 'soon' ? `Ще ${st.left} дн.` : 'Активна';
     return `<span class="mem-pill mem-pill--${st.state}">${text}</span>`;
   };
   const fmt = (iso) => (iso ? iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.' + iso.slice(0, 4) : '—');
@@ -108,26 +108,27 @@
     const list = members.filter((m) => !q
       || (m.full_name || '').toLowerCase().includes(q)
       || (digits.length >= 3 && ((m.phone || '').replace(/\D/g, '').includes(digits) || (m.card_number || '').includes(digits))));
-    const active = members.filter((m) => C().stateOf(m).state !== 'expired').length;
+    const active = members.filter((m) => ['active', 'soon'].includes(C().stateOf(m).state)).length;
+    const pending = members.filter((m) => C().stateOf(m).state === 'pending').length;
     body.innerHTML = `
       <div class="mem-toolbar">
         <input type="search" id="memSearch" placeholder="Пошук: імʼя, телефон або номер карти" value="${esc(query)}" aria-label="Пошук клієнтів">
         <button type="button" class="btn btn--primary" data-act="new">+ Новий клієнт</button>
       </div>
       <div class="mem-toolbar mem-toolbar--sub">
-        <span class="mem-count">${members.length} ${plural(members.length, ['клієнт', 'клієнти', 'клієнтів'])} · ${active} з активним абонементом</span>
+        <span class="mem-count">${members.length} ${plural(members.length, ['клієнт', 'клієнти', 'клієнтів'])} · ${active} з активним абонементом${pending ? ` · <b class="mem-new">${pending} ${plural(pending, ['нова реєстрація', 'нові реєстрації', 'нових реєстрацій'])}</b>` : ''}</span>
         <button type="button" class="btn btn--ghost" data-act="check">Перевірити карту</button>
       </div>
       <div class="mem-list">${list.length ? list.map((m) => `
         <div class="mem-row" data-id="${esc(m.id)}">
           <div class="mem-row__main">
             <b>${esc(m.full_name || 'Без імені')}</b>
-            <span>${esc(m.plan || '—')} · до ${fmt(m.valid_to)} · ${esc(C().groupNumber(m.card_number))}</span>
+            <span>${m.status === 'pending' && !m.valid_to ? 'Зареєструвався сам · ' + esc(m.phone || '') : esc(m.plan || '—') + ' · до ' + fmt(m.valid_to)} · ${esc(C().groupNumber(m.card_number))}</span>
           </div>
           ${statePill(m)}
           <div class="mem-row__actions">
             <button type="button" data-act="card" title="Карта і посилання">Карта</button>
-            <button type="button" data-act="renew" title="Продовжити на 1 місяць">+1 міс</button>
+            ${m.status === 'pending' && !m.valid_to ? '<button type="button" data-act="edit" class="is-primary" title="Вказати абонемент і дати">Активувати</button>' : '<button type="button" data-act="renew" title="Продовжити на 1 місяць">+1 міс</button>'}
             <button type="button" data-act="edit" title="Редагувати">✎</button>
             <button type="button" data-act="del" class="is-danger" title="Видалити">✕</button>
           </div>
@@ -144,12 +145,12 @@
     const g = gyms();
     body.innerHTML = `
       <form class="mem-form" id="memForm" autocomplete="off">
-        <p class="mem-sub">${isNew ? 'Новий клієнт — після збереження зʼявиться карта й посилання для клієнта' : 'Редагування клієнта'}</p>
+        <p class="mem-sub">${isNew ? 'Новий клієнт — після збереження зʼявиться карта й посилання для клієнта' : m.status === 'pending' && !m.valid_to ? 'Активація: вкажи абонемент і дати — карта клієнта одразу стане активною' : 'Редагування клієнта'}</p>
         <label>ПІБ<input name="full_name" required maxlength="80" value="${esc(m ? m.full_name : '')}" placeholder="Прізвище та імʼя"></label>
         <label>Телефон<input name="phone" type="tel" maxlength="20" value="${esc(m ? m.phone : '')}" placeholder="+380…"></label>
         <div class="mem-form__row">
-          <label>Абонемент<input name="plan" list="memPlans" maxlength="40" value="${esc(m ? m.plan : (p[1] || p[0] || ''))}" required></label>
-          <label>Зал<input name="gym" list="memGyms" maxlength="40" value="${esc(m ? m.gym : (g[0] || 'Подільськ'))}"></label>
+          <label>Абонемент<input name="plan" list="memPlans" maxlength="40" value="${esc((m && m.plan) || p[1] || p[0] || '')}" required></label>
+          <label>Зал<input name="gym" list="memGyms" maxlength="40" value="${esc((m && m.gym) || g[0] || 'Подільськ')}"></label>
         </div>
         <datalist id="memPlans">${p.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
         <datalist id="memGyms">${g.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
@@ -158,6 +159,10 @@
           <label>Діє до<input name="valid_to" type="date" required value="${esc((m && m.valid_to) || addMonths(start, 1))}"></label>
         </div>
         <div class="mem-quick">${[1, 3, 6, 12].map((n) => `<button type="button" data-months="${n}">${n} міс</button>`).join('')}</div>
+        <div class="mem-form__row">
+          <label>Дата народження<input name="birth_date" type="date" value="${esc((m && m.birth_date) || '')}"></label>
+          <label>Email<input name="email" type="email" maxlength="120" value="${esc((m && m.email) || '')}"></label>
+        </div>
         <label>Нотатка (бачить лише адмін)<input name="notes" maxlength="200" value="${esc(m ? m.notes : '')}"></label>
         <p class="admin-modal__error" id="memError"></p>
         <div class="admin-modal__actions">
@@ -173,7 +178,7 @@
       e.preventDefault();
       const f = Object.fromEntries(new FormData(form).entries());
       if (f.valid_to < f.valid_from) { form.querySelector('#memError').textContent = 'Дата «до» раніша за дату «з».'; return; }
-      const rec = { ...(m || {}), ...f };
+      const rec = { ...(m || {}), ...f, birth_date: f.birth_date || null, status: 'active' };
       if (isNew) { rec.card_number = uniqueNumber(); rec.token = C().newToken(); }
       try {
         const saved = await upsertMember(rec);

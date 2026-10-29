@@ -207,3 +207,7 @@ body.admin-editing [data-edit-key]:focus{
   .mem-toolbar{ flex-direction:column; align-items:stretch; }
   .mem-form__row{ grid-template-columns: minmax(0,1fr); }
 }
+
+.mem-pill--pending{ color:#04140a; background:#39ff6a; }
+.mem-new{ color:#39ff6a; }
+.mem-row__actions .is-primary{ background:#39ff6a; border-color:#39ff6a; color:#04140a; }
