@@ -1006,7 +1006,20 @@
     roleEl.dataset.editKey = id + '.role';
     roleEl.textContent = role;
 
-    [nameEl, roleEl].forEach((el) => {
+    // Instagram тренера: відвідувачі бачать рядок, лише коли нік вписаний
+    const ig = document.createElement('a');
+    ig.className = 'trainer-card__ig';
+    ig.target = '_blank';
+    ig.rel = 'noopener';
+    ig.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle class="ig-dot" cx="17.3" cy="6.7" r="1.1"/></svg>';
+    const igHandle = document.createElement('span');
+    igHandle.className = 'trainer-card__ig-handle';
+    igHandle.dataset.editKey = id + '.instagram';
+    igHandle.textContent = content[id + '.instagram'] || '';
+    ig.appendChild(igHandle);
+    updateTrainerInstagram(ig);
+
+    [nameEl, roleEl, igHandle].forEach((el) => {
       el.setAttribute('contenteditable', editing ? 'true' : 'false');
       el.spellcheck = false;
     });
@@ -1015,7 +1028,22 @@
     card.appendChild(photo);
     card.appendChild(nameEl);
     card.appendChild(roleEl);
+    card.appendChild(ig);
     return card;
+  }
+
+  function updateTrainerInstagram(link) {
+    const handleEl = link.querySelector('.trainer-card__ig-handle');
+    const raw = handleEl.textContent.trim();
+    const url = instagramUrl(raw);
+    link.classList.toggle('is-empty', !url);
+    if (url) {
+      link.href = url;
+      link.setAttribute('aria-label', 'Instagram тренера: ' + raw);
+    } else {
+      link.removeAttribute('href');
+      link.removeAttribute('aria-label');
+    }
   }
 
   function renderTrainers() {
@@ -1043,7 +1071,7 @@
       delete photos[id];
       localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
     }
-    const keys = [id + '.name', id + '.role'];
+    const keys = [id + '.name', id + '.role', id + '.instagram'];
     const cache = getContentCache();
     keys.forEach((k) => delete cache[k]);
     localStorage.setItem(STORAGE_CONTENT_KEY, JSON.stringify(cache));
@@ -1081,7 +1109,22 @@
         const img = el.closest('.trainer-card').querySelector('.photo-img');
         if (img) img.alt = value;
       }
+      const igLink = el.closest('.trainer-card__ig');
+      if (igLink) {
+        // нормалізуємо: «xfit_coach», посилання чи «@xfit_coach» → «@xfit_coach»
+        const url = instagramUrl(value);
+        const handle = url ? '@' + decodeURIComponent(url.split('/').pop()) : '';
+        if (handle !== value) {
+          el.textContent = handle;
+          saveContentKey(el.dataset.editKey, handle);
+        }
+        updateTrainerInstagram(igLink);
+      }
       refreshTrainerClones();
+    });
+    // Під час редагування клік по рядку Instagram не відкриває посилання
+    trainersTrack.addEventListener('click', (e) => {
+      if (editing && e.target.closest('.trainer-card__ig')) e.preventDefault();
     });
   }
 

@@ -382,6 +382,20 @@ p{ color: var(--muted); line-height:1.7; margin:0 0 16px; }
 }
 .trainer-card h3{ font-size:1.05rem; margin-bottom:4px; }
 .trainer-card__role{ font-size:.8rem; color: var(--green); text-transform:uppercase; letter-spacing:.05em; }
+.trainer-card__ig{
+  display:flex; align-items:center; justify-content:center; gap:6px; width: fit-content; max-width:100%;
+  margin: 10px auto 0; padding: 5px 12px 5px 8px; border-radius:999px;
+  border:1px solid var(--border); background: rgba(57,255,106,0.04);
+  font-size:.78rem; color: var(--muted); transition: color .25s, border-color .25s, background .25s;
+}
+.trainer-card__ig svg{ width:15px; height:15px; flex-shrink:0; fill:none; stroke: var(--green); stroke-width:2; }
+.trainer-card__ig .ig-dot{ fill: var(--green); stroke:none; }
+.trainer-card__ig-handle{ min-width: 2ch; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+a.trainer-card__ig[href]:hover, a.trainer-card__ig[href]:focus-visible{ color: var(--green); border-color: rgba(57,255,106,0.5); background: rgba(57,255,106,0.1); outline:none; }
+/* Порожній нік: відвідувачам рядок не показується, адміну — з підказкою */
+.trainer-card__ig.is-empty{ display:none; }
+body.admin-editing .trainer-card__ig.is-empty{ display:flex; border-style:dashed; }
+body.admin-editing .trainer-card__ig-handle:empty::before{ content:"@instagram"; color: rgba(154,163,154,0.55); }
 
 /* ============ GALLERY ============ */
 .gallery-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 48px; }
@@ -781,6 +795,8 @@ body.admin-mode .announcements__admin-hint{ display:block; }
   .gallery-grid{ gap: 12px; }
   .trainers.is-wheel .trainer-card h3{ font-size: .9rem; }
   .trainers.is-wheel .trainer-card__role{ font-size: .66rem; letter-spacing: .03em; }
+  .trainers.is-wheel .trainer-card__ig{ font-size: .68rem; padding: 4px 9px 4px 6px; gap:4px; }
+  .trainers.is-wheel .trainer-card__ig svg{ width:13px; height:13px; }
   .photo-upload{ opacity:1; background: rgba(4,5,4,0.35); }
   .photo-upload__btn{ font-size:.72rem; padding:7px 12px; }
   .features__col{ grid-column: auto; }
