@@ -15,7 +15,7 @@ const CORE = [
   'card.html',
   'css/card.css?v=3',
   'js/card.js?v=3',
-  'js/gallery.js?v=2',
+  'js/gallery.js?v=1',
   'js/vendor/qrcode-generator-1.4.4.js',
   'js/vendor/jsbarcode-3.11.6.min.js',
   'manifest.webmanifest?v=3',
