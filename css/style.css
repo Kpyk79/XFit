@@ -466,7 +466,13 @@ body:not(.admin-editing) .photo-upload,
 body:not(.admin-editing) .photo-remove{ display:none !important; }
 
 /* ============ PRICING ============ */
-.pricing-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 56px; align-items:stretch; }
+.pricing-grid{ --cols: 3; --gap: 24px; display:flex; flex-wrap:wrap; justify-content:center; gap: var(--gap); margin-top: 56px; align-items:stretch; }
+.pricing-grid > .price-card{ flex: 0 1 calc((100% - (var(--cols) - 1) * var(--gap)) / var(--cols)); min-width:0; }
+/* Рівно 4 абонементи — усі в один ряд (5 і більше — по 3, неповний ряд по центру) */
+.pricing-grid:has(> .price-card:nth-child(4):last-child){ --cols: 4; --gap: 20px; }
+.pricing-grid:has(> .price-card:nth-child(4):last-child) .price-card{ padding: 32px 26px; }
+.pricing-grid:has(> .price-card:nth-child(4):last-child) .price-card h3{ min-height: 2.5em; }
+.pricing-grid:has(> .price-card:nth-child(4):last-child) .price-card__price{ font-size: 2.2rem; }
 .price-card{
   position:relative; padding: 40px 32px; border-radius: var(--radius);
   border:1px solid var(--border); background: var(--panel);
@@ -484,11 +490,15 @@ body:not(.admin-editing) .photo-remove{ display:none !important; }
   padding: 6px 16px; border-radius:999px; text-transform:uppercase; letter-spacing:.05em;
 }
 .price-card h3{ font-size:1.1rem; margin-bottom: 12px; }
-.price-card__price{ font-family: var(--font-display); font-size: 2.6rem; font-weight:800; color: var(--white); margin-bottom: 24px; }
-.price-card__price > span:last-child{ font-family: var(--font-body); font-size:.9rem; color: var(--muted); font-weight:400; }
+.price-card__price{ font-family: var(--font-display); font-size: 2.6rem; font-weight:800; color: var(--white); margin-bottom: 24px; white-space:nowrap; }
+.price-card__period{ font-family: var(--font-body); font-size:.9rem; color: var(--muted); font-weight:400; }
 .price-card ul{ display:flex; flex-direction:column; gap: 12px; margin-bottom: 32px; flex:1; }
 .price-card li{ font-size:.9rem; color: var(--muted); padding-left: 22px; position:relative; }
 .price-card li::before{ content:"—"; position:absolute; left:0; color: var(--green); }
+/* Порожній період (напр. разове тренування) не показується; в адмінці — підказка */
+.price-card__period:empty{ display:none; }
+body.admin-editing .price-card__period:empty{ display:inline-block; min-width: 3em; }
+body.admin-editing .price-card__period:empty::before{ content:"/період"; color: rgba(154,163,154,0.55); }
 
 /* ============ CTA / SCHEDULE ============ */
 .section--cta{ position:relative; overflow:hidden; background: var(--bg-alt); text-align:center; }
@@ -837,7 +847,8 @@ body.admin-mode .announcements__admin-hint{ display:block; }
   .announcements-grid{ grid-template-columns: repeat(2,1fr); }
   .features__grid{ grid-template-columns: repeat(2,1fr); }
   .features__col{ grid-row: auto; grid-column: span 2; }
-  .pricing-grid{ grid-template-columns: 1fr; max-width: 460px; margin-left:auto; margin-right:auto; }
+  .pricing-grid, .pricing-grid:has(> .price-card:nth-child(4):last-child){ --cols: 1; max-width: 460px; margin-left:auto; margin-right:auto; }
+  .pricing-grid .price-card h3{ min-height:0 !important; }
 }
 
 @media (max-width: 860px){
