@@ -302,7 +302,7 @@
         const sb = window.supabase.createClient(url, key);
         const lst = await sb.from('site_settings').select('value').eq('key', 'list:pricing');
         if (!lst.error && lst.data && lst.data[0]) ids = JSON.parse(lst.data[0].value);
-        const keys = ids.flatMap((id) => [id + '.name', id + '.amount']);
+        const keys = ids.flatMap((id) => [id + '.name', id + '.amount', id + '.period']);
         const rows = await sb.from('site_content').select('key,value').in('key', keys);
         if (!rows.error) rows.data.forEach((r) => { content[r.key] = r.value; });
       } catch (e) { /* лишаємо типові */ }
@@ -311,7 +311,9 @@
     const options = ids.map((id) => {
       const name = content[id + '.name'] || (DEFAULTS[id] || [])[0];
       const amount = content[id + '.amount'] || (DEFAULTS[id] || [])[1];
-      return name ? name + (amount ? ' — ' + amount + '/міс' : '') : null;
+      // період як на сайті: «/міс», «/рік» або порожньо (разове тренування)
+      const period = (id + '.period') in content ? content[id + '.period'] : '/міс';
+      return name ? name + (amount ? ' — ' + amount + period : '') : null;
     }).filter(Boolean);
     if (!options.length) return;
     const prev = select.value;
