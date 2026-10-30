@@ -154,6 +154,9 @@ if (emailjsReady) {
   window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
 }
 
+const LEAD_SENT_KEY = 'xfit_lead_sent_at';
+const LEAD_COOLDOWN_MS = 60 * 1000;
+
 contactForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const submitBtn = contactForm.querySelector('button[type="submit"]');
@@ -166,13 +169,41 @@ contactForm.addEventListener('submit', async (e) => {
   // і в заявках адмінки без змін у шаблоні EmailJS чи таблиці leads
   const message = plan ? `Абонемент: ${plan}` + (note ? `\n\n${note}` : '') : note;
 
+  const showNote = (text, isError) => {
+    formNote.textContent = text;
+    formNote.classList.toggle('is-error', !!isError);
+  };
+
+  // Приховане поле-пастка: людина його не бачить, а бот заповнює
+  if ((formData.get('website') || '').toString().trim()) {
+    showNote('Дякуємо! Ми звʼяжемось з тобою найближчим часом.');
+    contactForm.reset();
+    return;
+  }
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 9 || digits.length > 15) {
+    showNote('Перевір номер телефону — схоже, в ньому помилка.', true);
+    return;
+  }
+  // Повторна заявка з цього браузера — не частіше ніж раз на хвилину
+  let lastSent = 0;
+  try { lastSent = Number(localStorage.getItem(LEAD_SENT_KEY)) || 0; } catch (err) { /* ignore */ }
+  if (Date.now() - lastSent < LEAD_COOLDOWN_MS) {
+    showNote('Заявку вже надіслано. Ми скоро звʼяжемось з тобою!');
+    return;
+  }
+
   if (submitBtn) submitBtn.disabled = true;
+  showNote('Надсилаємо…');
 
   const tasks = [];
   // Важливо: .insert() БЕЗ .select() — інакше PostgREST спробує повернути
   // рядок і впреться в RLS, бо читати "leads" може лише адмін.
+  // Supabase не кидає помилку, а повертає { error } — перетворюємо її на відмову.
   if (leadsRemoteReady) {
-    tasks.push(leadsClient.from('leads').insert({ name, phone, message }));
+    tasks.push(leadsClient.from('leads').insert({ name, phone, message }).then((res) => {
+      if (res.error) throw res.error;
+    }));
   }
   if (emailjsReady) {
     tasks.push(window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { name, phone, message, plan: plan || 'не обрано' }));
@@ -182,10 +213,19 @@ contactForm.addEventListener('submit', async (e) => {
   results.forEach((r) => {
     if (r.status === 'rejected') console.error('Не вдалося доставити заявку:', r.reason);
   });
-
-  formNote.textContent = 'Дякуємо! Ми звʼяжемось з тобою найближчим часом.';
-  contactForm.reset();
   if (submitBtn) submitBtn.disabled = false;
+
+  // Заявка дійшла, якщо її прийняв хоча б один канал (база або пошта)
+  if (results.some((r) => r.status === 'fulfilled')) {
+    try { localStorage.setItem(LEAD_SENT_KEY, String(Date.now())); } catch (err) { /* ignore */ }
+    showNote('Дякуємо! Ми звʼяжемось з тобою найближчим часом.');
+    contactForm.reset();
+    return;
+  }
+  const tooMany = results.some((r) => r.reason && /too_many_requests/.test(r.reason.message || ''));
+  showNote(tooMany
+    ? 'Заявку з цього номера вже отримано. Ми скоро звʼяжемось з тобою!'
+    : 'Не вдалося надіслати заявку. Перевір інтернет і спробуй ще раз або напиши нам в Instagram.', !tooMany);
 });
 
 /* ============ THREE.JS HERO SCENE ============ */

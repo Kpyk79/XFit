@@ -339,6 +339,7 @@
     });
     if (error) {
       if (/phone_exists/.test(error.message)) throw new Error('Цей номер уже зареєстровано. Якщо загубив посилання на свою карту — звернись на рецепцію XFit.');
+      if (/too_many_requests/.test(error.message)) throw new Error('Зараз забагато реєстрацій. Спробуй за годину або звернись на рецепцію.');
       if (/invalid_data/.test(error.message)) throw new Error('Перевір імʼя та номер телефону.');
       throw new Error('Не вдалося зареєструватися. Спробуй ще раз трохи згодом.');
     }
