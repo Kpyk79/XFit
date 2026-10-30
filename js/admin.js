@@ -16,7 +16,6 @@
   const STORAGE_CONTENT_KEY = 'xfit_content_v1';
   const STORAGE_PASSWORD_KEY = 'xfit_admin_password';
   const SESSION_FLAG_KEY = 'xfit_admin_session';
-  const DEFAULT_PASSWORD = 'xfit2026';
   const PHOTO_STORAGE_KEY = 'xfit_photos_v1';
   const ANNOUNCEMENTS_KEY = 'xfit_announcements_v1';
   const TRAINERS_KEY = 'xfit_trainers_v1';
@@ -106,7 +105,7 @@
 
   /* ---------- Локальний пароль (запасний режим) ---------- */
   function getStoredPassword() {
-    return localStorage.getItem(STORAGE_PASSWORD_KEY) || DEFAULT_PASSWORD;
+    return localStorage.getItem(STORAGE_PASSWORD_KEY) || '';
   }
 
   /* ---------- Застосування даних з localStorage-кешу до сторінки ---------- */
@@ -441,6 +440,10 @@
     if (isRemote) {
       emailInput.value = localStorage.getItem(LAST_EMAIL_KEY) || DEFAULT_ADMIN_EMAIL || '';
     }
+    // Локальний режим без збереженого пароля: перший вхід задає пароль
+    if (!isRemote && !getStoredPassword()) {
+      loginError.textContent = 'Перший вхід: придумай пароль адміністратора (мін. 6 символів).';
+    }
     loginModal.classList.add('open');
     setTimeout(() => (isRemote && !emailInput.value ? emailInput : loginInput).focus(), 50);
   }
@@ -478,7 +481,15 @@
       return;
     }
 
-    if (password === getStoredPassword()) {
+    if (!getStoredPassword()) {
+      if (password.trim().length < 6) {
+        loginError.textContent = 'Пароль занадто короткий — мінімум 6 символів.';
+        loginInput.focus();
+        return;
+      }
+      localStorage.setItem(STORAGE_PASSWORD_KEY, password.trim());
+    }
+    if (password.trim() === getStoredPassword()) {
       sessionStorage.setItem(SESSION_FLAG_KEY, '1');
       closeLogin();
       enterAdminMode();
