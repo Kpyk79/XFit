@@ -566,6 +566,8 @@ body:not(.admin-editing) .photo-remove{ display:none !important; }
 .contact-form select.is-picked{ border-color: var(--green); animation: planPicked 1.2s ease-out; }
 @keyframes planPicked{ 0%{ box-shadow: 0 0 0 0 var(--green-glow); } 100%{ box-shadow: 0 0 0 10px rgba(57,255,106,0); } }
 .form-note{ font-size:.85rem; color: var(--green); min-height: 1.2em; margin:0; }
+.form-note.is-error{ color:#ff6b6b; }
+.hp-field{ position:absolute !important; left:-9999px; width:1px; height:1px; opacity:0; pointer-events:none; }
 
 /* ============ ANNOUNCEMENTS (керується адміністратором) ============ */
 .announcements{ display:none; }
