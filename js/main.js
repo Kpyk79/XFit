@@ -462,3 +462,12 @@ contactForm.addEventListener('submit', async (e) => {
   }, { rootMargin: '600px 0px' });
   io.observe(block);
 })();
+
+/* ============ КНОПКА «ПРИЄДНАТИСЬ» → «МОЯ КАРТА», ЯКЩО КАРТА ВЖЕ Є ============ */
+(function initJoinButtons() {
+  let card = null;
+  try { card = JSON.parse(localStorage.getItem('xfit_card_v1') || 'null'); } catch (e) { /* ignore */ }
+  if (!card || !card.token) return;
+  document.querySelectorAll('[data-join]').forEach((el) => { el.textContent = 'Моя карта'; });
+  document.querySelectorAll('[data-join-go]').forEach((el) => { el.textContent = 'Відкрити карту →'; });
+})();
