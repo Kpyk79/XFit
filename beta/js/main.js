@@ -403,3 +403,22 @@ contactForm.addEventListener('submit', async (e) => {
   }));
 })();
 
+/* ============ INSTAGRAM (Behold) У РОЗДІЛІ «ПРО НАС» ============ */
+// Скрипт віджета вантажимо, коли розділ наближається до екрана, — головна лишається швидкою
+(function initBehold() {
+  const block = document.querySelector('.about__insta');
+  if (!block) return;
+  const load = () => {
+    if (window.__bhldScript) return;
+    window.__bhldScript = true;
+    const s = document.createElement('script');
+    s.type = 'module';
+    s.src = 'https://w.behold.so/widget.js';
+    document.head.append(s);
+  };
+  if (!('IntersectionObserver' in window)) { load(); return; }
+  const io = new IntersectionObserver((entries) => {
+    if (entries.some((e) => e.isIntersecting)) { io.disconnect(); load(); }
+  }, { rootMargin: '600px 0px' });
+  io.observe(block);
+})();
