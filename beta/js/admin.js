@@ -503,6 +503,7 @@
     document.body.classList.add('admin-mode');
     renderAnnouncements();
     carousel.restartAutoplay();
+    galleryWheel.restartAutoplay();
     showToast(isRemote ? 'Адмін-режим активовано (хмара Supabase)' : 'Адмін-режим активовано (локальний режим)');
   }
 
@@ -511,6 +512,7 @@
     adminBar.classList.remove('open');
     document.body.classList.remove('admin-mode');
     carousel.restartAutoplay();
+    galleryWheel.restartAutoplay();
     if (isRemote) {
       await sb.auth.signOut();
     } else {
@@ -1065,6 +1067,7 @@
 
   function refreshTrainerClones() {
     carousel.refresh();
+    galleryWheel.refresh();
   }
 
   async function deleteTrainer(id) {
@@ -1138,10 +1141,8 @@
 
   // «Колесо»: картки стоять на 3D-барабані, видно кілька (5 на комп'ютері, 3 на телефоні),
   // барабан крутиться свайпом з інерцією і нескінченно
-  const carousel = (function () {
-    const root = trainersCarousel;
-    const track = trainersTrack;
-    const viewport = root ? root.querySelector('.trainers__viewport') : null;
+  function createWheel({ root, track, viewportSel, itemSelector, prevId, nextId }) {
+    const viewport = root ? root.querySelector(viewportSel) : null;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const AUTOPLAY_MS = 4500;
     const STIFFNESS = 0.075;
@@ -1240,7 +1241,7 @@
       const perView = parseInt(css.getPropertyValue('--per-view'), 10) || 1;
       const visible = parseInt(css.getPropertyValue('--wheel-visible'), 10) || 5;
       step = parseFloat(css.getPropertyValue('--wheel-step')) || 34;
-      cards = Array.from(track.querySelectorAll('.trainer-card'));
+      cards = Array.from(track.querySelectorAll(itemSelector));
       count = cards.length;
       active = count > perView;
       half = Math.floor((Math.min(visible, count) - 1) / 2);
@@ -1278,8 +1279,8 @@
       }, AUTOPLAY_MS);
     }
 
-    const prevBtn = document.getElementById('trainersPrev');
-    const nextBtn = document.getElementById('trainersNext');
+    const prevBtn = document.getElementById(prevId);
+    const nextBtn = document.getElementById(nextId);
     if (prevBtn) prevBtn.addEventListener('click', () => go(-1));
     if (nextBtn) nextBtn.addEventListener('click', () => go(1));
     root.addEventListener('mouseenter', () => { hovering = true; });
@@ -1308,7 +1309,7 @@
       startPos = pos;
       dragVelocity = 0;
       velocity = 0;
-      pressedCard = e.target.closest('.trainer-card');
+      pressedCard = e.target.closest(itemSelector);
     });
     window.addEventListener('pointermove', (e) => {
       if (!dragging) return;
@@ -1346,7 +1347,7 @@
     window.addEventListener('pointerup', endDrag);
     window.addEventListener('pointercancel', endDrag);
     viewport.addEventListener('click', (e) => {
-      const card = e.target.closest('.trainer-card');
+      const card = e.target.closest(itemSelector);
       if (moved || (active && card && !card.classList.contains('is-front') && !e.target.closest('button'))) {
         e.preventDefault();
         e.stopPropagation();
@@ -1366,7 +1367,17 @@
     });
 
     return { setup, refresh: measure, showOriginal, restartAutoplay };
-  })();
+  }
+
+  const carousel = createWheel({
+    root: trainersCarousel, track: trainersTrack, viewportSel: '.trainers__viewport',
+    itemSelector: '.trainer-card', prevId: 'trainersPrev', nextId: 'trainersNext',
+  });
+  // Галерея крутиться так само, як тренери
+  const galleryWheel = createWheel({
+    root: document.getElementById('galleryCarousel'), track: document.getElementById('galleryTrack'), viewportSel: '.gallery__viewport',
+    itemSelector: '.gallery-tile', prevId: 'galleryPrev', nextId: 'galleryNext',
+  });
 
   /* ============================================================
      Редаговані списки: програми, переваги, галерея, абонементи,
@@ -1496,6 +1507,7 @@
     });
     Object.values(current).forEach((item) => item.remove());
 
+    if (name === 'gallery') galleryWheel.setup();
     list.el.querySelectorAll(':scope > [data-list-item] [data-list-number]').forEach((el, i) => {
       el.textContent = String(i + 1).padStart(2, '0');
     });
