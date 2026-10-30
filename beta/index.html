@@ -99,7 +99,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=32">
+<link rel="stylesheet" href="css/style.css?v=35">
 <link rel="stylesheet" href="css/admin.css?v=28">
 </head>
 <body>
@@ -129,6 +129,11 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
       <a href="#schedule" class="nav-link">Розклад</a>
       <a href="#contact" class="nav-link">Контакти</a>
     </nav>
+
+    <button type="button" class="install-btn install-btn--nav" data-install hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+      <span class="install-btn__full">Встановити додаток</span><span class="install-btn__short" aria-hidden="true">Додаток</span>
+    </button>
 
     <a href="card.html" class="btn btn--primary btn--nav">Приєднатись</a>
 
@@ -514,7 +519,7 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
     <div class="pricing-grid" data-list="pricing">
       <article class="price-card reveal" data-list-item="price1">
         <h3 data-edit-key="price1.name">Старт</h3>
-        <p class="price-card__price"><span data-edit-key="price1.amount">499₴</span><span>/міс</span></p>
+        <p class="price-card__price"><span data-edit-key="price1.amount">499₴</span><span class="price-card__period" data-edit-key="price1.period">/міс</span></p>
         <ul data-list="price1.items" data-list-style="row">
           <li data-list-item="price1.item1"><span data-edit-key="price1.item1">Доступ у будні дні</span></li>
           <li data-list-item="price1.item2"><span data-edit-key="price1.item2">Тренажерний зал</span></li>
@@ -526,7 +531,7 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
       <article class="price-card price-card--featured reveal" data-list-item="price2">
         <span class="price-card__badge">Популярний</span>
         <h3 data-edit-key="price2.name">Повний</h3>
-        <p class="price-card__price"><span data-edit-key="price2.amount">799₴</span><span>/міс</span></p>
+        <p class="price-card__price"><span data-edit-key="price2.amount">799₴</span><span class="price-card__period" data-edit-key="price2.period">/міс</span></p>
         <ul data-list="price2.items" data-list-style="row">
           <li data-list-item="price2.item1"><span data-edit-key="price2.item1">Доступ 7 днів на тиждень</span></li>
           <li data-list-item="price2.item2"><span data-edit-key="price2.item2">Тренажерний зал + кросфіт</span></li>
@@ -538,7 +543,7 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
 
       <article class="price-card reveal" data-list-item="price3">
         <h3 data-edit-key="price3.name">PRO</h3>
-        <p class="price-card__price"><span data-edit-key="price3.amount">1299₴</span><span>/міс</span></p>
+        <p class="price-card__price"><span data-edit-key="price3.amount">1299₴</span><span class="price-card__period" data-edit-key="price3.period">/міс</span></p>
         <ul data-list="price3.items" data-list-style="row">
           <li data-list-item="price3.item1"><span data-edit-key="price3.item1">Все з плану «Повний»</span></li>
           <li data-list-item="price3.item2"><span data-edit-key="price3.item2">4 персональні тренування</span></li>
@@ -652,6 +657,7 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
       <div class="form-row">
         <input type="text" name="name" placeholder="Ім'я" required>
         <input type="tel" name="phone" placeholder="Телефон" required>
+        <input type="text" name="website" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
       </div>
       <div class="form-select">
         <select name="plan" id="planSelect" aria-label="Абонемент">
@@ -789,8 +795,8 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
 <script src="js/supabase-config.js?v=24"></script>
 <script src="js/emailjs-config.js?v=24"></script>
 <script src="js/logo3d.js?v=24"></script>
-<script src="js/main.js?v=29"></script>
-<script src="js/admin.js?v=28"></script>
+<script src="js/main.js?v=30"></script>
+<script src="js/admin.js?v=29"></script>
 <script src="js/admin-members.js?v=2"></script>
 <script src="js/gallery.js?v=1"></script>
 </body>
