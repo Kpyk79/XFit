@@ -4,12 +4,12 @@
    свіжість (кеш — лише запасний варіант офлайн), тож оновлення сайту
    видно одразу. Бібліотеки з CDN мають версію в адресі — їх беремо з
    кешу. Запити до Supabase, EmailJS та інших сайтів не чіпаємо. */
-const CACHE = 'xfit-v11'; // змінюй версію, коли міняєш сам sw.js
+const CACHE = 'xfit-v12'; // змінюй версію, коли міняєш сам sw.js
 const CORE = [
   './',
   'index.html',
   'train.html',
-  'css/style.css?v=31',
+  'css/style.css?v=32',
   'css/train.css?v=4',
   'js/train.js?v=3',
   'card.html',
