@@ -231,3 +231,5 @@ $$;
 drop trigger if exists leads_guard on leads;
 create trigger leads_guard before insert on leads
   for each row execute function leads_guard();
+-- функцію викликає лише тригер — напряму через API вона недоступна
+revoke all on function leads_guard() from public, anon, authenticated;
