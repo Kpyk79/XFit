@@ -71,6 +71,18 @@
 
   const LOGO = '<svg class="xcard__logo" viewBox="314 60 792 435" aria-label="XFit" role="img"><use class="m" href="#xfMark"/><use class="w" href="#xfWord"/></svg>';
 
+  // Назва абонемента в один рядок: якщо не вміщається — зменшуємо шрифт (не менше 16px)
+  function fitPlan(card) {
+    const el = card.querySelector('.xcard__plan');
+    if (!el || !el.clientWidth) return;
+    el.style.fontSize = '';
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > el.clientWidth + 1 && size > 16) {
+      size -= 1;
+      el.style.fontSize = size + 'px';
+    }
+  }
+
   function render(el, m) {
     const st = stateOf(m);
     el.classList.add('xcard');
@@ -81,6 +93,8 @@
     const pending = st.state === 'pending';
     // на карті — лише назва абонемента («PRO»), ціна — у деталях під картою
     const planName = String(m.plan || m.desired_plan || '').split(' — ')[0].trim();
+    // на лицьовому боці над назвою вже написано «Абонемент» — не повторюємо його: «Абонемент Місячний» → «Місячний»
+    const planShort = planName.replace(/^абонемент\s+/i, '') || planName;
     el.innerHTML = `
       <div class="xcard__inner">
         <div class="xcard__face xcard__front">
@@ -90,7 +104,7 @@
           <div class="xcard__top">${LOGO}<span class="xcard__status">${st.label}</span></div>
           <div class="xcard__plan-block">
             <span class="xcard__kicker">${pending ? 'Обраний абонемент' : 'Абонемент'}</span>
-            <b class="xcard__plan">${esc(planName || (pending ? 'Ще не обрано' : '—'))}</b>
+            <b class="xcard__plan">${esc(planShort || (pending ? 'Ще не обрано' : '—'))}</b>
           </div>
           <div class="xcard__bottom">
             <div class="xcard__field"><span>Клієнт XFit</span><b>${esc(m.full_name || '—')}</b></div>
@@ -110,6 +124,7 @@
           <div class="xcard__barcode"><svg class="xcard__barsvg"></svg></div>
         </div>
       </div>`;
+    fitPlan(el);
     const bar = el.querySelector('.xcard__barsvg');
     if (typeof JsBarcode === 'function' && m.card_number) {
       try {
@@ -119,6 +134,8 @@
     }
     if (!el.dataset.bound) {
       el.dataset.bound = '1';
+      // карта змінює розмір (поворот екрана, поява з прихованого стану) — підганяємо назву ще раз
+      if (window.ResizeObserver) new ResizeObserver(() => fitPlan(el)).observe(el);
       const flip = () => el.classList.toggle('is-flipped');
       el.addEventListener('click', (e) => {
         // на звороті торкання QR чи штрих-коду відкриває його на весь екран
