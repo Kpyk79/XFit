@@ -145,3 +145,23 @@
 .xcard[data-state="pending"] .xcard__status{ color: #ffb020; }
 .xcard-wrap[data-state="pending"] .card-progress__bar i{ background: rgba(255,255,255,0.25); box-shadow:none; }
 @media (max-width: 420px){ .reg__row{ grid-template-columns: minmax(0,1fr); } }
+
+/* ---------- Кнопки «Таймер» і «Мої тренування» ---------- */
+.card-apps{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.card-apps[hidden]{ display:none; }
+.card-app{
+  position:relative; display:flex; flex-direction:column; gap: 4px; padding: 16px; border-radius: 20px;
+  background: var(--panel); border: 1px solid rgba(57,255,106,0.35); color: var(--white);
+  transition: border-color .2s, transform .15s, box-shadow .2s;
+}
+.card-app:hover{ border-color: var(--green); box-shadow: 0 14px 34px -18px var(--green-glow); }
+.card-app:active{ transform: scale(.97); }
+.card-app__icon{ width: 46px; height: 46px; border-radius: 14px; display:grid; place-items:center; background: var(--green); margin-bottom: 8px; }
+.card-app__icon svg{ width: 24px; height: 24px; fill:none; stroke: #04140a; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.card-app b{ font-size: 1rem; }
+.card-app small{ color: var(--muted); font-size: .78rem; line-height: 1.3; }
+.card-app__lock{ display:none; margin-top: 6px; font-size: .74rem; font-weight: 600; color: #ffb020; }
+.card-apps.is-locked .card-app{ border-color: var(--border); }
+.card-apps.is-locked .card-app__icon{ background: rgba(255,255,255,0.08); }
+.card-apps.is-locked .card-app__icon svg{ stroke: var(--muted); }
+.card-apps.is-locked .card-app__lock{ display:block; }

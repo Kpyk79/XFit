@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Тренування — таймер і щоденник | XFit</title>
-<meta name="description" content="Інтервальний таймер (табата, EMOM, відпочинок) і щоденник тренувань XFit. Працює без інтернету, дані зберігаються на телефоні.">
+<title>Таймер і мої тренування | XFit</title>
+<meta name="description" content="Інтервальний таймер (табата, EMOM, відпочинок) та журнал «Мої тренування» XFit. Працює без інтернету, дані зберігаються на телефоні.">
 <link rel="icon" href="assets/favicon.svg?v=2" type="image/svg+xml">
 <link rel="icon" href="assets/favicon-32.png?v=2" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=2">
@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=32">
-<link rel="stylesheet" href="css/train.css?v=4">
+<link rel="stylesheet" href="css/train.css?v=5">
 </head>
 <body class="train-page">
 <style>.beta-ribbon{position:fixed;left:50%;top:calc(4px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:5000;pointer-events:none;
@@ -35,7 +35,7 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
     </a>
     <nav class="train-tabs" role="tablist" aria-label="Розділи">
       <button class="train-tab" role="tab" id="tabTimer" aria-controls="panelTimer" data-tab="timer">Таймер</button>
-      <button class="train-tab" role="tab" id="tabLog" aria-controls="panelLog" data-tab="log">Щоденник</button>
+      <button class="train-tab" role="tab" id="tabLog" aria-controls="panelLog" data-tab="log">Мої тренування</button>
     </nav>
   </div>
 </header>
@@ -43,12 +43,12 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
 <section class="train-lock container" id="trainLock" hidden aria-live="polite">
   <div class="train-lock__box">
     <span class="train-lock__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></span>
-    <h1 class="train-lock__title" id="trainLockTitle">Таймер і щоденник — для клієнтів XFit</h1>
+    <h1 class="train-lock__title" id="trainLockTitle">Таймер і «Мої тренування» — для клієнтів XFit</h1>
     <p class="train-lock__text" id="trainLockText">Вони відкриваються разом з активною картою клієнта.</p>
     <ol class="train-lock__steps">
       <li>Зареєструйся в додатку й обери абонемент</li>
       <li>Оплати його на рецепції — готівкою або карткою</li>
-      <li>Адміністратор активує карту — і таймер зі щоденником одразу відкриються</li>
+      <li>Адміністратор активує карту — і таймер та «Мої тренування» одразу відкриються</li>
     </ol>
     <a class="btn btn--primary btn--block" id="trainLockCta" href="card.html">Отримати карту клієнта</a>
   </div>
@@ -64,10 +64,12 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
       <button class="mode" data-mode="emom" role="radio">EMOM</button>
       <button class="mode" data-mode="rest" role="radio">Відпочинок</button>
       <button class="mode" data-mode="stopwatch" role="radio">Секундомір</button>
+      <button class="mode mode--breath" data-mode="breath" role="radio">Дихання</button>
     </div>
 
     <div class="timer" id="timer" data-phase="idle">
       <div class="timer__dial">
+        <div class="breath-orb" id="breathOrb" aria-hidden="true"><i></i><i></i><i></i></div>
         <svg class="timer__ring" viewBox="0 0 260 260" aria-hidden="true">
           <circle class="timer__track" cx="130" cy="130" r="116"/>
           <circle class="timer__progress" id="timerProgress" cx="130" cy="130" r="116"/>
@@ -94,6 +96,7 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
       </div>
 
       <ol class="laps" id="laps" aria-label="Кола" hidden></ol>
+      <div class="breath-dots" id="breathDots" hidden></div>
     </div>
 
     <div class="settings" id="settings">
@@ -112,6 +115,14 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
       <div class="setting" data-field="rounds">
         <span class="setting__label" data-rounds-label>Підходи</span>
         <div class="stepper"><button data-step="-1" aria-label="Менше">−</button><output data-value></output><button data-step="1" aria-label="Більше">+</button></div>
+      </div>
+      <div class="setting setting--presets setting--breath" data-field="pattern">
+        <span class="setting__label">Техніка</span>
+        <div class="presets breath-patterns">
+          <button data-pattern="box"><b>Квадрат</b><small>4 · 4 · 4 · 4 — фокус</small></button>
+          <button data-pattern="calm"><b>Відновлення</b><small>4 · 6 — після тренування</small></button>
+          <button data-pattern="relax"><b>Спокій</b><small>4 · 7 · 8 — розслаблення</small></button>
+        </div>
       </div>
       <div class="setting setting--presets" data-field="restPreset">
         <span class="setting__label">Швидкий вибір</span>
@@ -132,31 +143,74 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
     <p class="stats__caption">За останні 7 днів</p>
     <div class="stats" id="logStats"></div>
 
-    <form class="log-form" id="logForm" autocomplete="off">
-      <h2 class="log-h">Додати підхід</h2>
-      <div class="log-form__row">
-        <label class="field field--wide">
-          <span>Вправа</span>
-          <input type="text" id="logExercise" list="exerciseList" placeholder="Напр. Жим лежачи" required maxlength="60">
-          <datalist id="exerciseList"></datalist>
-        </label>
-        <label class="field field--date">
-          <span>Дата</span>
-          <input type="date" id="logDate" required>
+    <section class="workout" id="workout" aria-labelledby="workoutTitle">
+      <div class="workout__head">
+        <h2 class="log-h" id="workoutTitle">Тренування</h2>
+        <label class="date-chip" title="Змінити день">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+          <span id="logDateLabel">Сьогодні</span>
+          <input type="date" id="logDate" aria-label="День тренування">
         </label>
       </div>
-      <div class="log-form__row">
-        <div class="field">
-          <span>Вага, кг</span>
-          <div class="stepper stepper--input"><button type="button" data-for="logWeight" data-step="-2.5" aria-label="Менше">−</button><input type="number" id="logWeight" inputmode="decimal" min="0" max="999" step="0.5" value="20"><button type="button" data-for="logWeight" data-step="2.5" aria-label="Більше">+</button></div>
+
+      <ol class="howto" id="howto">
+        <li><b>1</b><span>Обери вправу</span></li>
+        <li><b>2</b><span>Вкажи вагу й повтори</span></li>
+        <li><b>3</b><span>Натисни «Записати підхід»</span></li>
+      </ol>
+
+      <div class="today" id="todayList"></div>
+
+      <div class="current" id="current" hidden>
+        <div class="current__top">
+          <span class="current__icon" id="curIcon" aria-hidden="true"></span>
+          <div class="current__title"><b id="curName"></b><small id="curLast"></small></div>
+          <button type="button" class="link-btn" id="curChange">Змінити</button>
         </div>
-        <div class="field">
-          <span>Повтори</span>
-          <div class="stepper stepper--input"><button type="button" data-for="logReps" data-step="-1" aria-label="Менше">−</button><input type="number" id="logReps" inputmode="numeric" min="1" max="999" step="1" value="10"><button type="button" data-for="logReps" data-step="1" aria-label="Більше">+</button></div>
+
+        <div class="big-field" id="weightField">
+          <div class="big-field__label"><span>Вага</span>
+            <button type="button" class="chip-toggle" id="bodyweight" aria-pressed="false">Власна вага</button>
+          </div>
+          <div class="big-stepper" id="weightStepper">
+            <button type="button" data-for="logWeight" data-step="-2.5" aria-label="Менше на 2,5 кг">−</button>
+            <label class="big-stepper__val"><input type="number" id="logWeight" inputmode="decimal" min="0" max="999" step="0.5" value="20"><span>кг</span></label>
+            <button type="button" data-for="logWeight" data-step="2.5" aria-label="Більше на 2,5 кг">+</button>
+          </div>
+        </div>
+        <div class="big-field">
+          <div class="big-field__label"><span>Повтори</span></div>
+          <div class="big-stepper">
+            <button type="button" data-for="logReps" data-step="-1" aria-label="Менше на 1">−</button>
+            <label class="big-stepper__val"><input type="number" id="logReps" inputmode="numeric" min="1" max="999" step="1" value="10"><span>раз</span></label>
+            <button type="button" data-for="logReps" data-step="1" aria-label="Більше на 1">+</button>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn--primary btn--block btn--lg add-set" id="addSet">✓ Записати підхід</button>
+        <div class="current__actions">
+          <button type="button" class="soft-btn" id="restBtn">⏱ Відпочинок <b id="restLabel">1:30</b></button>
+          <button type="button" class="soft-btn" id="finishEx">Готово з вправою</button>
         </div>
       </div>
-      <button type="submit" class="btn btn--primary btn--block">+ Додати підхід</button>
-    </form>
+
+      <button type="button" class="pick-btn" id="pickExercise">
+        <span class="pick-btn__plus" aria-hidden="true">+</span>
+        <span><b id="pickTitle">Обрати вправу</b><small>Груди, спина, ноги, руки, прес…</small></span>
+      </button>
+    </section>
+
+    <div class="sheet" id="exSheet" hidden>
+      <div class="sheet__box" role="dialog" aria-modal="true" aria-labelledby="exSheetTitle">
+        <div class="sheet__head">
+          <h3 id="exSheetTitle">Обери вправу</h3>
+          <button type="button" class="sheet__close" id="exClose" aria-label="Закрити">×</button>
+        </div>
+        <input type="search" id="exSearch" class="sheet__search" placeholder="Пошук або своя назва вправи" autocomplete="off" maxlength="60">
+        <div class="cats" id="exCats" role="tablist" aria-label="Групи м'язів"></div>
+        <div class="ex-list" id="exList"></div>
+      </div>
+    </div>
 
     <div class="log-section">
       <div class="log-section__head">
@@ -197,6 +251,6 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
 
 <script src="js/supabase-config.js?v=27"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/train.js?v=3"></script>
+<script src="js/train.js?v=4"></script>
 </body>
 </html>
