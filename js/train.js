@@ -62,6 +62,7 @@
     intervals: { work: 40, rest: 20, rounds: 10 },
     emom: { interval: 60, rounds: 10 },
     rest: { rest: 90 },
+    breath: { pattern: 'box', rounds: 6 },
     sound: true,
     vibrate: true,
     prep: true,
@@ -77,6 +78,7 @@
     intervals: { ...DEFAULTS.intervals, ...(saved.intervals || {}) },
     emom: { ...DEFAULTS.emom, ...(saved.emom || {}) },
     rest: { ...DEFAULTS.rest, ...(saved.rest || {}) },
+    breath: { ...DEFAULTS.breath, ...(saved.breath || {}) },
   };
   const saveCfg = () => store.set(SETTINGS_KEY, cfg);
 
@@ -106,7 +108,14 @@
   };
   const fmtSetting = (sec) => (sec >= 60 ? Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0') : sec + ' с');
 
-  const PHASE_NAMES = { prep: 'Приготуйся', work: 'Робота', rest: 'Відпочинок', done: 'Готово!', idle: 'Готовий?' };
+  const PHASE_NAMES = {
+    prep: 'Приготуйся', work: 'Робота', rest: 'Відпочинок', done: 'Готово!', idle: 'Готовий?',
+    inhale: 'Вдих', hold: 'Затримай', exhale: 'Видих', hold2: 'Пауза',
+  };
+  // Дихальні техніки: секунди вдиху, затримки, видиху, паузи
+  const BREATH = { box: [4, 4, 4, 4], calm: [4, 0, 6, 0], relax: [4, 7, 8, 0] };
+  const BREATH_PHASES = ['inhale', 'hold', 'exhale', 'hold2'];
+  const isBreath = (type) => BREATH_PHASES.includes(type);
 
   // Послідовність фаз для поточного режиму
   function buildPhases() {
@@ -123,6 +132,11 @@
       for (let r = 1; r <= cfg.emom.rounds; r++) phases.push({ type: 'work', dur: cfg.emom.interval, round: r, rounds: cfg.emom.rounds });
     } else if (m === 'rest') {
       phases.push({ type: 'rest', dur: cfg.rest.rest });
+    } else if (m === 'breath') {
+      const pat = BREATH[cfg.breath.pattern] || BREATH.box;
+      for (let r = 1; r <= cfg.breath.rounds; r++) {
+        pat.forEach((dur, i) => { if (dur) phases.push({ type: BREATH_PHASES[i], dur, round: r, rounds: cfg.breath.rounds }); });
+      }
     }
     return phases;
   }
@@ -164,13 +178,62 @@
     osc.start(at);
     osc.stop(at + dur + 0.02);
   }
+  // М'який звук для дихання: синусоїда, що плавно ковзає від f0 до f1
+  function glide(f0, f1, dur, vol = 0.12) {
+    if (!cfg.sound || !audio) return;
+    const at = audio.currentTime;
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(f0, at);
+    osc.frequency.exponentialRampToValueAtTime(f1, at + dur);
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(vol, at + Math.min(0.6, dur / 3));
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(at);
+    osc.stop(at + dur + 0.05);
+  }
   const vibrate = (pattern) => { if (cfg.vibrate && navigator.vibrate) navigator.vibrate(pattern); };
   const sounds = {
     tick() { beep(880, 0.12); vibrate(60); },
     work() { beep(1320, 0.45); vibrate([220]); },
     rest() { beep(660, 0.45); vibrate([120, 80, 120]); },
     done() { beep(1320, 0.18); beep(1320, 0.18, 0.25); beep(1760, 0.5, 0.5); vibrate([300, 120, 300, 120, 500]); },
+    inhale(d) { glide(330, 494, Math.min(d, 4)); vibrate(40); },
+    hold() { glide(440, 440, 0.6, 0.06); vibrate([20, 60, 20]); },
+    exhale(d) { glide(494, 294, Math.min(d, 5)); vibrate(40); },
+    hold2() { glide(294, 294, 0.6, 0.05); },
+    calmDone() { glide(392, 587, 1.2, 0.1); setTimeout(() => glide(587, 784, 1.4, 0.08), 500); vibrate([80, 80, 80]); },
   };
+  const phaseSound = (p) => {
+    if (!p) return;
+    if (p.type === 'work') sounds.work();
+    else if (p.type === 'rest') sounds.rest();
+    else if (sounds[p.type]) sounds[p.type](p.dur);
+  };
+
+  /* ---------- Дихальне коло ---------- */
+  const orbEl = $('#breathOrb');
+  const dotsEl = $('#breathDots');
+  const ease = (x) => 0.5 - Math.cos(Math.PI * x) / 2;
+  function setOrb(type, frac) {
+    let k = 0.15;                                          // 0 — мале коло, 1 — велике
+    if (type === 'inhale') k = ease(frac);
+    else if (type === 'hold') k = 1;
+    else if (type === 'exhale') k = 1 - ease(frac);
+    else if (type === 'idle' || type === 'done') k = 0.35;
+    orbEl.style.setProperty('--k', k.toFixed(3));
+  }
+  function renderDots(round, rounds) {
+    if (cfg.mode !== 'breath') { dotsEl.hidden = true; return; }
+    dotsEl.hidden = false;
+    if (dotsEl.childElementCount !== rounds) dotsEl.innerHTML = '<i></i>'.repeat(rounds);
+    [...dotsEl.children].forEach((d, i) => {
+      d.classList.toggle('is-done', i < round - 1);
+      d.classList.toggle('is-now', i === round - 1);
+    });
+  }
 
   /* ---------- Екран не гасне, поки таймер іде ---------- */
   let wakeLock = null;
@@ -217,6 +280,8 @@
     timerEl.classList.remove('is-running');
     lapsEl.hidden = cfg.mode !== 'stopwatch' || !t.laps.length;
     if (cfg.mode === 'stopwatch') {
+      timerEl.dataset.mode = cfg.mode;
+      renderDots(0, 0);
       setPhase('idle');
       phaseEl.textContent = 'Секундомір';
       timeEl.textContent = fmtPrecise(t.swElapsed);
@@ -227,14 +292,22 @@
       return;
     }
     skipBtn.setAttribute('aria-label', 'Наступна фаза');
+    timerEl.dataset.mode = cfg.mode;
+    setOrb('idle', 0);
+    renderDots(0, cfg.mode === 'breath' ? cfg.breath.rounds : 0);
     const phases = buildPhases();
     const first = phases.find((p) => p.type !== 'prep') || phases[0];
     setPhase('idle');
     timeEl.textContent = fmt(first ? first.dur : 0);
     if (cfg.mode === 'rest') roundEl.textContent = 'Відпочинок між підходами';
+    else if (cfg.mode === 'breath') roundEl.textContent = cfg.breath.rounds + ' ' + plural(cfg.breath.rounds, ['цикл', 'цикли', 'циклів']) + ' · натисни старт';
     else roundEl.textContent = (first && first.rounds) + ' ' + plural(first && first.rounds, ['підхід', 'підходи', 'підходів']);
     const total = phases.reduce((s, p) => s + p.dur, 0);
     totalEl.textContent = cfg.mode === 'rest' ? '' : 'Усього: ' + fmt(total);
+    if (cfg.mode === 'breath') {
+      phaseEl.textContent = 'Дихання';
+      timeEl.textContent = (BREATH[cfg.breath.pattern] || BREATH.box).filter(Boolean).join('·');
+    }
     setProgress(1);
   }
 
@@ -259,9 +332,15 @@
     const el = elapsedInPhase(now);
     const left = p.dur - el;
     setPhase(p.type);
-    timeEl.textContent = fmt(left);
+    timeEl.textContent = isBreath(p.type) ? String(Math.max(1, Math.ceil(left - 1e-6))) : fmt(left);
     setProgress(left / p.dur);
-    roundEl.textContent = p.rounds ? `Підхід ${p.round} / ${p.rounds}` : (p.type === 'prep' ? 'Старт за мить' : '');
+    setOrb(p.type, Math.min(1, el / p.dur));
+    if (cfg.mode === 'breath') {
+      roundEl.textContent = p.rounds ? `Цикл ${p.round} / ${p.rounds}` : 'Сядь зручно, розслаб плечі';
+      renderDots(p.round || 0, cfg.breath.rounds);
+    } else {
+      roundEl.textContent = p.rounds ? `Підхід ${p.round} / ${p.rounds}` : (p.type === 'prep' ? 'Старт за мить' : '');
+    }
     totalEl.textContent = cfg.mode === 'rest' ? '' : 'Залишилось: ' + fmt(totalRemaining(now));
   }
 
@@ -277,10 +356,9 @@
         t.lastBeep = null;
         p = t.phases[t.idx];
         if (!p) return finish();
-        if (p.type === 'work') sounds.work();
-        else if (p.type === 'rest') sounds.rest();
+        phaseSound(p);
       }
-      if (p) {
+      if (p && !isBreath(p.type)) {
         const leftWhole = Math.ceil(p.dur - elapsedInPhase(now));
         if (leftWhole <= 3 && leftWhole >= 1 && t.lastBeep !== leftWhole) {
           t.lastBeep = leftWhole;
@@ -305,9 +383,7 @@
       t.idx = 0;
       t.phaseStart = now;
       t.lastBeep = null;
-      const first = t.phases[0];
-      if (first.type === 'work') sounds.work();
-      else if (first.type === 'rest') sounds.rest();
+      phaseSound(t.phases[0]);
     } else {
       t.phaseStart += now - t.pausedAt; // продовжуємо після паузи
     }
@@ -346,13 +422,15 @@
   function finish() {
     t.running = false;
     clearInterval(t.interval);
-    sounds.done();
+    if (cfg.mode === 'breath') sounds.calmDone(); else sounds.done();
     unlockScreen();
     t.phases = [];
     timerEl.classList.remove('is-running');
     setPhase('done');
-    timeEl.textContent = '00:00';
-    roundEl.textContent = cfg.mode === 'rest' ? 'Час для наступного підходу' : 'Тренування завершено 💪';
+    setOrb('done', 0);
+    if (cfg.mode === 'breath') renderDots(cfg.breath.rounds + 1, cfg.breath.rounds);
+    timeEl.textContent = cfg.mode === 'breath' ? '✓' : '00:00';
+    roundEl.textContent = cfg.mode === 'rest' ? 'Час для наступного підходу' : cfg.mode === 'breath' ? 'Чудово. Відчуй, як стало спокійніше' : 'Тренування завершено 💪';
     totalEl.textContent = '';
     setProgress(1);
     startBtn.setAttribute('aria-label', 'Старт');
@@ -386,6 +464,8 @@
   }
 
   startBtn.addEventListener('click', () => (t.running ? pause() : start()));
+  // у диханні можна просто торкнутися кола
+  $('.timer__dial').addEventListener('click', () => { if (cfg.mode === 'breath') (t.running ? pause() : start()); });
   resetBtn.addEventListener('click', reset);
   skipBtn.addEventListener('click', skip);
 
@@ -397,6 +477,7 @@
     emom: ['interval', 'rounds'],
     rest: ['rest', 'restPreset'],
     stopwatch: [],
+    breath: ['pattern', 'rounds'],
   };
 
   function renderSettings() {
@@ -412,12 +493,14 @@
       }
     });
     const roundsLabel = $('[data-rounds-label]', settingsEl);
-    if (roundsLabel) roundsLabel.textContent = cfg.mode === 'emom' ? 'Підходи (хвилини)' : 'Підходи';
-    $$('.presets button', settingsEl).forEach((b) => b.classList.toggle('is-active', cfg.mode === 'rest' && Number(b.dataset.preset) === cfg.rest.rest));
+    if (roundsLabel) roundsLabel.textContent = cfg.mode === 'emom' ? 'Підходи (хвилини)' : cfg.mode === 'breath' ? 'Цикли' : 'Підходи';
+    $$('[data-pattern]', settingsEl).forEach((b) => b.classList.toggle('is-active', b.dataset.pattern === cfg.breath.pattern));
+    $$('[data-preset]', settingsEl).forEach((b) => b.classList.toggle('is-active', cfg.mode === 'rest' && Number(b.dataset.preset) === cfg.rest.rest));
     $('#optSound').checked = cfg.sound;
     $('#optVibrate').checked = cfg.vibrate;
     $('#optPrep').checked = cfg.prep;
     $('#optPrep').closest('.toggle').hidden = cfg.mode === 'rest' || cfg.mode === 'stopwatch';
+    timerEl.dataset.mode = cfg.mode;
     $('#optVibrate').closest('.toggle').hidden = !('vibrate' in navigator);
   }
 
@@ -437,7 +520,14 @@
     reset();
     renderSettings();
   }));
-  $$('.presets button', settingsEl).forEach((b) => b.addEventListener('click', () => {
+  $$('[data-pattern]', settingsEl).forEach((b) => b.addEventListener('click', () => {
+    if (t.running) return;
+    cfg.breath.pattern = b.dataset.pattern;
+    saveCfg();
+    reset();
+    renderSettings();
+  }));
+  $$('[data-preset]', settingsEl).forEach((b) => b.addEventListener('click', () => {
     cfg.rest.rest = Number(b.dataset.preset);
     saveCfg();
     reset();
@@ -455,11 +545,26 @@
      ЩОДЕННИК
      ============================================================ */
   const LOG_KEY = 'xfit_log_v1';
-  const COMMON_EXERCISES = [
-    'Жим лежачи', 'Присідання зі штангою', 'Станова тяга', 'Жим стоячи', 'Підтягування', 'Віджимання на брусах',
-    'Тяга штанги в нахилі', 'Тяга верхнього блока', 'Жим ногами', 'Випади', 'Румунська тяга',
-    'Згинання рук зі штангою', 'Французький жим', 'Розведення гантелей', 'Жим гантелей сидячи', 'Гіперекстензія',
+  // Каталог вправ за групами м'язів. Вправи з bw: true зазвичай роблять з власною вагою.
+  const CATS = [
+    { id: 'chest', name: 'Груди', icon: '🏋️', items: ['Жим лежачи', 'Жим лежачи на похилій лаві', 'Жим гантелей лежачи', 'Жим гантелей на похилій лаві', 'Розведення гантелей лежачи', 'Зведення рук у кросовері', 'Жим у тренажері на груди', 'Метелик (pec deck)', 'Пуловер з гантеллю', ['Віджимання', 1], ['Віджимання на брусах', 1]] },
+    { id: 'back', name: 'Спина', icon: '🧗', items: [['Підтягування', 1], 'Тяга верхнього блока', 'Тяга горизонтального блока', 'Тяга штанги в нахилі', 'Тяга гантелі однією рукою', 'Тяга Т-грифа', 'Станова тяга', 'Тяга в тренажері (важільна)', 'Шраги', ['Гіперекстензія', 1], 'Пуловер на блоці'] },
+    { id: 'legs', name: 'Ноги', icon: '🦵', items: ['Присідання зі штангою', 'Фронтальні присідання', 'Присідання з гантеллю (гоблет)', 'Жим ногами', 'Гак-присідання', 'Випади', 'Болгарські випади', 'Румунська тяга', 'Розгинання ніг у тренажері', 'Згинання ніг у тренажері', 'Ягідний міст', 'Відведення ноги в кросовері', 'Зведення ніг у тренажері', 'Розведення ніг у тренажері', 'Підйоми на носки', ['Присідання без ваги', 1]] },
+    { id: 'shoulders', name: 'Плечі', icon: '🤸', items: ['Жим стоячи (армійський)', 'Жим гантелей сидячи', 'Жим Арнольда', 'Махи гантелями в сторони', 'Махи в нахилі', 'Підйоми гантелей перед собою', 'Тяга штанги до підборіддя', 'Тяга канату до обличчя', 'Жим у тренажері на плечі'] },
+    { id: 'arms', name: 'Руки', icon: '💪', items: ['Згинання рук зі штангою', 'Згинання рук з гантелями', 'Молотки', 'Згинання на лаві Скотта', 'Згинання на нижньому блоці', 'Французький жим', 'Розгинання рук на блоці', 'Розгинання гантелі з-за голови', 'Жим вузьким хватом', ['Віджимання від лави', 1]] },
+    { id: 'abs', name: 'Прес', icon: '🔥', items: [['Скручування', 1], ['Підйом ніг у висі', 1], ['Підйом ніг лежачи', 1], ['Велосипед', 1], ['Російські скручування', 1], 'Скручування на блоці', ['Ролик для преса', 1], ['Планка (секунди)', 1], ['Бічна планка (секунди)', 1]] },
+    { id: 'cardio', name: 'Кардіо та функціональні', icon: '🏃', items: [['Бурпі', 1], ['Стрибки на скакалці', 1], ['Стрибки на тумбу', 1], 'Махи гирею', 'Кидки медболу', ['Гребний тренажер (хвилини)', 1], ['Бігова доріжка (хвилини)', 1], ['Велотренажер (хвилини)', 1], ['Альпініст', 1], ['Джампінг-джек', 1]] },
   ];
+  const CATALOG = new Map();                                // назва (мал. літери) → { name, cat, bw }
+  CATS.forEach((c) => {
+    c.items = c.items.map((it) => {
+      const [name, bw] = Array.isArray(it) ? it : [it, 0];
+      CATALOG.set(name.toLowerCase(), { name, cat: c, bw: !!bw });
+      return name;
+    });
+  });
+  const catOf = (name) => (CATALOG.get(String(name).toLowerCase()) || {}).cat;
+
   let log = store.get(LOG_KEY, { v: 1, sets: [] });
   if (!log || !Array.isArray(log.sets)) log = { v: 1, sets: [] };
   const saveLog = () => {
@@ -484,69 +589,232 @@
   const fmtKg = (n) => (Math.round(n * 10) / 10).toLocaleString('uk-UA');
   // великий тоннаж — у тоннах: 10 507,5 кг → «10,5 т»
   const fmtMass = (kg) => (kg >= 1000 ? (Math.round(kg / 100) / 10).toLocaleString('uk-UA') + ' т' : fmtKg(kg) + ' кг');
+  // підхід з власною вагою (0 кг) показуємо лише повторами
+  const fmtSet = (s) => (s.w > 0 ? `${fmtKg(s.w)} кг × ${s.r}` : `${s.r} повт.`);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  const form = $('#logForm');
-  const exInput = $('#logExercise');
   const dateInput = $('#logDate');
   const weightInput = $('#logWeight');
   const repsInput = $('#logReps');
+  const currentEl = $('#current');
+  const pickBtn = $('#pickExercise');
+  const bwBtn = $('#bodyweight');
   dateInput.value = todayISO();
   dateInput.max = todayISO();
+  const day = () => dateInput.value || todayISO();
 
   function exercisesByRecency() {
     const seen = new Map();
     [...log.sets].sort((a, b) => b.t - a.t).forEach((s) => { if (!seen.has(s.ex)) seen.set(s.ex, s); });
     return [...seen.keys()];
   }
+  const setsOf = (ex) => log.sets.filter((s) => s.ex === ex).sort((a, b) => b.t - a.t);
 
-  function renderDatalist() {
-    const mine = exercisesByRecency();
-    const all = [...mine, ...COMMON_EXERCISES.filter((e) => !mine.includes(e))];
-    $('#exerciseList').innerHTML = all.map((e) => `<option value="${esc(e)}"></option>`).join('');
+  /* ---------- Поточна вправа ---------- */
+  let curEx = null;
+  let bodyweight = false;
+
+  function setBodyweight(on) {
+    bodyweight = on;
+    bwBtn.setAttribute('aria-pressed', String(on));
+    $('#weightStepper').hidden = on;
   }
 
-  // Вибрав вправу — підставляємо вагу й повтори з останнього разу
-  exInput.addEventListener('change', () => {
-    const name = exInput.value.trim();
-    const last = [...log.sets].filter((s) => s.ex.toLowerCase() === name.toLowerCase()).sort((a, b) => b.t - a.t)[0];
-    if (last) {
-      exInput.value = last.ex;
-      weightInput.value = last.w;
-      repsInput.value = last.r;
-    }
-  });
+  function updateAddLabel() {
+    const n = log.sets.filter((s) => s.ex === curEx && s.d === day()).length;
+    $('#addSet').textContent = `✓ Записати підхід ${n + 1}`;
+  }
 
-  $$('.stepper--input [data-for]', form).forEach((btn) => btn.addEventListener('click', () => {
+  function selectExercise(name) {
+    curEx = name;
+    const all = setsOf(name);
+    const last = all[0];
+    const info = CATALOG.get(name.toLowerCase());
+    const cat = catOf(name);
+    $('#curIcon').textContent = cat ? cat.icon : '⭐';
+    $('#curName').textContent = name;
+    const best = Math.max(0, ...all.map((s) => s.w));
+    $('#curLast').textContent = last
+      ? `Минулого разу: ${fmtSet(last)}` + (best > 0 ? ` · рекорд ${fmtKg(best)} кг` : '')
+      : 'Перший раз — почни з легкої ваги й правильної техніки';
+    if (last) { weightInput.value = last.w || 20; repsInput.value = last.r; }
+    setBodyweight(last ? last.w === 0 : !!(info && info.bw));
+    $('#restLabel').textContent = fmtSetting(cfg.rest.rest).replace(' с', ' с');
+    currentEl.hidden = false;
+    pickBtn.hidden = true;
+    updateAddLabel();
+    currentEl.classList.remove('is-pop'); void currentEl.offsetWidth; currentEl.classList.add('is-pop');
+    currentEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function closeExercise() {
+    curEx = null;
+    currentEl.hidden = true;
+    pickBtn.hidden = false;
+  }
+
+  $$('.big-stepper [data-for]', currentEl).forEach((btn) => btn.addEventListener('click', () => {
     const input = $('#' + btn.dataset.for);
-    const min = Number(input.min);
-    const max = Number(input.max);
-    const v = Math.min(max, Math.max(min, (parseFloat(input.value) || 0) + Number(btn.dataset.step)));
+    const v = Math.min(Number(input.max), Math.max(Number(input.min), (parseFloat(input.value) || 0) + Number(btn.dataset.step)));
     input.value = String(Math.round(v * 10) / 10);
+    input.parentElement.classList.remove('is-bump'); void input.offsetWidth; input.parentElement.classList.add('is-bump');
   }));
+  bwBtn.addEventListener('click', () => setBodyweight(!bodyweight));
+  $('#curChange').addEventListener('click', openSheet);
+  $('#finishEx').addEventListener('click', () => { closeExercise(); renderWorkout(); });
+  pickBtn.addEventListener('click', openSheet);
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const ex = exInput.value.trim().replace(/\s+/g, ' ');
-    const w = Math.max(0, parseFloat(String(weightInput.value).replace(',', '.')) || 0);
+  $('#addSet').addEventListener('click', () => {
+    if (!curEx) return;
+    const w = bodyweight ? 0 : Math.max(0, parseFloat(String(weightInput.value).replace(',', '.')) || 0);
     const r = Math.max(1, parseInt(repsInput.value, 10) || 0);
-    const d = dateInput.value || todayISO();
-    if (!ex) { exInput.focus(); return; }
-    // одна назва вправи без різниці у великих/малих літерах
-    const existing = exercisesByRecency().find((x) => x.toLowerCase() === ex.toLowerCase());
-    log.sets.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), d, ex: existing || ex, w, r, t: Date.now() });
+    // рекорд рахуємо відносно попередніх днів, а не підходів цього ж тренування
+    const prev = setsOf(curEx).filter((s) => s.d < day());
+    const prevBestW = Math.max(0, ...prev.map((s) => s.w));
+    const prevBestR = Math.max(0, ...prev.filter((s) => s.w === w).map((s) => s.r));
+    log.sets.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), d: day(), ex: curEx, w, r, t: Date.now() });
     saveLog();
-    toast(`Додано: ${existing || ex} — ${fmtKg(w)} кг × ${r}`);
-    progressExercise = existing || ex;
+    progressExercise = curEx;
+    const n = log.sets.filter((s) => s.ex === curEx && s.d === day()).length;
+    let record = '';
+    if (prev.length && w > 0 && w > prevBestW) record = `🏆 Новий рекорд — ${fmtKg(w)} кг!`;
+    else if (prev.length && r > prevBestR && prevBestR > 0) record = `🏆 Рекорд повторів з цією вагою — ${r}!`;
+    toast(record || `Підхід ${n} записано: ${fmtSet({ w, r })}`);
+    if (navigator.vibrate && cfg.vibrate) navigator.vibrate(record ? [60, 60, 120] : 40);
+    const btn = $('#addSet');
+    btn.classList.remove('is-done', 'is-record'); void btn.offsetWidth;
+    btn.classList.add(record ? 'is-record' : 'is-done');
     renderLog();
+    updateAddLabel();
   });
+
+  // Відпочинок між підходами — одним дотиком у таймер
+  $('#restBtn').addEventListener('click', () => {
+    if (t.running) pause();
+    cfg.mode = 'rest';
+    saveCfg();
+    reset();
+    renderSettings();
+    history.replaceState(null, '', '#timer');
+    showTab('timer');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    start();
+  });
+
+  /* ---------- День тренування ---------- */
+  function renderDay() {
+    $('#logDateLabel').textContent = fmtDay(day());
+    $('#workoutTitle').textContent = dayDiff(day()) === 0 ? 'Тренування сьогодні' : 'Тренування';
+  }
+  dateInput.addEventListener('change', () => {
+    if (!dateInput.value || dateInput.value > todayISO()) dateInput.value = todayISO();
+    renderWorkout();
+    if (curEx) updateAddLabel();
+  });
+
+  /* ---------- Вправи обраного дня ---------- */
+  function renderWorkout() {
+    renderDay();
+    $('#howto').hidden = log.sets.length > 0;
+    const sets = log.sets.filter((s) => s.d === day()).sort((a, b) => a.t - b.t);
+    const byEx = new Map();
+    sets.forEach((s) => { if (!byEx.has(s.ex)) byEx.set(s.ex, []); byEx.get(s.ex).push(s); });
+    const box = $('#todayList');
+    box.innerHTML = [...byEx.entries()].map(([ex, list]) => {
+      const cat = catOf(ex);
+      return `<div class="today-ex${ex === curEx ? ' is-current' : ''}">
+        <button type="button" class="today-ex__head" data-more="${esc(ex)}">
+          <span class="today-ex__icon" aria-hidden="true">${cat ? cat.icon : '⭐'}</span>
+          <b>${esc(ex)}</b><span class="today-ex__more">+ підхід</span>
+        </button>
+        <div class="sets">${list.map((s, i) => `<span class="set-chip"><i>${i + 1}</i>${fmtSet(s)}<button type="button" data-del="${s.id}" aria-label="Видалити підхід ${i + 1}">×</button></span>`).join('')}</div>
+      </div>`;
+    }).join('');
+    $$('[data-more]', box).forEach((b) => b.addEventListener('click', () => selectExercise(b.dataset.more)));
+    $$('[data-del]', box).forEach((b) => b.addEventListener('click', () => deleteSet(b.dataset.del)));
+    $('#pickTitle').textContent = byEx.size ? 'Додати ще вправу' : 'Обрати вправу';
+  }
 
   function deleteSet(id) {
+    const removed = log.sets.find((s) => s.id === id);
     log.sets = log.sets.filter((s) => s.id !== id);
     saveLog();
     renderLog();
-    toast('Підхід видалено');
+    if (curEx) updateAddLabel();
+    toast(removed ? `Підхід видалено: ${fmtSet(removed)}` : 'Підхід видалено');
   }
+
+  /* ---------- Вікно вибору вправи ---------- */
+  const sheet = $('#exSheet');
+  const search = $('#exSearch');
+  let activeCat = null;
+
+  function openSheet() {
+    search.value = '';
+    activeCat = exercisesByRecency().length ? 'recent' : CATS[0].id;
+    renderSheet();
+    sheet.hidden = false;
+    document.body.classList.add('sheet-open');
+    requestAnimationFrame(() => sheet.classList.add('is-open'));
+  }
+  function closeSheet() {
+    sheet.classList.remove('is-open');
+    document.body.classList.remove('sheet-open');
+    setTimeout(() => { sheet.hidden = true; }, 220);
+  }
+  function exItem(name) {
+    const last = setsOf(name)[0];
+    const cat = catOf(name);
+    return `<button type="button" class="ex-item" data-pick="${esc(name)}">
+      <span class="ex-item__icon" aria-hidden="true">${cat ? cat.icon : '⭐'}</span>
+      <span class="ex-item__name">${esc(name)}</span>
+      ${last ? `<small>${fmtSet(last)}</small>` : ''}
+    </button>`;
+  }
+  function renderSheet() {
+    const mine = exercisesByRecency();
+    const cats = [...(mine.length ? [{ id: 'recent', name: 'Недавні', icon: '🕘' }] : []), ...CATS];
+    $('#exCats').innerHTML = cats.map((c) => `<button type="button" class="cat${c.id === activeCat ? ' is-active' : ''}" data-cat="${c.id}" role="tab" aria-selected="${c.id === activeCat}">${c.icon} ${esc(c.name)}</button>`).join('');
+    const q = search.value.trim().replace(/\s+/g, ' ');
+    let html = '';
+    if (q) {
+      const ql = q.toLowerCase();
+      const names = [...new Set([...mine, ...CATALOG.values()].map((x) => (typeof x === 'string' ? x : x.name)))];
+      const found = names.filter((n) => n.toLowerCase().includes(ql));
+      const exact = names.find((n) => n.toLowerCase() === ql);
+      if (!exact) html += `<button type="button" class="ex-item ex-item--add" data-pick="${esc(q)}"><span class="ex-item__icon" aria-hidden="true">+</span><span class="ex-item__name">Додати свою: «${esc(q)}»</span></button>`;
+      html += found.map(exItem).join('') || '';
+      $('#exCats').hidden = true;
+    } else {
+      $('#exCats').hidden = false;
+      const list = activeCat === 'recent' ? mine.slice(0, 20) : (CATS.find((c) => c.id === activeCat) || CATS[0]).items;
+      html = list.map(exItem).join('');
+    }
+    $('#exList').innerHTML = html || '<p class="ex-empty">Нічого не знайдено</p>';
+  }
+  $('#exCats').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cat]');
+    if (!b) return;
+    activeCat = b.dataset.cat;
+    renderSheet();
+    b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  });
+  $('#exList').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pick]');
+    if (!b) return;
+    const raw = b.dataset.pick.slice(0, 60);
+    // одна назва вправи без різниці у великих/малих літерах
+    const name = exercisesByRecency().find((x) => x.toLowerCase() === raw.toLowerCase()) || (CATALOG.get(raw.toLowerCase()) || {}).name || raw;
+    closeSheet();
+    selectExercise(name);
+  });
+  search.addEventListener('input', renderSheet);
+  search.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); const first = $('#exList [data-pick]'); if (first) first.click(); }
+  });
+  $('#exClose').addEventListener('click', closeSheet);
+  sheet.addEventListener('click', (e) => { if (e.target === sheet) closeSheet(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sheet.hidden) closeSheet(); });
 
   /* ---------- Підсумки ---------- */
   function renderStats() {
@@ -564,7 +832,7 @@
   function renderHistory() {
     const box = $('#logHistory');
     if (!log.sets.length) {
-      box.innerHTML = '<p class="history-empty">Тут з\'являться твої тренування. Додай перший підхід вище.</p>';
+      box.innerHTML = '<p class="history-empty">Тут з\'являться твої тренування. Обери вправу вище й запиши перший підхід.</p>';
       return;
     }
     const byDay = new Map();
@@ -581,8 +849,8 @@
       return `<div class="day">
         <div class="day__head"><span class="day__date">${esc(fmtDay(d))}</span><span class="day__meta">${sets.length} ${plural(sets.length, ['підхід', 'підходи', 'підходів'])} · ${fmtKg(tonnage)} кг</span></div>
         ${[...byEx.entries()].map(([ex, list]) => `<div class="ex">
-          <div class="ex__name">${esc(ex)}<small>макс ${fmtKg(Math.max(...list.map((s) => s.w)))} кг</small></div>
-          <div class="sets">${list.map((s) => `<span class="set-chip">${fmtKg(s.w)} кг × ${s.r}<button type="button" data-del="${s.id}" aria-label="Видалити підхід ${fmtKg(s.w)} кг × ${s.r}">×</button></span>`).join('')}</div>
+          <div class="ex__name">${esc(ex)}${Math.max(...list.map((s) => s.w)) > 0 ? `<small>макс ${fmtKg(Math.max(...list.map((s) => s.w)))} кг</small>` : ''}</div>
+          <div class="sets">${list.map((s) => `<span class="set-chip">${fmtSet(s)}<button type="button" data-del="${s.id}" aria-label="Видалити підхід ${fmtSet(s)}">×</button></span>`).join('')}</div>
         </div>`).join('')}
       </div>`;
     }).join('') + (days.length > historyDays ? '<button type="button" class="btn btn--ghost history-more" id="historyMore">Показати ще</button>' : '');
@@ -719,7 +987,7 @@
     const blob = new Blob([JSON.stringify(log, null, 1)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `xfit-shchodennyk-${todayISO()}.json`;
+    a.download = `xfit-moi-trenuvannia-${todayISO()}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -741,13 +1009,13 @@
       renderLog();
       note.textContent = added.length ? `Відновлено ${added.length} ${plural(added.length, ['підхід', 'підходи', 'підходів'])}.` : 'Усі записи з цього файлу вже є.';
     } catch (err) {
-      note.textContent = 'Це не схоже на файл копії щоденника XFit.';
+      note.textContent = 'Це не схоже на файл копії «Моїх тренувань» XFit.';
     }
   });
 
   function renderLog() {
     renderStats();
-    renderDatalist();
+    renderWorkout();
     renderProgress();
     renderHistory();
   }
@@ -774,9 +1042,9 @@
     const steps = $$('.train-lock__steps li', lock);
     steps.forEach((li, i) => li.classList.toggle('is-done', (state === 'pending' && i === 0) || (state === 'expired' && i < 2)));
     const text = {
-      none: ['Таймер і щоденник — для клієнтів XFit', 'Вони відкриваються разом з активною картою клієнта.', 'Отримати карту клієнта'],
-      pending: ['Майже готово', 'Твоя карта чекає оплати. Оплати обраний абонемент на рецепції — після активації таймер і щоденник відкриються автоматично.', 'Показати мою карту'],
-      expired: ['Абонемент закінчився', 'Продовж абонемент на рецепції, щоб знову користуватися таймером і щоденником. Твої записи збережено.', 'Показати мою карту'],
+      none: ['Таймер і «Мої тренування» — для клієнтів XFit', 'Вони відкриваються разом з активною картою клієнта.', 'Отримати карту клієнта'],
+      pending: ['Майже готово', 'Твоя карта чекає оплати. Оплати обраний абонемент на рецепції — після активації таймер і «Мої тренування» відкриються автоматично.', 'Показати мою карту'],
+      expired: ['Абонемент закінчився', 'Продовж абонемент на рецепції, щоб знову користуватися таймером і «Моїми тренуваннями». Твої записи збережено.', 'Показати мою карту'],
     }[state];
     $('#trainLockTitle').textContent = text[0];
     $('#trainLockText').textContent = text[1];
