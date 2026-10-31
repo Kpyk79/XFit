@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=32">
-<link rel="stylesheet" href="css/card.css?v=4">
+<link rel="stylesheet" href="css/card.css?v=5">
 </head>
 <body class="card-page">
 <style>.beta-ribbon{position:fixed;left:50%;top:calc(4px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:5000;pointer-events:none;
@@ -44,7 +44,7 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
   <form class="reg" id="regForm" hidden autocomplete="on" novalidate>
     <div class="reg__head">
       <h1 class="reg__title">Отримай карту клієнта XFit</h1>
-      <p class="reg__lead">Заповни дані й обери абонемент — карта з'явиться одразу. Оплати абонемент на рецепції, адміністратор активує карту, і відкриються таймер та щоденник тренувань.</p>
+      <p class="reg__lead">Заповни дані й обери абонемент — карта з'явиться одразу. Оплати абонемент на рецепції, адміністратор активує карту, і відкриються таймер та «Мої тренування».</p>
     </div>
     <label class="reg__field"><span>Прізвище та імʼя</span><input name="full_name" autocomplete="name" required minlength="3" maxlength="80" placeholder="Напр. Олена Коваленко"></label>
     <label class="reg__field"><span>Телефон</span><input name="phone" type="tel" autocomplete="tel" inputmode="tel" required placeholder="+380 __ ___ __ __"></label>
@@ -68,6 +68,19 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
     <button type="submit" class="btn btn--primary btn--block btn--lg" id="regSubmit">Отримати карту</button>
   </form>
 
+  <nav class="card-apps" id="cardApps" aria-label="Інструменти клієнта" hidden>
+    <a href="train.html#timer" class="card-app">
+      <span class="card-app__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 2M9.5 3h5M12 3v3"/></svg></span>
+      <b>Таймер</b><small>Табата, інтервали, дихання</small>
+      <span class="card-app__lock">🔒 після активації</span>
+    </a>
+    <a href="train.html#log" class="card-app">
+      <span class="card-app__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span>
+      <b>Мої тренування</b><small>Підходи, вага, рекорди</small>
+      <span class="card-app__lock">🔒 після активації</span>
+    </a>
+  </nav>
+
   <section class="card-details" id="cardDetails" aria-label="Дані абонемента"></section>
   <p class="card-note" id="cardNote"></p>
 
@@ -84,6 +97,6 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/vendor/qrcode-generator-1.4.4.js"></script>
 <script src="js/vendor/jsbarcode-3.11.6.min.js"></script>
-<script src="js/card.js?v=6"></script>
+<script src="js/card.js?v=7"></script>
 </body>
 </html>

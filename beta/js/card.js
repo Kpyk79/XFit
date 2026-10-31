@@ -136,6 +136,9 @@
       el.dataset.bound = '1';
       // карта змінює розмір (поворот екрана, поява з прихованого стану) — підганяємо назву ще раз
       if (window.ResizeObserver) new ResizeObserver(() => fitPlan(el)).observe(el);
+      // фірмовий шрифт довантажується пізніше й ширший за запасний — підганяємо ще раз
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitPlan(el));
+      if (document.fonts) document.fonts.addEventListener('loadingdone', () => fitPlan(el));
       const flip = () => el.classList.toggle('is-flipped');
       el.addEventListener('click', (e) => {
         // на звороті торкання QR чи штрих-коду відкриває його на весь екран
@@ -209,13 +212,17 @@
     document.getElementById('regForm').hidden = true;
     const details = document.getElementById('cardDetails');
     details.hidden = false;
+    // кнопки таймера й «Моїх тренувань»: відкриваються з активною картою
+    const apps = document.getElementById('cardApps');
+    apps.hidden = false;
+    apps.classList.toggle('is-locked', st.state !== 'active');
     const note = document.getElementById('cardNote');
     if (st.state === 'pending') {
       details.innerHTML = `
         <div class="card-row"><span>Статус</span><b>Чекає оплати на рецепції</b></div>
         <div class="card-row"><span>Обраний абонемент</span><b>${esc(m.desired_plan || m.plan || '—')}</b></div>
         ${m.gym ? `<div class="card-row"><span>Зал</span><b>${esc(m.gym)}</b></div>` : ''}`;
-      note.textContent = opts.offline ? 'Немає з\'єднання — показано збережену карту.' : 'Оплати абонемент на рецепції XFit (готівкою або карткою) — адміністратор активує карту, і тут з\'являться дати абонемента. Після активації відкриються таймер і щоденник тренувань.';
+      note.textContent = opts.offline ? 'Немає з\'єднання — показано збережену карту.' : 'Оплати абонемент на рецепції XFit (готівкою або карткою) — адміністратор активує карту, і тут з\'являться дати абонемента. Після активації відкриються таймер і «Мої тренування».';
       document.getElementById('demoBadge').hidden = !opts.demo;
       return;
     }
@@ -246,6 +253,7 @@
   function showState(title, text, withForm) {
     document.getElementById('cardWrap').hidden = true;
     document.getElementById('cardDetails').hidden = true;
+    document.getElementById('cardApps').hidden = true;
     document.querySelector('.card-flip-hint').hidden = true;
     const box = document.getElementById('cardState');
     box.hidden = !title;
