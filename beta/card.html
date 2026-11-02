@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=32">
-<link rel="stylesheet" href="css/card.css?v=5">
+<link rel="stylesheet" href="css/card.css?v=10">
 </head>
 <body class="card-page">
 <style>.beta-ribbon{position:fixed;left:50%;top:calc(4px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:5000;pointer-events:none;
@@ -38,6 +38,10 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
     <div id="xcard"></div>
   </div>
   <p class="card-flip-hint"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4"/></svg>Торкнись карти, щоб побачити QR-код і штрих-код</p>
+  <button type="button" class="scan-mode-btn" id="scanModeBtn" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 9v6M11 9v6M13.5 9v6M16 9v6"/></svg>
+    <span>Показати для сканування</span>
+  </button>
 
   <div class="card-state" id="cardState"><h2>Завантаження карти…</h2></div>
 
@@ -63,6 +67,8 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
     </label>
     <label class="reg__field"><span>Email <i>необовʼязково</i></span><input name="email" type="email" autocomplete="email" maxlength="120" placeholder="name@gmail.com"></label>
     <input class="reg__hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <label class="reg__consent reg__plastic-toggle"><input type="checkbox" id="hasPlastic"><span>У мене вже є пластикова карта XFit — додати її в додаток</span></label>
+    <div class="plastic" id="regPlastic" hidden></div>
     <label class="reg__consent"><input type="checkbox" name="consent" required><span>Погоджуюсь на обробку моїх персональних даних для обслуговування в XFit</span></label>
     <p class="reg__error" id="regError" role="alert"></p>
     <button type="submit" class="btn btn--primary btn--block btn--lg" id="regSubmit">Отримати карту</button>
@@ -81,6 +87,14 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
     </a>
   </nav>
 
+  <section class="plastic-link" id="plasticLink" hidden>
+    <button type="button" class="install-btn install-btn--block" id="plasticOpen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M6 9v6M9 9v6M11.5 9v6M14 9v6M17.5 9v6"/></svg>
+      <span>У мене є пластикова карта XFit</span>
+    </button>
+    <div class="plastic" id="linkPlastic" hidden></div>
+  </section>
+
   <section class="card-details" id="cardDetails" aria-label="Дані абонемента"></section>
   <p class="card-note" id="cardNote"></p>
 
@@ -97,6 +111,7 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/vendor/qrcode-generator-1.4.4.js"></script>
 <script src="js/vendor/jsbarcode-3.11.6.min.js"></script>
-<script src="js/card.js?v=7"></script>
+<script src="js/scanner.js?v=2"></script>
+<script src="js/card.js?v=12"></script>
 </body>
 </html>

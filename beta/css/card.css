@@ -75,23 +75,40 @@
 .xcard__info{ display:flex; flex-direction:column; gap: 6px; min-width:0; }
 .xcard__info .xcard__field b{ font-size: clamp(.68rem, 3.3cqw, .88rem); }
 .xcard__hint{ font-size: .6rem; line-height:1.4; color: rgba(244,246,244,0.6); margin:0; }
-.xcard__barcode{ position:relative; margin: 4% 6% 6%; background:#fff; border-radius: 8px; padding: 2.4% 4%; height: 18%; display:flex; align-items:center; justify-content:center; }
+.xcard__barcode{ position:relative; margin: 3% 6% 5%; background:#fff; border-radius: 8px; padding: 2.4% 2%; height: 23%; display:flex; align-items:center; justify-content:center; }
 .xcard__barcode{ flex-direction:column; gap: 1px; cursor: zoom-in; }
 .xcard__barcode svg{ width:100%; flex:1; min-height:0; }
 .xcard__qr{ cursor: zoom-in; }
 
 .xcard-zoom{
-  position:fixed; inset:0; z-index: 200; display:flex; flex-direction:column; align-items:center; justify-content:center; gap: 18px;
-  padding: max(24px, env(safe-area-inset-top, 0px)) 20px max(24px, env(safe-area-inset-bottom, 0px));
-  background: rgba(0,0,0,0.88); backdrop-filter: blur(6px); cursor: zoom-out;
+  position:fixed; inset:0; z-index: 300; display:flex; align-items:center; justify-content:center;
+  background: #000; cursor: zoom-out; overflow:hidden;
 }
 .xcard-zoom[hidden]{ display:none; }
-.xcard-zoom p{ color: var(--muted); font-size:.85rem; margin:0; }
-.xcard-zoom__sheet{ background:#fff; border-radius: 20px; padding: 22px; display:flex; flex-direction:column; align-items:center; gap: 10px; box-shadow: 0 0 0 4px rgba(57,255,106,0.4); }
-.xcard-zoom__sheet--qr{ width: min(82vw, 360px); aspect-ratio: 1; }
-.xcard-zoom__sheet--qr svg{ width:100%; height:100%; }
-.xcard-zoom__sheet--bar{ width: min(92vw, 520px); height: 180px; }
-.xcard-zoom__sheet--bar svg{ width:100%; flex:1; }
+body.scan-open{ overflow:hidden; }
+
+/* Збільшена карта: на вертикальному екрані повертається боком і займає всю висоту */
+.scan-card{ position:relative; flex:none; aspect-ratio: 1.586; width: min(94vw, 88vh * 1.586); container-type: inline-size; }
+@media (orientation: portrait){
+  .scan-card{ width: min(92vh, 148vw); transform: rotate(90deg); }
+}
+.scan-card__face{ backface-visibility: visible; -webkit-backface-visibility: visible; display:flex; flex-direction:column; padding: 4.5cqw 5cqw 3.5cqw; gap: 3cqw; border-radius: 4.6cqw; }
+.scan-card__top{ position:relative; display:flex; align-items:center; justify-content:space-between; gap: 4cqw; }
+.scan-card__top .xcard__logo{ height: 7cqw; }
+.scan-card__name{ font-weight: 700; font-size: 3.4cqw; letter-spacing: .08em; text-transform: uppercase; text-align:right; white-space:nowrap; overflow:hidden; text-overflow: ellipsis; }
+.scan-card__bar{ position:relative; flex:1; height:auto; margin:0; padding: 3cqw 3cqw 2cqw; border-radius: 2.4cqw; cursor: inherit; gap: 1cqw; box-shadow: 0 0 0 0.6cqw rgba(57,255,106,0.35); }
+.scan-card__bar .xcard__digits{ font-size: 4cqw; letter-spacing: .22em; }
+.scan-card__qr{ position:relative; flex:1; align-self:center; aspect-ratio:1; background:#fff; border-radius: 2.4cqw; padding: 2cqw; }
+.scan-card__qr svg{ width:100%; height:100%; display:block; }
+.scan-card__tip{ position:relative; margin:0; text-align:center; font-size: 2.6cqw; color: rgba(244,246,244,0.6); }
+
+.scan-mode-btn{
+  align-self:center; display:inline-flex; align-items:center; gap: 10px; padding: 12px 22px; border-radius: 999px; cursor:pointer;
+  background: #fff; color: #060706; border: 0; font: 700 .92rem var(--font-body);
+  box-shadow: 0 10px 30px -12px rgba(255,255,255,0.45);
+}
+.scan-mode-btn[hidden]{ display:none; }
+.scan-mode-btn svg{ width: 22px; height: 22px; fill:none; stroke: #060706; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* стан абонемента */
 .xcard__status{ display:inline-flex; align-items:center; gap:6px; font-size:.6rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color: var(--green); }
@@ -165,3 +182,32 @@
 .card-apps.is-locked .card-app__icon{ background: rgba(255,255,255,0.08); }
 .card-apps.is-locked .card-app__icon svg{ stroke: var(--muted); }
 .card-apps.is-locked .card-app__lock{ display:block; }
+
+/* ---------- Штрихкод EAN-13: цифри під штрихами, як на пластиковій карті ---------- */
+.xcard__digits{ font: 600 clamp(.5rem, 2.6cqw, .72rem)/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .14em; color:#060706; }
+.xcard-zoom__sheet--bar .xcard__digits{ font-size: 1.15rem; }
+
+/* ---------- Пластикова карта: сканування або ввід цифр ---------- */
+.plastic{ display:flex; flex-direction:column; gap: 12px; padding: 16px; border-radius: 18px; border: 1px solid rgba(57,255,106,0.35); background: rgba(57,255,106,0.05); }
+.plastic[hidden]{ display:none; }
+.plastic__lead{ margin:0; font-size: .86rem; color: var(--muted); line-height: 1.45; }
+.plastic__cam{ position:relative; border-radius: 16px; overflow:hidden; background:#000; aspect-ratio: 4 / 3; }
+.plastic__cam[hidden]{ display:none; }
+.plastic__cam video{ width:100%; height:100%; object-fit: cover; display:block; }
+.plastic__frame{ position:absolute; left: 10%; right: 10%; top: 32%; bottom: 32%; border: 2px solid var(--green); border-radius: 12px; box-shadow: 0 0 0 999px rgba(0,0,0,0.35); }
+.plastic__frame::after{ content:""; position:absolute; left: 6%; right: 6%; top: 50%; height: 2px; background: rgba(255,80,80,0.85); animation: scanLine 1.6s ease-in-out infinite; }
+@keyframes scanLine{ 50%{ transform: translateY(-20px); } }
+.plastic__scan{ display:flex; align-items:center; justify-content:center; gap: 10px; }
+.plastic__scan svg{ width: 22px; height: 22px; fill:none; stroke: var(--green); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.plastic__input{ font-family: ui-monospace, "SF Mono", Menlo, monospace !important; letter-spacing: .12em; font-size: 1.1rem !important; }
+.plastic__status{ margin:0; min-height: 1.2em; font-size: .85rem; color: var(--muted); }
+.plastic__status.is-ok{ color: var(--green); font-weight: 600; }
+.plastic__status.is-bad{ color: #ff8080; }
+.reg__plastic-toggle span{ color: var(--white); font-weight: 600; }
+.plastic-link{ display:flex; flex-direction:column; gap: 10px; }
+.plastic-link[hidden]{ display:none; }
+
+/* Номер пластикової карти поруч із логотипом (як на лицьовому боці пластикової) */
+.xcard__brand{ display:flex; align-items:center; gap: 3cqw; }
+.xcard__no{ font: 800 clamp(.7rem, 3.6cqw, 1rem) var(--font-display); letter-spacing: .04em; color: var(--white); opacity: .9; }
+.scan-card__name small{ display:block; margin-top: .6cqw; font-size: 2.8cqw; letter-spacing: .1em; color: var(--green); }

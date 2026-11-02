@@ -25,7 +25,7 @@
     if (libsReady) return libsReady;
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'css/card.css?v=3';
+    css.href = 'css/card.css?v=10';
     document.head.appendChild(css);
     const load = (src) => new Promise((res, rej) => {
       const s = document.createElement('script');
@@ -36,7 +36,8 @@
     });
     libsReady = load('js/vendor/qrcode-generator-1.4.4.js')
       .then(() => load('js/vendor/jsbarcode-3.11.6.min.js'))
-      .then(() => load('js/card.js?v=3'));
+      .then(() => load('js/scanner.js?v=2'))
+      .then(() => load('js/card.js?v=12'));
     return libsReady;
   }
 
@@ -60,7 +61,10 @@
     m.updated_at = new Date().toISOString();
     if (isRemote) {
       const { data, error } = await sb.from('members').upsert(m).select().single();
-      if (error) throw new Error('Не вдалося зберегти: ' + error.message);
+      if (error) {
+        if (/barcode/.test(error.message) && /duplicate|unique/i.test(error.message)) throw new Error('Цей штрихкод уже має інший клієнт.');
+        throw new Error('Не вдалося зберегти: ' + error.message);
+      }
       const i = members.findIndex((x) => x.id === data.id);
       if (i >= 0) members[i] = data; else members.unshift(data);
       return data;
@@ -107,12 +111,12 @@
     const digits = q.replace(/\D/g, '');
     const list = members.filter((m) => !q
       || (m.full_name || '').toLowerCase().includes(q)
-      || (digits.length >= 3 && ((m.phone || '').replace(/\D/g, '').includes(digits) || (m.card_number || '').includes(digits))));
+      || (digits.length >= 3 && ((m.phone || '').replace(/\D/g, '').includes(digits) || (m.card_number || '').includes(digits) || (m.barcode || '').includes(digits))));
     const active = members.filter((m) => ['active', 'soon'].includes(C().stateOf(m).state)).length;
     const pending = members.filter((m) => C().stateOf(m).state === 'pending').length;
     body.innerHTML = `
       <div class="mem-toolbar">
-        <input type="search" id="memSearch" placeholder="Пошук: імʼя, телефон або номер карти" value="${esc(query)}" aria-label="Пошук клієнтів">
+        <input type="search" id="memSearch" placeholder="Пошук: імʼя, телефон або штрихкод" value="${esc(query)}" aria-label="Пошук клієнтів">
         <button type="button" class="btn btn--primary" data-act="new">+ Новий клієнт</button>
       </div>
       <div class="mem-toolbar mem-toolbar--sub">
@@ -123,7 +127,7 @@
         <div class="mem-row" data-id="${esc(m.id)}">
           <div class="mem-row__main">
             <b>${esc(m.full_name || 'Без імені')}</b>
-            <span>${m.status === 'pending' && !m.valid_to ? 'Обрав: ' + esc(m.desired_plan || '—') + ' · ' + esc(m.phone || '') : esc(m.plan || '—') + ' · до ' + fmt(m.valid_to)} · ${esc(C().groupNumber(m.card_number))}</span>
+            <span>${m.status === 'pending' && !m.valid_to ? 'Обрав: ' + esc(m.desired_plan || '—') + ' · ' + esc(m.phone || '') : esc(m.plan || '—') + ' · до ' + fmt(m.valid_to)} · ${m.barcode ? (C().plasticNo(m.barcode) ? '🪪 №' + esc(C().plasticNo(m.barcode)) + ' · ' : m.barcode_source === 'plastic' ? '🪪 ' : '') + esc(C().fmtBarcode(m.barcode)) : esc(C().groupNumber(m.card_number))}</span>
           </div>
           ${statePill(m)}
           <div class="mem-row__actions">
@@ -163,6 +167,7 @@
           <label>Дата народження<input name="birth_date" type="date" value="${esc((m && m.birth_date) || '')}"></label>
           <label>Email<input name="email" type="email" maxlength="120" value="${esc((m && m.email) || '')}"></label>
         </div>
+        <label>Штрихкод карти <span class="mem-hint">пластикова карта — відскануй сканером або введи 13 цифр; порожнє — згенерується</span><input name="barcode" inputmode="numeric" maxlength="15" value="${esc((m && m.barcode) || '')}" placeholder="2 500000 000000" autocomplete="off"></label>
         <label>Нотатка (бачить лише адмін)<input name="notes" maxlength="200" value="${esc(m ? m.notes : '')}"></label>
         <p class="admin-modal__error" id="memError"></p>
         <div class="admin-modal__actions">
@@ -178,7 +183,12 @@
       e.preventDefault();
       const f = Object.fromEntries(new FormData(form).entries());
       if (f.valid_to < f.valid_from) { form.querySelector('#memError').textContent = 'Дата «до» раніша за дату «з».'; return; }
+      f.barcode = String(f.barcode || '').replace(/\D/g, '');
+      if (f.barcode && !C().isBarcode(f.barcode)) { form.querySelector('#memError').textContent = 'Штрихкод має 13 цифр, починається з 2, і контрольна цифра має сходитись — перевір ще раз.'; return; }
+      if (f.barcode && members.some((x) => x.barcode === f.barcode && (!m || x.id !== m.id))) { form.querySelector('#memError').textContent = 'Цей штрихкод уже має інший клієнт.'; return; }
       const rec = { ...(m || {}), ...f, birth_date: f.birth_date || null, status: 'active' };
+      if (!rec.barcode) rec.barcode = uniqueBarcode();
+      rec.barcode_source = rec.barcode.startsWith('251') ? 'app' : 'plastic';
       if (isNew) { rec.card_number = uniqueNumber(); rec.token = C().newToken(); }
       try {
         const saved = await upsertMember(rec);
@@ -196,6 +206,12 @@
     if (!desired) return '';
     const name = desired.split(' — ')[0].trim();
     return list.find((x) => x.toLowerCase() === name.toLowerCase()) || name;
+  }
+
+  function uniqueBarcode() {
+    let n;
+    do { n = C().newBarcode(); } while (members.some((m) => m.barcode === n));
+    return n;
   }
 
   function uniqueNumber() {
@@ -226,13 +242,15 @@
   function stopCamera() {
     if (stream) stream.getTracks().forEach((t) => t.stop());
     stream = null;
+    if (stopScan) stopScan();
+    stopScan = null;
   }
   function findByCode(raw) {
     const text = String(raw || '').trim();
     let token = null;
     try { token = new URL(text).searchParams.get('c'); } catch (e) { /* не посилання */ }
     const digits = text.replace(/\D/g, '');
-    return members.find((m) => (token && m.token === token) || (digits.length >= 8 && m.card_number === digits)) || null;
+    return members.find((m) => (token && m.token === token) || (digits.length >= 8 && (m.card_number === digits || m.barcode === digits))) || null;
   }
   function showCheckResult(m, raw) {
     const box = body.querySelector('#memResult');
@@ -249,11 +267,11 @@
       <button type="button" class="btn btn--ghost" data-act="open" data-id="${esc(m.id)}">Відкрити клієнта</button>`;
   }
   function viewCheck() {
-    const canScan = 'BarcodeDetector' in window && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+    const canScan = !!(window.XFitScanner && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
     body.innerHTML = `
       <div class="mem-check">
         ${canScan ? '<div class="mem-scan"><video id="memVideo" playsinline muted></video><span class="mem-scan__frame"></span></div><button type="button" class="btn btn--primary" data-act="scan">Сканувати камерою</button>' : '<p class="mem-sub">Цей браузер не вміє сканувати коди камерою (наприклад, Safari на iPhone). Введи номер карти вручну або відскануй QR звичайною камерою телефона — відкриється карта клієнта з її статусом.</p>'}
-        <form class="mem-link" id="memCheckForm"><input id="memCheckInput" inputmode="numeric" placeholder="Номер карти" aria-label="Номер карти"><button type="submit" class="btn btn--ghost">Перевірити</button></form>
+        <form class="mem-link" id="memCheckForm"><input id="memCheckInput" inputmode="numeric" placeholder="Штрихкод або номер карти" aria-label="Штрихкод або номер карти"><button type="submit" class="btn btn--ghost">Перевірити</button></form>
         <div id="memResult" class="mem-result" aria-live="polite"></div>
         <div class="admin-modal__actions"><button type="button" class="btn btn--ghost" data-act="back">До списку</button></div>
       </div>`;
@@ -263,32 +281,21 @@
       showCheckResult(findByCode(v), v);
     });
   }
+  // Сканер штрихкодів (пластикові та віртуальні карти) і QR-кодів — і в Chrome, і в Safari
+  let stopScan = null;
   async function startScan() {
     const video = body.querySelector('#memVideo');
+    if (stopScan) stopScan();
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-    } catch (e) {
-      A().showToast('Немає доступу до камери');
-      return;
+      stopScan = await window.XFitScanner.start(video, ['ean_13', 'qr_code', 'code_128'], (raw) => {
+        if (navigator.vibrate) navigator.vibrate(120);
+        showCheckResult(findByCode(raw), raw);
+        if (stopScan) stopScan();
+        stopScan = null;
+      });
+    } catch (err) {
+      A().showToast(window.XFitScanner.errorText(err));
     }
-    video.srcObject = stream;
-    await video.play();
-    const detector = new window.BarcodeDetector({ formats: ['qr_code', 'code_128'] });
-    const tick = async () => {
-      if (!stream || !document.body.contains(video)) return stopCamera();
-      try {
-        const codes = await detector.detect(video);
-        if (codes.length) {
-          const raw = codes[0].rawValue;
-          if (navigator.vibrate) navigator.vibrate(120);
-          showCheckResult(findByCode(raw), raw);
-          stopCamera();
-          return;
-        }
-      } catch (e) { /* кадр не розпізнано */ }
-      requestAnimationFrame(tick);
-    };
-    tick();
   }
 
   /* ---------- Події ---------- */

@@ -37,6 +37,24 @@
     crypto.getRandomValues(bytes);
     return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
+  /* ---------- Штрихкод EAN-13, як на пластикових картах XFit (2 500000 005053) ---------- */
+  function eanCheck(d12) {
+    let sum = 0;
+    for (let i = 0; i < 12; i++) sum += Number(d12[i]) * (i % 2 ? 3 : 1);
+    return String((10 - (sum % 10)) % 10);
+  }
+  // Карти залу — внутрішня нумерація магазинів/закладів, вона починається з «2»
+  const isBarcode = (code) => /^2\d{12}$/.test(String(code || '')) && eanCheck(code) === String(code)[12];
+  // Карти з додатку — окремий діапазон «251…», щоб не перетнутися з пластиковими «2500000…»
+  function newBarcode() {
+    const rnd = new Uint32Array(1);
+    crypto.getRandomValues(rnd);
+    const d12 = '251' + String(rnd[0] % 1e9).padStart(9, '0');
+    return d12 + eanCheck(d12);
+  }
+  // Порядковий номер, надрукований на пластиковій карті: 2500000 00505 3 → 505
+  const plasticNo = (code) => (/^2500000\d{6}$/.test(String(code || '')) ? String(Number(String(code).slice(7, 12))) : '');
+  const fmtBarcode = (code) => String(code || '').replace(/^(\d)(\d{6})(\d{6})$/, '$1 $2 $3');
   const groupNumber = (n) => String(n || '').replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ');
   function maskPhone(p) {
     const d = String(p || '').replace(/\D/g, '');
@@ -101,7 +119,7 @@
           <div class="xcard__grid"></div>
           <span class="xcard__band" aria-hidden="true"></span>
           <svg class="xcard__watermark" viewBox="314 60 540 430" aria-hidden="true"><use href="#xfMark"/></svg>
-          <div class="xcard__top">${LOGO}<span class="xcard__status">${st.label}</span></div>
+          <div class="xcard__top"><span class="xcard__brand">${LOGO}${plasticNo(m.barcode) ? `<span class="xcard__no">№ ${plasticNo(m.barcode)}</span>` : ''}</span><span class="xcard__status">${st.label}</span></div>
           <div class="xcard__plan-block">
             <span class="xcard__kicker">${pending ? 'Обраний абонемент' : 'Абонемент'}</span>
             <b class="xcard__plan">${esc(planShort || (pending ? 'Ще не обрано' : '—'))}</b>
@@ -121,14 +139,17 @@
               <p class="xcard__hint">${pending ? 'Оплати абонемент на рецепції — адміністратор активує карту' : 'Покажи QR-код або штрих-код на рецепції'}</p>
             </div>
           </div>
-          <div class="xcard__barcode"><svg class="xcard__barsvg"></svg></div>
+          <div class="xcard__barcode"><svg class="xcard__barsvg"></svg>${isBarcode(m.barcode) ? `<span class="xcard__digits">${fmtBarcode(m.barcode)}</span>` : ''}</div>
         </div>
       </div>`;
     fitPlan(el);
     const bar = el.querySelector('.xcard__barsvg');
-    if (typeof JsBarcode === 'function' && m.card_number) {
+    const ean = isBarcode(m.barcode) ? m.barcode : null;
+    if (typeof JsBarcode === 'function' && (ean || m.card_number)) {
       try {
-        JsBarcode(bar, String(m.card_number), { format: 'CODE128', displayValue: false, height: 60, margin: 0, background: '#ffffff', lineColor: '#060706' });
+        // EAN-13 — той самий формат, що на пластикових картах (сканер на рецепції читає обидва)
+        // білі поля з боків (≥ 11 ширин смужки) — без них сканери не читають код
+        JsBarcode(bar, ean || String(m.card_number), { format: ean ? 'EAN13' : 'CODE128', flat: true, displayValue: false, height: 60, margin: 0, marginLeft: 24, marginRight: 24, background: '#ffffff', lineColor: '#060706' });
         bar.removeAttribute('width'); bar.removeAttribute('height'); bar.setAttribute('preserveAspectRatio', 'none');
       } catch (e) { /* штрих-код не намалювався — лишаємо QR */ }
     }
@@ -157,7 +178,18 @@
     return st;
   }
 
-  // Великий код на білому тлі — легше сканувати на рецепції
+  // Режим сканування: білий екран на весь дисплей, великі QR і штрихкод, екран не гасне.
+  // Яскравість екрана сайт змінити не може (браузери не дають такого доступу) — біле тло світить найсильніше.
+  let scanLock = null;
+  function closeZoom() {
+    const box = document.getElementById('xcardZoom');
+    if (!box || box.hidden) return;
+    box.hidden = true;
+    document.body.classList.remove('scan-open');
+    if (scanLock) scanLock.release().catch(() => {});
+    scanLock = null;
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  }
   function openZoom(cardEl, kind) {
     let box = document.getElementById('xcardZoom');
     if (!box) {
@@ -166,17 +198,40 @@
       box.className = 'xcard-zoom';
       box.setAttribute('role', 'dialog');
       box.setAttribute('aria-modal', 'true');
-      box.setAttribute('aria-label', 'Код карти');
+      box.setAttribute('aria-label', 'Карта для сканування');
       document.body.appendChild(box);
-      box.addEventListener('click', () => { box.hidden = true; });
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') box.hidden = true; });
+      box.addEventListener('click', closeZoom);
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeZoom(); });
+      document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && !box.hidden && box.dataset.fs === '1') closeZoom(); });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !box.hidden && 'wakeLock' in navigator) navigator.wakeLock.request('screen').then((l) => { scanLock = l; }).catch(() => {});
+      });
     }
-    const src = cardEl.querySelector(kind === 'qr' ? '.xcard__qr' : '.xcard__barcode');
-    box.innerHTML = `<div class="xcard-zoom__sheet xcard-zoom__sheet--${kind}">${src.innerHTML}</div><p>Торкнись, щоб закрити</p>`;
+    // та сама карта, лише велика; головне — штрихкод (QR лишається на звороті звичайної карти)
+    const bar = cardEl.querySelector('.xcard__barcode');
+    const name = (cardEl.querySelector('.xcard__info .xcard__field b') || {}).textContent || '';
+    const no = (cardEl.querySelector('.xcard__no') || {}).textContent || '';
+    const useQr = !bar || !bar.querySelector('rect, path');
+    const code = useQr ? `<div class="scan-card__qr">${(cardEl.querySelector('.xcard__qr') || {}).innerHTML || ''}</div>` : `<div class="xcard__barcode scan-card__bar">${bar.innerHTML}</div>`;
+    box.innerHTML = `
+      <div class="scan-card" data-state="${esc(cardEl.dataset.state || '')}">
+        <div class="xcard__face scan-card__face">
+          <div class="xcard__grid"></div>
+          <div class="scan-card__top">${LOGO}<span class="scan-card__name">${esc(name)}${no ? `<small>${esc(no)}</small>` : ''}</span></div>
+          ${code}
+          <p class="scan-card__tip">Підніми яскравість екрана · торкнись, щоб закрити</p>
+        </div>
+      </div>`;
     box.hidden = false;
+    document.body.classList.add('scan-open');
+    box.dataset.fs = '0';
+    if (box.requestFullscreen && !document.fullscreenElement) {
+      box.requestFullscreen({ navigationUI: 'hide' }).then(() => { box.dataset.fs = '1'; }).catch(() => {});
+    }
+    if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then((l) => { scanLock = l; }).catch(() => {});
   }
 
-  root.XFitCard = { render, stateOf, newCardNumber, newToken, groupNumber, maskPhone, fmtDate, cardUrl, todayISO, daysBetween };
+  root.XFitCard = { openZoom, render, stateOf, newCardNumber, newToken, groupNumber, maskPhone, fmtDate, cardUrl, todayISO, daysBetween, isBarcode, newBarcode, fmtBarcode, plasticNo };
 
   /* ============================================================
      Сторінка card.html
@@ -190,7 +245,7 @@
   const demo = params.has('demo');
 
   const DEMO = {
-    token: 'demo', card_number: '2026408153371829', full_name: 'Олена Коваленко', phone: '+380671234567',
+    token: 'demo', card_number: '2026408153371829', barcode: '2510000042156', full_name: 'Олена Коваленко', phone: '+380671234567',
     plan: 'Повний', valid_from: todayISO(), valid_to: new Date(Date.now() + 23 * DAY).toISOString().slice(0, 10), gym: 'Подільськ',
   };
 
@@ -208,6 +263,7 @@
     wrap.dataset.state = st.state;
     wrap.hidden = false;
     document.querySelector('.card-flip-hint').hidden = false;
+    document.getElementById('scanModeBtn').hidden = false;
     document.getElementById('cardState').hidden = true;
     document.getElementById('regForm').hidden = true;
     const details = document.getElementById('cardDetails');
@@ -215,6 +271,11 @@
     // кнопки таймера й «Моїх тренувань»: відкриваються з активною картою
     const apps = document.getElementById('cardApps');
     apps.hidden = false;
+    // пластикову карту можна додати до віртуальної (крім демо й уже доданої)
+    shownMember = m;
+    const plasticLink = document.getElementById('plasticLink');
+    plasticLink.hidden = !!opts.demo || !m.token || m.barcode_source === 'plastic';
+    if (plasticLink.hidden && linkPlastic) linkPlastic.stop();
     apps.classList.toggle('is-locked', st.state !== 'active');
     const note = document.getElementById('cardNote');
     if (st.state === 'pending') {
@@ -242,6 +303,62 @@
     document.getElementById('demoBadge').hidden = !opts.demo;
   }
 
+  document.getElementById('scanModeBtn').addEventListener('click', () => openZoom(document.getElementById('xcard'), 'bar'));
+
+  /* ---------- Додати пластикову карту до вже створеної віртуальної ---------- */
+  let shownMember = null;
+  let linkPlastic = null;
+  const linkBox = document.getElementById('linkPlastic');
+  document.getElementById('plasticOpen').addEventListener('click', () => {
+    if (!linkPlastic) {
+      linkPlastic = mountPlastic(linkBox, { action: 'Додати карту' });
+      linkBox.querySelector('.plastic__save').addEventListener('click', saveLink);
+    }
+    linkBox.hidden = !linkBox.hidden;
+    if (linkBox.hidden) linkPlastic.stop();
+  });
+  async function saveLink() {
+    const m = shownMember;
+    const code = linkPlastic.value();
+    const st = linkPlastic.status;
+    if (!m || !linkPlastic.valid()) { st.className = 'plastic__status is-bad'; st.textContent = 'Відскануй штрихкод або введи 13 цифр під ним.'; return; }
+    const btn = linkBox.querySelector('.plastic__save');
+    btn.disabled = true;
+    try {
+      const url = window.XFIT_SUPABASE_URL || '';
+      const key = window.XFIT_SUPABASE_ANON_KEY || '';
+      let fresh;
+      if (window.supabase && url && key && !url.includes('YOUR-PROJECT')) {
+        const sb = window.supabase.createClient(url, key);
+        const { error } = await sb.rpc('link_member_barcode', { p_token: m.token, p_barcode: code });
+        if (error) {
+          if (/barcode_exists/.test(error.message)) throw new Error('Ця пластикова карта вже додана в додаток іншим клієнтом. Звернись на рецепцію XFit.');
+          if (/invalid_barcode/.test(error.message)) throw new Error('Номер не розпізнано — перевір 13 цифр під штрихкодом.');
+          throw new Error('Не вдалося додати карту. Перевір інтернет і спробуй ще раз.');
+        }
+        const res = await fetchRemote(m.token);
+        fresh = res.member || { ...m, barcode: code, barcode_source: 'plastic' };
+      } else {
+        const list = JSON.parse(localStorage.getItem('xfit_members_v1') || '[]');
+        if (list.some((x) => x.barcode === code && x.token !== m.token)) throw new Error('Ця пластикова карта вже додана в додаток іншим клієнтом. Звернись на рецепцію XFit.');
+        list.forEach((x) => { if (x.token === m.token) { x.barcode = code; x.barcode_source = 'plastic'; } });
+        localStorage.setItem('xfit_members_v1', JSON.stringify(list));
+        fresh = { ...m, barcode: code, barcode_source: 'plastic' };
+      }
+      writeCache(fresh);
+      linkPlastic.stop();
+      linkBox.hidden = true;
+      show(fresh);
+      document.getElementById('xcard').classList.add('is-flipped'); // показуємо зворот зі штрихкодом
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      st.className = 'plastic__status is-bad';
+      st.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   function plural(n, f) {
     const a = Math.abs(n) % 100, b = a % 10;
     if (a > 10 && a < 20) return f[2];
@@ -255,6 +372,7 @@
     document.getElementById('cardDetails').hidden = true;
     document.getElementById('cardApps').hidden = true;
     document.querySelector('.card-flip-hint').hidden = true;
+    document.getElementById('scanModeBtn').hidden = true;
     const box = document.getElementById('cardState');
     box.hidden = !title;
     if (title) box.innerHTML = `<h2>${esc(title)}</h2><p>${esc(text)}</p>`;
@@ -347,9 +465,78 @@
   }
   loadPlans();
 
+  /* ---------- Пластикова карта: сканування штрихкоду або ввід цифр ---------- */
+  function mountPlastic(box, opts = {}) {
+    box.innerHTML = `
+      <p class="plastic__lead">Відскануй штрихкод на звороті пластикової карти або введи 13 цифр під ним.</p>
+      <div class="plastic__cam" hidden><video aria-label="Камера"></video><span class="plastic__frame" aria-hidden="true"></span></div>
+      <button type="button" class="btn btn--ghost btn--block plastic__scan">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 9v6M10 9v6M12.5 9v6M15 9v6M17 9v6"/></svg>
+        <span>Сканувати камерою</span>
+      </button>
+      <label class="reg__field"><span>Цифри під штрихкодом</span><input class="plastic__input" inputmode="numeric" autocomplete="off" maxlength="15" placeholder="2 500000 005053"></label>
+      <p class="plastic__status" role="status"></p>
+      ${opts.action ? `<button type="button" class="btn btn--primary btn--block plastic__save">${esc(opts.action)}</button>` : ''}`;
+    const input = box.querySelector('.plastic__input');
+    const status = box.querySelector('.plastic__status');
+    const cam = box.querySelector('.plastic__cam');
+    const scanBtn = box.querySelector('.plastic__scan');
+    let stopCam = null;
+    const value = () => input.value.replace(/\D/g, '');
+    function check() {
+      const v = value();
+      status.className = 'plastic__status';
+      if (!v) { status.textContent = ''; return; }
+      if (v.length < 13) { status.textContent = `Ще ${13 - v.length} ${plural(13 - v.length, ['цифра', 'цифри', 'цифр'])}`; return; }
+      if (isBarcode(v)) { status.textContent = '✓ Карту розпізнано'; status.classList.add('is-ok'); }
+      else { status.textContent = 'Цифри не сходяться — перевір ще раз. Номер карти XFit має 13 цифр і починається з 2.'; status.classList.add('is-bad'); }
+    }
+    function setValue(v) { input.value = fmtBarcode(v); check(); }
+    function stop() {
+      if (stopCam) stopCam();
+      stopCam = null;
+      cam.hidden = true;
+      scanBtn.querySelector('span').textContent = 'Сканувати камерою';
+    }
+    input.addEventListener('input', () => {
+      const d = value().slice(0, 13);
+      input.value = d.length === 13 ? fmtBarcode(d) : d;
+      check();
+    });
+    scanBtn.addEventListener('click', async () => {
+      if (stopCam) { stop(); return; }
+      if (!window.XFitScanner) { status.textContent = 'Сканер недоступний — введи цифри вручну.'; return; }
+      cam.hidden = false;
+      scanBtn.querySelector('span').textContent = 'Закрити камеру';
+      status.className = 'plastic__status';
+      status.textContent = 'Наведи камеру на штрихкод — він розпізнається сам';
+      try {
+        stopCam = await window.XFitScanner.start(cam.querySelector('video'), ['ean_13'], (code) => {
+          const d = String(code).replace(/\D/g, '');
+          if (!isBarcode(d)) return; // інший штрихкод (напр. товар) — чекаємо далі
+          if (navigator.vibrate) navigator.vibrate(120);
+          setValue(d);
+          stop();
+        });
+      } catch (err) {
+        stop();
+        status.className = 'plastic__status is-bad';
+        status.textContent = window.XFitScanner.errorText(err);
+      }
+    });
+    return { value, valid: () => isBarcode(value()), stop, setValue, focus: () => input.focus(), status };
+  }
+
   /* ---------- Реєстрація клієнта ---------- */
   const regForm = document.getElementById('regForm');
   const regError = document.getElementById('regError');
+  const hasPlastic = document.getElementById('hasPlastic');
+  const regPlasticBox = document.getElementById('regPlastic');
+  const regPlastic = mountPlastic(regPlasticBox);
+  hasPlastic.addEventListener('change', () => {
+    regPlasticBox.hidden = !hasPlastic.checked;
+    if (!hasPlastic.checked) regPlastic.stop();
+  });
   function normalizePhone(v) {
     let d = String(v || '').replace(/\D/g, '');
     if (d.length === 10 && d[0] === '0') d = '38' + d;      // 067… → 38067…
@@ -363,8 +550,11 @@
     const sb = window.supabase.createClient(url, key);
     const { data, error } = await sb.rpc('register_member', {
       p_full_name: f.full_name, p_phone: '+' + f.phone, p_gym: f.gym, p_birth_date: f.birth_date || null, p_email: f.email, p_plan: f.plan,
+      p_barcode: f.barcode || null,
     });
     if (error) {
+      if (/barcode_exists/.test(error.message)) throw new Error('Ця пластикова карта вже додана в додаток. Якщо це твоя карта — звернись на рецепцію XFit.');
+      if (/invalid_barcode/.test(error.message)) throw new Error('Номер пластикової карти не розпізнано — перевір 13 цифр під штрихкодом.');
       if (/phone_exists/.test(error.message)) throw new Error('Цей номер уже зареєстровано. Якщо загубив посилання на свою карту — звернись на рецепцію XFit.');
       if (/too_many_requests/.test(error.message)) throw new Error('Зараз забагато реєстрацій. Спробуй за годину або звернись на рецепцію.');
       if (/invalid_data/.test(error.message)) throw new Error('Перевір імʼя та номер телефону.');
@@ -379,8 +569,10 @@
     let list = [];
     try { list = JSON.parse(localStorage.getItem('xfit_members_v1') || '[]'); } catch (e) { list = []; }
     if (list.some((m) => String(m.phone || '').replace(/\D/g, '').slice(-9) === f.phone.slice(-9))) throw new Error('Цей номер уже зареєстровано. Якщо загубив посилання на свою карту — звернись на рецепцію XFit.');
+    if (f.barcode && list.some((m) => m.barcode === f.barcode)) throw new Error('Ця пластикова карта вже додана в додаток. Якщо це твоя карта — звернись на рецепцію XFit.');
     const m = {
       id: (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()), card_number: newCardNumber(), token: newToken() + newToken(),
+      barcode: f.barcode || newBarcode(), barcode_source: f.barcode ? 'plastic' : 'app',
       full_name: f.full_name, phone: '+' + f.phone, gym: f.gym, birth_date: f.birth_date || null, email: f.email,
       plan: '', desired_plan: f.plan, valid_from: null, valid_to: null, status: 'pending', consent_at: new Date().toISOString(), created_at: new Date().toISOString(),
     };
@@ -400,6 +592,7 @@
       email: String(fd.get('email') || '').trim(),
       gym: String(fd.get('gym') || ''),
       plan: String(fd.get('plan') || ''),
+      barcode: hasPlastic.checked ? regPlastic.value() : '',
     };
     const bad = (name, msg) => { const el = regForm.elements[name]; el.setAttribute('aria-invalid', 'true'); el.focus(); regError.textContent = msg; };
     regForm.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));
@@ -407,6 +600,7 @@
     if (f.phone.length < 11 || f.phone.length > 13) return bad('phone', 'Вкажи номер телефону, напр. +380 67 123 45 67.');
     if (f.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) return bad('email', 'Перевір email або залиш поле порожнім.');
     if (f.birth_date && (f.birth_date > todayISO() || f.birth_date < '1920-01-01')) return bad('birth_date', 'Перевір дату народження.');
+    if (hasPlastic.checked && !regPlastic.valid()) { regPlastic.focus(); regError.textContent = 'Відскануй штрихкод пластикової карти або введи 13 цифр під ним.'; return; }
     if (!fd.get('consent')) { regError.textContent = 'Потрібна згода на обробку персональних даних.'; return; }
     const submit = document.getElementById('regSubmit');
     submit.disabled = true;
