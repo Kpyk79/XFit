@@ -206,3 +206,8 @@ body.scan-open{ overflow:hidden; }
 .reg__plastic-toggle span{ color: var(--white); font-weight: 600; }
 .plastic-link{ display:flex; flex-direction:column; gap: 10px; }
 .plastic-link[hidden]{ display:none; }
+
+/* Номер пластикової карти поруч із логотипом (як на лицьовому боці пластикової) */
+.xcard__brand{ display:flex; align-items:center; gap: 3cqw; }
+.xcard__no{ font: 800 clamp(.7rem, 3.6cqw, 1rem) var(--font-display); letter-spacing: .04em; color: var(--white); opacity: .9; }
+.scan-card__name small{ display:block; margin-top: .6cqw; font-size: 2.8cqw; letter-spacing: .1em; color: var(--green); }

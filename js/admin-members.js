@@ -25,7 +25,7 @@
     if (libsReady) return libsReady;
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'css/card.css?v=9';
+    css.href = 'css/card.css?v=10';
     document.head.appendChild(css);
     const load = (src) => new Promise((res, rej) => {
       const s = document.createElement('script');
@@ -37,7 +37,7 @@
     libsReady = load('js/vendor/qrcode-generator-1.4.4.js')
       .then(() => load('js/vendor/jsbarcode-3.11.6.min.js'))
       .then(() => load('js/scanner.js?v=2'))
-      .then(() => load('js/card.js?v=11'));
+      .then(() => load('js/card.js?v=12'));
     return libsReady;
   }
 
@@ -127,7 +127,7 @@
         <div class="mem-row" data-id="${esc(m.id)}">
           <div class="mem-row__main">
             <b>${esc(m.full_name || 'Без імені')}</b>
-            <span>${m.status === 'pending' && !m.valid_to ? 'Обрав: ' + esc(m.desired_plan || '—') + ' · ' + esc(m.phone || '') : esc(m.plan || '—') + ' · до ' + fmt(m.valid_to)} · ${m.barcode ? (m.barcode_source === 'plastic' ? '🪪 ' : '') + esc(C().fmtBarcode(m.barcode)) : esc(C().groupNumber(m.card_number))}</span>
+            <span>${m.status === 'pending' && !m.valid_to ? 'Обрав: ' + esc(m.desired_plan || '—') + ' · ' + esc(m.phone || '') : esc(m.plan || '—') + ' · до ' + fmt(m.valid_to)} · ${m.barcode ? (C().plasticNo(m.barcode) ? '🪪 №' + esc(C().plasticNo(m.barcode)) + ' · ' : m.barcode_source === 'plastic' ? '🪪 ' : '') + esc(C().fmtBarcode(m.barcode)) : esc(C().groupNumber(m.card_number))}</span>
           </div>
           ${statePill(m)}
           <div class="mem-row__actions">

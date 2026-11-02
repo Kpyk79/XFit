@@ -52,6 +52,8 @@
     const d12 = '251' + String(rnd[0] % 1e9).padStart(9, '0');
     return d12 + eanCheck(d12);
   }
+  // Порядковий номер, надрукований на пластиковій карті: 2500000 00505 3 → 505
+  const plasticNo = (code) => (/^2500000\d{6}$/.test(String(code || '')) ? String(Number(String(code).slice(7, 12))) : '');
   const fmtBarcode = (code) => String(code || '').replace(/^(\d)(\d{6})(\d{6})$/, '$1 $2 $3');
   const groupNumber = (n) => String(n || '').replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ');
   function maskPhone(p) {
@@ -117,7 +119,7 @@
           <div class="xcard__grid"></div>
           <span class="xcard__band" aria-hidden="true"></span>
           <svg class="xcard__watermark" viewBox="314 60 540 430" aria-hidden="true"><use href="#xfMark"/></svg>
-          <div class="xcard__top">${LOGO}<span class="xcard__status">${st.label}</span></div>
+          <div class="xcard__top"><span class="xcard__brand">${LOGO}${plasticNo(m.barcode) ? `<span class="xcard__no">№ ${plasticNo(m.barcode)}</span>` : ''}</span><span class="xcard__status">${st.label}</span></div>
           <div class="xcard__plan-block">
             <span class="xcard__kicker">${pending ? 'Обраний абонемент' : 'Абонемент'}</span>
             <b class="xcard__plan">${esc(planShort || (pending ? 'Ще не обрано' : '—'))}</b>
@@ -208,13 +210,14 @@
     // та сама карта, лише велика; головне — штрихкод (QR лишається на звороті звичайної карти)
     const bar = cardEl.querySelector('.xcard__barcode');
     const name = (cardEl.querySelector('.xcard__info .xcard__field b') || {}).textContent || '';
+    const no = (cardEl.querySelector('.xcard__no') || {}).textContent || '';
     const useQr = !bar || !bar.querySelector('rect, path');
     const code = useQr ? `<div class="scan-card__qr">${(cardEl.querySelector('.xcard__qr') || {}).innerHTML || ''}</div>` : `<div class="xcard__barcode scan-card__bar">${bar.innerHTML}</div>`;
     box.innerHTML = `
       <div class="scan-card" data-state="${esc(cardEl.dataset.state || '')}">
         <div class="xcard__face scan-card__face">
           <div class="xcard__grid"></div>
-          <div class="scan-card__top">${LOGO}<span class="scan-card__name">${esc(name)}</span></div>
+          <div class="scan-card__top">${LOGO}<span class="scan-card__name">${esc(name)}${no ? `<small>${esc(no)}</small>` : ''}</span></div>
           ${code}
           <p class="scan-card__tip">Підніми яскравість екрана · торкнись, щоб закрити</p>
         </div>
@@ -228,7 +231,7 @@
     if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then((l) => { scanLock = l; }).catch(() => {});
   }
 
-  root.XFitCard = { openZoom, render, stateOf, newCardNumber, newToken, groupNumber, maskPhone, fmtDate, cardUrl, todayISO, daysBetween, isBarcode, newBarcode, fmtBarcode };
+  root.XFitCard = { openZoom, render, stateOf, newCardNumber, newToken, groupNumber, maskPhone, fmtDate, cardUrl, todayISO, daysBetween, isBarcode, newBarcode, fmtBarcode, plasticNo };
 
   /* ============================================================
      Сторінка card.html
