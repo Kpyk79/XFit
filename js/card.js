@@ -89,6 +89,24 @@
 
   const LOGO = '<svg class="xcard__logo" viewBox="314 60 792 435" aria-label="XFit" role="img"><use class="m" href="#xfMark"/><use class="w" href="#xfWord"/></svg>';
 
+  // Контакти залу — на звороті, як на пластиковій карті
+  const GYMS = {
+    'Подільськ': ['(050) 011 88 00', 'вул. Соборна 72, корпус Б'],
+    'Балта': ['', 'Балта · скоро відкриття'],
+  };
+  // Візерунок пластикової карти: контурні шеврони й великий «X» (координати — у пропорції карти 1586×1000)
+  const chevron = (x, y, w, h, t) => `<path d="M${x} ${y}h${t}l${w - t} ${h / 2}l${-(w - t)} ${h / 2}h${-t}l${w - t} ${-h / 2}z"/>`;
+  const bigX = (cx, cy, s, t) => `<path d="M${cx - s + t} ${cy - s}L${cx} ${cy - t}L${cx + s - t} ${cy - s}L${cx + s} ${cy - s + t}L${cx + t} ${cy}L${cx + s} ${cy + s - t}L${cx + s - t} ${cy + s}L${cx} ${cy + t}L${cx - s + t} ${cy + s}L${cx - s} ${cy + s - t}L${cx - t} ${cy}L${cx - s} ${cy - s + t}z"/>`;
+  const DECO_FRONT = `<svg class="xc-deco" viewBox="0 0 1586 1000" preserveAspectRatio="none" aria-hidden="true">
+    ${[0, 1, 2, 3].map((i) => chevron(1090 + i * 105, 30, 150, 190, 46)).join('')}
+    ${chevron(-70, 330, 190, 300, 60)}
+    ${bigX(1440, 930, 230, 70)}
+  </svg>`;
+  const DECO_BACK = `<svg class="xc-deco" viewBox="0 0 1586 1000" preserveAspectRatio="none" aria-hidden="true">
+    ${[0, 1, 2].map((i) => chevron(860 + i * 115, 380, 160, 230, 48)).join('')}
+    ${chevron(-60, 470, 150, 230, 48)}
+  </svg>`;
+
   // Назва абонемента в один рядок: якщо не вміщається — зменшуємо шрифт (не менше 16px)
   function fitPlan(card) {
     const el = card.querySelector('.xcard__plan');
@@ -113,33 +131,28 @@
     const planName = String(m.plan || m.desired_plan || '').split(' — ')[0].trim();
     // на лицьовому боці над назвою вже написано «Абонемент» — не повторюємо його: «Абонемент Місячний» → «Місячний»
     const planShort = planName.replace(/^абонемент\s+/i, '') || planName;
+    const no = plasticNo(m.barcode);
+    const gym = GYMS[m.gym] || GYMS['Подільськ'];
+    const meta = pending ? `${esc(planShort || 'Абонемент')} · чекає оплати` : `${esc(planShort || 'Абонемент')} · до ${esc(fmtShortDate(m.valid_to))}`;
     el.innerHTML = `
       <div class="xcard__inner">
         <div class="xcard__face xcard__front">
-          <div class="xcard__grid"></div>
-          <span class="xcard__band" aria-hidden="true"></span>
-          <svg class="xcard__watermark" viewBox="314 60 540 430" aria-hidden="true"><use href="#xfMark"/></svg>
-          <div class="xcard__top"><span class="xcard__brand">${LOGO}${plasticNo(m.barcode) ? `<span class="xcard__no">№ ${plasticNo(m.barcode)}</span>` : ''}</span><span class="xcard__status">${st.label}</span></div>
-          <div class="xcard__plan-block">
-            <span class="xcard__kicker">${pending ? 'Обраний абонемент' : 'Абонемент'}</span>
-            <b class="xcard__plan">${esc(planShort || (pending ? 'Ще не обрано' : '—'))}</b>
-          </div>
-          <div class="xcard__bottom">
-            <div class="xcard__field"><span>Клієнт XFit</span><b>${esc(m.full_name || '—')}</b></div>
-            <div class="xcard__field xcard__field--right"><span>${pending ? 'Активація' : 'Діє до'}</span><b>${pending ? 'після оплати' : esc(fmtShortDate(m.valid_to))}</b></div>
-          </div>
+          <span class="xc-light" aria-hidden="true"></span>
+          ${DECO_FRONT}
+          <span class="xcard__status">${st.label}</span>
+          <div class="xc-center">${LOGO}<span class="xc-tagline">Твоя нова спортсім'я</span></div>
+          <div class="xc-bottom"><span class="xc-meta">${meta}</span>${no ? `<b class="xcard__no">${no}</b>` : ''}</div>
         </div>
         <div class="xcard__face xcard__back">
-          <div class="xcard__grid"></div>
-          <div class="xcard__backbody">
+          <span class="xc-light" aria-hidden="true"></span>
+          ${DECO_BACK}
+          <div class="xc-back">
             <div class="xcard__qr">${m.token ? qrSvg(cardUrl(m.token)) : ''}</div>
-            <div class="xcard__info">
-              <div class="xcard__field"><span>Клієнт</span><b>${esc(m.full_name || '—')}</b></div>
-              <div class="xcard__field"><span>${pending ? 'Обрано' : 'Абонемент'}</span><b>${esc(planName || '—')}</b></div>
-              <p class="xcard__hint">${pending ? 'Оплати абонемент на рецепції — адміністратор активує карту' : 'Покажи QR-код або штрих-код на рецепції'}</p>
-            </div>
+            <div class="xcard__info"><div class="xcard__field"><b>${esc(m.full_name || '—')}</b></div></div>
+            ${gym[0] ? `<p class="xc-line"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg>${esc(gym[0])}</p>` : ''}
+            <p class="xc-line"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>${esc(gym[1])}</p>
           </div>
-          <div class="xcard__barcode"><svg class="xcard__barsvg"></svg>${isBarcode(m.barcode) ? `<span class="xcard__digits">${fmtBarcode(m.barcode)}</span>` : ''}</div>
+          <div class="xcard__barcode xc-vbar"><div class="xc-vbar__in"><svg class="xcard__barsvg"></svg>${isBarcode(m.barcode) ? `<span class="xcard__digits">${fmtBarcode(m.barcode)}</span>` : ''}</div></div>
         </div>
       </div>`;
     fitPlan(el);
@@ -210,13 +223,16 @@
     // та сама карта, лише велика; головне — штрихкод (QR лишається на звороті звичайної карти)
     const bar = cardEl.querySelector('.xcard__barcode');
     const name = (cardEl.querySelector('.xcard__info .xcard__field b') || {}).textContent || '';
-    const no = (cardEl.querySelector('.xcard__no') || {}).textContent || '';
+    const no = cardEl.querySelector('.xcard__no') ? '№ ' + cardEl.querySelector('.xcard__no').textContent : '';
     const useQr = !bar || !bar.querySelector('rect, path');
-    const code = useQr ? `<div class="scan-card__qr">${(cardEl.querySelector('.xcard__qr') || {}).innerHTML || ''}</div>` : `<div class="xcard__barcode scan-card__bar">${bar.innerHTML}</div>`;
+    const svg = bar && bar.querySelector('.xcard__barsvg');
+    const digits = bar && bar.querySelector('.xcard__digits');
+    const code = useQr ? `<div class="scan-card__qr">${(cardEl.querySelector('.xcard__qr') || {}).innerHTML || ''}</div>` : `<div class="xcard__barcode scan-card__bar">${svg.outerHTML}${digits ? digits.outerHTML : ''}</div>`;
     box.innerHTML = `
       <div class="scan-card" data-state="${esc(cardEl.dataset.state || '')}">
         <div class="xcard__face scan-card__face">
           <div class="xcard__grid"></div>
+          ${DECO_FRONT}
           <div class="scan-card__top">${LOGO}<span class="scan-card__name">${esc(name)}${no ? `<small>${esc(no)}</small>` : ''}</span></div>
           ${code}
           <p class="scan-card__tip">Підніми яскравість екрана · торкнись, щоб закрити</p>
