@@ -25,7 +25,7 @@
     if (libsReady) return libsReady;
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'css/card.css?v=10';
+    css.href = 'css/card.css?v=12';
     document.head.appendChild(css);
     const load = (src) => new Promise((res, rej) => {
       const s = document.createElement('script');
@@ -37,7 +37,7 @@
     libsReady = load('js/vendor/qrcode-generator-1.4.4.js')
       .then(() => load('js/vendor/jsbarcode-3.11.6.min.js'))
       .then(() => load('js/scanner.js?v=2'))
-      .then(() => load('js/card.js?v=12'));
+      .then(() => load('js/card.js?v=14'));
     return libsReady;
   }
 
@@ -228,6 +228,7 @@
         <p class="mem-sub">Надішли клієнту це посилання (Viber, Telegram, SMS). Відкривши його, клієнт побачить свою карту, а встановивши додаток XFit — матиме її завжди під рукою, навіть без інтернету.</p>
         <div class="mem-link"><input readonly value="${esc(url)}" id="memLink" aria-label="Посилання на карту"><button type="button" class="btn btn--primary" data-act="copy">Копіювати</button></div>
         <div class="mem-card__actions">
+          ${m.phone ? `<a class="btn btn--primary" href="sms:${esc(String(m.phone).replace(/[^+\d]/g, ''))}?&body=${encodeURIComponent('XFit: твоя карта клієнта — відкрий посилання й збережи карту на телефоні: ' + url)}">SMS клієнту</a>` : ''}
           ${navigator.share ? '<button type="button" class="btn btn--ghost" data-act="share">Поділитися</button>' : ''}
           <a class="btn btn--ghost" href="${esc(url)}" target="_blank" rel="noopener">Відкрити карту</a>
           <button type="button" class="btn btn--ghost" data-act="back">До списку</button>
