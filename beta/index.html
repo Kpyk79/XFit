@@ -3,6 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
+<script>
+/* Встановлений додаток відкривається на «Моїй карті», якщо клієнт уже має карту.
+   Спрацьовує лише на старті додатка (?source=app з маніфесту або перший екран сеансу),
+   тож кнопка «На сайт XFit» з карти відкриває сайт як звичайно. */
+(function () {
+  try {
+    var fromApp = /[?&]source=app\b/.test(location.search);
+    var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+    if (!fromApp && !(standalone && !sessionStorage.getItem('xfit_app_started'))) return;
+    sessionStorage.setItem('xfit_app_started', '1');
+    var card = JSON.parse(localStorage.getItem('xfit_card_v1') || 'null');
+    if (card && card.token) location.replace('card.html');
+  } catch (e) { /* немає доступу до сховища — лишаємось на головній */ }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>XFit — Твоя нова спортсім'я</title>
 <meta name="description" content="XFit — мережа сучасних тренажерних залів у Подільську та Балті. Тренажери, кросфіт, персональні тренування та групові заняття.">
@@ -99,7 +114,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=35">
+<link rel="stylesheet" href="css/style.css?v=36">
 <link rel="stylesheet" href="css/admin.css?v=28">
 </head>
 <body>
@@ -797,7 +812,7 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
 <script src="js/logo3d.js?v=24"></script>
 <script src="js/main.js?v=31"></script>
 <script src="js/admin.js?v=29"></script>
-<script src="js/admin-members.js?v=4"></script>
+<script src="js/admin-members.js?v=5"></script>
 <script src="js/gallery.js?v=1"></script>
 </body>
 </html>

@@ -17,8 +17,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=32">
-<link rel="stylesheet" href="css/card.css?v=10">
+<link rel="stylesheet" href="css/style.css?v=36">
+<link rel="stylesheet" href="css/card.css?v=12">
 </head>
 <body class="card-page">
 <style>.beta-ribbon{position:fixed;left:50%;top:calc(4px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:5000;pointer-events:none;
@@ -46,6 +46,7 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
   <div class="card-state" id="cardState"><h2>Завантаження карти…</h2></div>
 
   <form class="reg" id="regForm" hidden autocomplete="on" novalidate>
+    <button type="button" class="reg__switch" id="toLogin">Вже маєш карту XFit (новий телефон)? <b>Увійти →</b></button>
     <div class="reg__head">
       <h1 class="reg__title">Отримай карту клієнта XFit</h1>
       <p class="reg__lead">Заповни дані й обери абонемент — карта з'явиться одразу. Оплати абонемент на рецепції, адміністратор активує карту, і відкриються таймер та «Мої тренування».</p>
@@ -87,6 +88,24 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
     </a>
   </nav>
 
+  <form class="reg" id="loginForm" hidden novalidate>
+    <div class="reg__head">
+      <h1 class="reg__title">Увійти в мою карту</h1>
+      <p class="reg__lead">Новий телефон чи очищений браузер? Введи номер, з яким реєструвався, і підтверди, що карта твоя.</p>
+    </div>
+    <label class="reg__field"><span>Телефон</span><input name="phone" type="tel" autocomplete="tel" inputmode="tel" required placeholder="+380 __ ___ __ __"></label>
+    <div class="login-ways" role="radiogroup" aria-label="Як підтвердити">
+      <button type="button" role="radio" data-way="plastic" aria-checked="true">🪪 Пластикова карта</button>
+      <button type="button" role="radio" data-way="birth" aria-checked="false">🎂 Дата народження</button>
+    </div>
+    <div class="plastic" id="loginPlastic"></div>
+    <label class="reg__field" id="loginBirth" hidden><span>Дата народження</span><input name="birth_date" type="date" autocomplete="bday"></label>
+    <p class="reg__error" id="loginError" role="alert"></p>
+    <button type="submit" class="btn btn--primary btn--block btn--lg" id="loginSubmit">Увійти</button>
+    <p class="login-help">Немає пластикової карти й не вказував дату народження? Звернись на рецепцію XFit — адміністратор надішле посилання на твою карту в SMS.</p>
+    <button type="button" class="reg__switch" id="toReg">Ще немає карти? <b>Зареєструватися →</b></button>
+  </form>
+
   <section class="plastic-link" id="plasticLink" hidden>
     <button type="button" class="install-btn install-btn--block" id="plasticOpen">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M6 9v6M9 9v6M11.5 9v6M14 9v6M17.5 9v6"/></svg>
@@ -103,6 +122,7 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
       <span>Встановити XFit — карта завжди під рукою</span>
     </button>
+    <button type="button" class="btn btn--ghost btn--block" id="shareLink" hidden>Зберегти посилання на карту</button>
     <a href="./" class="btn btn--ghost btn--block">На сайт XFit</a>
   </div>
 </main>
@@ -112,6 +132,6 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
 <script src="js/vendor/qrcode-generator-1.4.4.js"></script>
 <script src="js/vendor/jsbarcode-3.11.6.min.js"></script>
 <script src="js/scanner.js?v=2"></script>
-<script src="js/card.js?v=12"></script>
+<script src="js/card.js?v=14"></script>
 </body>
 </html>

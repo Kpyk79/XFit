@@ -919,3 +919,8 @@ body.admin-mode .announcements__admin-hint{ display:block; }
 @media (prefers-reduced-motion: reduce){
   *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }
+
+/* ============ Дотики: без синьої рамки й підсвітки ============ */
+/* Рамка фокусу лишається лише для клавіатури (:focus-visible) — для дотику й миші її немає */
+*{ -webkit-tap-highlight-color: transparent; }
+:focus:not(:focus-visible){ outline: none; }
