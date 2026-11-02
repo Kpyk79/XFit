@@ -228,6 +228,7 @@
         <p class="mem-sub">Надішли клієнту це посилання (Viber, Telegram, SMS). Відкривши його, клієнт побачить свою карту, а встановивши додаток XFit — матиме її завжди під рукою, навіть без інтернету.</p>
         <div class="mem-link"><input readonly value="${esc(url)}" id="memLink" aria-label="Посилання на карту"><button type="button" class="btn btn--primary" data-act="copy">Копіювати</button></div>
         <div class="mem-card__actions">
+          ${m.phone ? `<a class="btn btn--primary" href="sms:${esc(String(m.phone).replace(/[^+\d]/g, ''))}?&body=${encodeURIComponent('XFit: твоя карта клієнта — відкрий посилання й збережи карту на телефоні: ' + url)}">SMS клієнту</a>` : ''}
           ${navigator.share ? '<button type="button" class="btn btn--ghost" data-act="share">Поділитися</button>' : ''}
           <a class="btn btn--ghost" href="${esc(url)}" target="_blank" rel="noopener">Відкрити карту</a>
           <button type="button" class="btn btn--ghost" data-act="back">До списку</button>
