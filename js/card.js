@@ -205,15 +205,20 @@
         if (document.visibilityState === 'visible' && !box.hidden && 'wakeLock' in navigator) navigator.wakeLock.request('screen').then((l) => { scanLock = l; }).catch(() => {});
       });
     }
-    const qr = cardEl.querySelector('.xcard__qr');
+    // та сама карта, лише велика; головне — штрихкод (QR лишається на звороті звичайної карти)
     const bar = cardEl.querySelector('.xcard__barcode');
     const name = (cardEl.querySelector('.xcard__info .xcard__field b') || {}).textContent || '';
-    const qrHtml = qr && qr.innerHTML.trim() ? `<div class="scan-qr">${qr.innerHTML}</div>` : '';
-    const barHtml = bar ? `<div class="scan-bar">${bar.innerHTML}</div>` : '';
+    const useQr = !bar || !bar.querySelector('rect, path');
+    const code = useQr ? `<div class="scan-card__qr">${(cardEl.querySelector('.xcard__qr') || {}).innerHTML || ''}</div>` : `<div class="xcard__barcode scan-card__bar">${bar.innerHTML}</div>`;
     box.innerHTML = `
-      <div class="scan-head"><b>XFit</b><span>${esc(name)}</span></div>
-      ${kind === 'qr' ? qrHtml + barHtml : barHtml + qrHtml}
-      <p class="scan-tip">☀️ Підніми яскравість екрана на максимум · торкнись, щоб закрити</p>`;
+      <div class="scan-card" data-state="${esc(cardEl.dataset.state || '')}">
+        <div class="xcard__face scan-card__face">
+          <div class="xcard__grid"></div>
+          <div class="scan-card__top">${LOGO}<span class="scan-card__name">${esc(name)}</span></div>
+          ${code}
+          <p class="scan-card__tip">Підніми яскравість екрана · торкнись, щоб закрити</p>
+        </div>
+      </div>`;
     box.hidden = false;
     document.body.classList.add('scan-open');
     box.dataset.fs = '0';
