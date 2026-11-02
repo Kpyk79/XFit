@@ -96,7 +96,17 @@
     d.setDate(d.getDate() - 1); // абонемент на місяць: з 1-го по останній день включно
     return d.toISOString().slice(0, 10);
   }
-  const plans = () => [...document.querySelectorAll('#pricing .price-card h3')].map((h) => h.textContent.trim()).filter(Boolean);
+  const plans = () => planInfo().map((x) => x.name);
+  // Абонементи з розділу «Абонементи» сайту: назва й тривалість за підписом ціни (/міс, /6 міс, /рік, порожньо — разове)
+  function planInfo() {
+    return [...document.querySelectorAll('#pricing .price-card')].map((card) => {
+      const name = ((card.querySelector('h3') || {}).textContent || '').trim();
+      const period = ((card.querySelector('.price-card__period') || {}).textContent || '').trim().toLowerCase();
+      const n = parseInt(period.replace(/\D/g, ''), 10);
+      const months = !period ? 0 : /рік/.test(period) ? 12 * (n || 1) : /міс/.test(period) ? (n || 1) : 1;
+      return { name, months };
+    }).filter((x) => x.name);
+  }
   const gyms = () => [...document.querySelectorAll('#locations .location-card h3')].map((h) => h.textContent.trim()).filter(Boolean);
   const statePill = (m) => {
     const st = C().stateOf(m);
@@ -153,11 +163,9 @@
         <label>ПІБ<input name="full_name" required maxlength="80" value="${esc(m ? m.full_name : '')}" placeholder="Прізвище та імʼя"></label>
         <label>Телефон<input name="phone" type="tel" maxlength="20" value="${esc(m ? m.phone : '')}" placeholder="+380…"></label>
         <div class="mem-form__row">
-          <label>Абонемент${m && m.desired_plan && !m.plan ? ` <span class="mem-hint">обрав: ${esc(m.desired_plan)}</span>` : ''}<input name="plan" list="memPlans" maxlength="40" value="${esc((m && m.plan) || matchPlan(m && m.desired_plan, p) || p[1] || p[0] || '')}" required></label>
-          <label>Зал<input name="gym" list="memGyms" maxlength="40" value="${esc((m && m.gym) || g[0] || 'Подільськ')}"></label>
+          <label>Абонемент${m && m.desired_plan && !m.plan ? ` <span class="mem-hint">обрав: ${esc(m.desired_plan)}</span>` : ''}<select name="plan" required>${selectOptions(p, (m && m.plan) || matchPlan(m && m.desired_plan, p) || p[1] || p[0] || '', true)}</select></label>
+          <label>Зал<select name="gym">${selectOptions(g.length ? g : ['Подільськ', 'Балта'], (m && m.gym) || g[0] || 'Подільськ', false)}</select></label>
         </div>
-        <datalist id="memPlans">${p.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
-        <datalist id="memGyms">${g.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
         <div class="mem-form__row">
           <label>Діє з<input name="valid_from" type="date" required value="${esc(start)}"></label>
           <label>Діє до<input name="valid_to" type="date" required value="${esc((m && m.valid_to) || addMonths(start, 1))}"></label>
@@ -176,6 +184,19 @@
         </div>
       </form>`;
     const form = body.querySelector('#memForm');
+    // вибір абонемента: «Інший…» — своя назва; тривалість абонемента підставляє дату «Діє до»
+    let prevPlan = form.plan.value;
+    form.plan.addEventListener('change', () => {
+      if (form.plan.value === OTHER) {
+        const name = (prompt('Назва абонемента:') || '').trim().slice(0, 40);
+        if (!name) { form.plan.value = prevPlan; return; }
+        form.plan.insertAdjacentHTML('afterbegin', `<option>${esc(name)}</option>`);
+        form.plan.value = name;
+      }
+      prevPlan = form.plan.value;
+      const info = planInfo().find((x) => x.name === form.plan.value);
+      if (info) form.valid_to.value = info.months ? addMonths(form.valid_from.value || today(), info.months) : (form.valid_from.value || today());
+    });
     form.querySelectorAll('[data-months]').forEach((b) => b.addEventListener('click', () => {
       form.valid_to.value = addMonths(form.valid_from.value || today(), Number(b.dataset.months));
     }));
@@ -199,6 +220,14 @@
       }
     });
     form.full_name.focus();
+  }
+
+  const OTHER = '__other__';
+  // Варіанти списку; поточне значення, якого немає серед абонементів сайту, теж показуємо
+  function selectOptions(list, current, withOther) {
+    const items = current && !list.includes(current) ? [current, ...list] : list;
+    return items.map((x) => `<option${x === current ? ' selected' : ''}>${esc(x)}</option>`).join('')
+      + (withOther ? `<option value="${OTHER}">✎ Інший…</option>` : '');
   }
 
   // «Повний — 799₴/міс» → «Повний», якщо такий абонемент є в розділі «Абонементи»
