@@ -266,6 +266,8 @@
     document.getElementById('scanModeBtn').hidden = false;
     document.getElementById('cardState').hidden = true;
     document.getElementById('regForm').hidden = true;
+    document.getElementById('loginForm').hidden = true;
+    document.getElementById('shareLink').hidden = !!opts.demo || !m.token;
     const details = document.getElementById('cardDetails');
     details.hidden = false;
     // кнопки таймера й «Моїх тренувань»: відкриваються з активною картою
@@ -304,6 +306,85 @@
   }
 
   document.getElementById('scanModeBtn').addEventListener('click', () => openZoom(document.getElementById('xcard'), 'bar'));
+
+  /* ---------- Повторний вхід (новий телефон, очищений браузер) ---------- */
+  const loginForm = document.getElementById('loginForm');
+  const loginError = document.getElementById('loginError');
+  const loginPlastic = mountPlastic(document.getElementById('loginPlastic'));
+  let loginWay = 'plastic';
+  function switchForm(toLogin) {
+    document.getElementById('regForm').hidden = toLogin;
+    loginForm.hidden = !toLogin;
+    if (!toLogin) loginPlastic.stop();
+    regPlastic.stop();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.getElementById('toLogin').addEventListener('click', () => switchForm(true));
+  document.getElementById('toReg').addEventListener('click', () => switchForm(false));
+  loginForm.querySelectorAll('[data-way]').forEach((b) => b.addEventListener('click', () => {
+    loginWay = b.dataset.way;
+    loginForm.querySelectorAll('[data-way]').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+    document.getElementById('loginPlastic').hidden = loginWay !== 'plastic';
+    document.getElementById('loginBirth').hidden = loginWay !== 'birth';
+    if (loginWay !== 'plastic') loginPlastic.stop();
+  }));
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginError.textContent = '';
+    const phone = normalizePhone(loginForm.elements.phone.value);
+    const birth = loginForm.elements.birth_date.value;
+    const code = loginWay === 'plastic' ? loginPlastic.value() : '';
+    if (phone.length < 11 || phone.length > 13) { loginForm.elements.phone.focus(); loginError.textContent = 'Вкажи номер телефону, напр. +380 67 123 45 67.'; return; }
+    if (loginWay === 'plastic' && !loginPlastic.valid()) { loginPlastic.focus(); loginError.textContent = 'Відскануй штрихкод пластикової карти або введи 13 цифр під ним.'; return; }
+    if (loginWay === 'birth' && !birth) { loginForm.elements.birth_date.focus(); loginError.textContent = 'Вкажи дату народження.'; return; }
+    const btn = document.getElementById('loginSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Шукаємо карту…';
+    try {
+      let m = null;
+      const url = window.XFIT_SUPABASE_URL || '';
+      const key = window.XFIT_SUPABASE_ANON_KEY || '';
+      if (window.supabase && url && key && !url.includes('YOUR-PROJECT')) {
+        const sb = window.supabase.createClient(url, key);
+        const { data, error } = await sb.rpc('restore_member_card', { p_phone: '+' + phone, p_barcode: code || null, p_birth_date: loginWay === 'birth' ? birth : null });
+        if (error) {
+          if (/too_many_attempts/.test(error.message)) throw new Error('Забагато спроб. Спробуй завтра або звернись на рецепцію XFit.');
+          throw new Error('Не вдалося перевірити дані. Перевір інтернет і спробуй ще раз.');
+        }
+        if (data) m = (await fetchRemote(data)).member;
+      } else {
+        const list = JSON.parse(localStorage.getItem('xfit_members_v1') || '[]');
+        m = list.find((x) => String(x.phone || '').replace(/\D/g, '').slice(-9) === phone.slice(-9)
+          && ((code && x.barcode === code) || (birth && x.birth_date === birth))) || null;
+      }
+      if (!m) throw new Error(loginWay === 'plastic'
+        ? 'Карту з таким телефоном і штрихкодом не знайдено. Перевір номер телефону й цифри під штрихкодом.'
+        : 'Карту з таким телефоном і датою народження не знайдено. Спробуй через пластикову карту або звернись на рецепцію.');
+      writeCache(m);
+      loginPlastic.stop();
+      show(m);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      loginError.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Увійти';
+    }
+  });
+
+  // Посилання на карту — щоб відкрити її на новому телефоні (надіслати собі в Telegram, Viber, нотатки)
+  document.getElementById('shareLink').addEventListener('click', async (e) => {
+    const m = shownMember;
+    if (!m || !m.token) return;
+    const link = cardUrl(m.token);
+    const btn = e.currentTarget;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Моя карта XFit', text: 'Моя карта клієнта XFit — відкрий посилання на новому телефоні:', url: link }); return; } catch (err) { if (err && err.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(link); btn.textContent = 'Посилання скопійовано ✓'; }
+    catch (err) { prompt('Скопіюй посилання на свою карту:', link); }
+    setTimeout(() => { btn.textContent = 'Зберегти посилання на карту'; }, 2500);
+  });
 
   /* ---------- Додати пластикову карту до вже створеної віртуальної ---------- */
   let shownMember = null;
@@ -377,6 +458,8 @@
     box.hidden = !title;
     if (title) box.innerHTML = `<h2>${esc(title)}</h2><p>${esc(text)}</p>`;
     document.getElementById('regForm').hidden = !withForm;
+    document.getElementById('loginForm').hidden = true;
+    document.getElementById('shareLink').hidden = true;
   }
 
   async function fetchRemote(t) {

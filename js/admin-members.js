@@ -25,7 +25,7 @@
     if (libsReady) return libsReady;
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'css/card.css?v=10';
+    css.href = 'css/card.css?v=11';
     document.head.appendChild(css);
     const load = (src) => new Promise((res, rej) => {
       const s = document.createElement('script');
@@ -37,7 +37,7 @@
     libsReady = load('js/vendor/qrcode-generator-1.4.4.js')
       .then(() => load('js/vendor/jsbarcode-3.11.6.min.js'))
       .then(() => load('js/scanner.js?v=2'))
-      .then(() => load('js/card.js?v=12'));
+      .then(() => load('js/card.js?v=13'));
     return libsReady;
   }
 

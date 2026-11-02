@@ -211,3 +211,11 @@ body.scan-open{ overflow:hidden; }
 .xcard__brand{ display:flex; align-items:center; gap: 3cqw; }
 .xcard__no{ font: 800 clamp(.7rem, 3.6cqw, 1rem) var(--font-display); letter-spacing: .04em; color: var(--white); opacity: .9; }
 .scan-card__name small{ display:block; margin-top: .6cqw; font-size: 2.8cqw; letter-spacing: .1em; color: var(--green); }
+
+/* ---------- Вхід / реєстрація ---------- */
+.reg__switch{ align-self:stretch; padding: 12px 14px; border-radius: 14px; border: 1px dashed rgba(57,255,106,0.45); background: rgba(57,255,106,0.05); color: var(--muted); font: 500 .88rem var(--font-body); cursor:pointer; text-align:center; }
+.reg__switch b{ color: var(--green); }
+.login-ways{ display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.login-ways button{ padding: 12px 8px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg); color: var(--white); font: 600 .86rem var(--font-body); cursor:pointer; }
+.login-ways button[aria-checked="true"]{ border-color: var(--green); color: var(--green); background: rgba(57,255,106,0.08); }
+.login-help{ margin:0; font-size: .8rem; color: var(--muted); line-height: 1.45; text-align:center; }
