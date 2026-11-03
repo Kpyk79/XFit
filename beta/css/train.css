@@ -1,3 +1,4 @@
+/* iOS: hover-ефекти обгорнуто в (hover: hover), щоб не «залипали» після дотику */
 /* ============ XFIT — сторінка «Тренування»: таймер і щоденник ============ */
 :root{
   --work: #39ff6a;
@@ -12,14 +13,14 @@
 .train-bar{
   position: sticky; top: 0; z-index: 50;
   padding-top: env(safe-area-inset-top, 0px);
-  background: rgba(6,7,6,0.85); backdrop-filter: blur(14px);
+  background: rgba(6,7,6,0.85); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
 }
 .train-bar__inner{ display:flex; align-items:center; justify-content:space-between; gap: 16px; height: 64px; }
 .train-bar__back{ display:flex; align-items:center; gap: 6px; }
 .train-bar__back .logo__svg{ height: 28px; }
 .train-bar__arrow{ width:20px; height:20px; fill:none; stroke: var(--muted); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; transition: stroke .2s, transform .2s; }
-.train-bar__back:hover .train-bar__arrow{ stroke: var(--green); transform: translateX(-2px); }
+@media (hover: hover) and (pointer: fine){ .train-bar__back:hover .train-bar__arrow{ stroke: var(--green); transform: translateX(-2px); } }
 .train-tabs{ display:flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border); }
 .train-tab{
   font: 600 .88rem var(--font-body); color: var(--muted); background: transparent; border: 0;
@@ -39,7 +40,7 @@
   background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 9px 16px;
   transition: border-color .2s, color .2s, background .2s;
 }
-.mode:hover, .ranges button:hover, .presets button:hover{ border-color: rgba(57,255,106,0.5); }
+@media (hover: hover) and (pointer: fine){ .mode:hover, .ranges button:hover, .presets button:hover{ border-color: rgba(57,255,106,0.5); } }
 .mode[aria-checked="true"], .ranges button[aria-checked="true"], .presets button.is-active{
   border-color: var(--green); color: var(--green); background: rgba(57,255,106,0.08);
 }
@@ -82,7 +83,7 @@
 .ctl:focus-visible{ outline: 2px solid var(--green); outline-offset: 3px; }
 .ctl svg{ width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .ctl--ghost{ width: 56px; height: 56px; color: var(--white); background: var(--panel); border: 1px solid var(--border); }
-.ctl--ghost:hover{ border-color: rgba(57,255,106,0.5); }
+@media (hover: hover) and (pointer: fine){ .ctl--ghost:hover{ border-color: rgba(57,255,106,0.5); } }
 .ctl--main{
   width: 84px; height: 84px; color: #04140a; background: var(--green); border: 0;
   box-shadow: 0 12px 34px -10px var(--green-glow);
@@ -113,7 +114,7 @@
   width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg);
   color: var(--white); font: 600 1.2rem var(--font-body); cursor: pointer; transition: border-color .2s, color .2s;
 }
-.stepper button:hover{ border-color: var(--green); color: var(--green); }
+@media (hover: hover) and (pointer: fine){ .stepper button:hover{ border-color: var(--green); color: var(--green); } }
 .stepper button:focus-visible{ outline: 2px solid var(--green); outline-offset: 2px; }
 .stepper output{ min-width: 64px; text-align:center; font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
 .setting--presets{ flex-wrap: wrap; }
@@ -192,7 +193,7 @@
   width: 22px; height: 22px; border-radius: 50%; border: 0; background: transparent; color: var(--muted);
   cursor: pointer; font-size: .9rem; line-height: 1;
 }
-.set-chip button:hover{ color: #ff8080; background: rgba(255,92,92,0.12); }
+@media (hover: hover) and (pointer: fine){ .set-chip button:hover{ color: #ff8080; background: rgba(255,92,92,0.12); } }
 .history-empty{ color: var(--muted); font-size: .9rem; text-align:center; padding: 18px; border: 1px dashed var(--border); border-radius: 14px; }
 .history-more{ align-self: center; }
 
@@ -265,7 +266,7 @@ body.is-locked .train-tabs{ visibility: hidden; }
   color: var(--white); font: inherit; transition: background .2s, border-color .2s, transform .15s;
 }
 .pick-btn[hidden]{ display:none; }
-.pick-btn:hover{ background: rgba(57,255,106,0.1); border-style: solid; }
+@media (hover: hover) and (pointer: fine){ .pick-btn:hover{ background: rgba(57,255,106,0.1); border-style: solid; } }
 .pick-btn:active{ transform: scale(.985); }
 .pick-btn__plus{ flex:none; width: 46px; height: 46px; border-radius: 14px; display:grid; place-items:center; background: var(--green); color:#04140a; font-size: 1.8rem; font-weight: 700; line-height: 1; }
 .pick-btn b{ display:block; font-size: 1.05rem; }
@@ -329,7 +330,7 @@ body.is-locked .train-tabs{ visibility: hidden; }
   padding: 13px 10px; border-radius: 14px; border: 1px solid var(--border); background: var(--panel); color: var(--white);
   font: 600 .88rem var(--font-body); cursor:pointer; transition: border-color .2s;
 }
-.soft-btn:hover{ border-color: rgba(57,255,106,0.5); }
+@media (hover: hover) and (pointer: fine){ .soft-btn:hover{ border-color: rgba(57,255,106,0.5); } }
 .soft-btn b{ color: var(--rest); }
 
 /* ---------- Вікно вибору вправи ---------- */
@@ -361,7 +362,7 @@ body.is-locked .train-tabs{ visibility: hidden; }
   display:flex; align-items:center; gap: 12px; width:100%; text-align:left; padding: 13px 14px; border-radius: 14px;
   background: var(--bg); border: 1px solid transparent; color: var(--white); font: 500 .98rem var(--font-body); cursor:pointer;
 }
-.ex-item:hover, .ex-item:focus-visible{ border-color: rgba(57,255,106,0.5); outline: none; }
+@media (hover: hover) and (pointer: fine){ .ex-item:hover, .ex-item:focus-visible{ border-color: rgba(57,255,106,0.5); outline: none; } }
 .ex-item__icon{ flex:none; width: 34px; height: 34px; border-radius: 10px; display:grid; place-items:center; background: rgba(255,255,255,0.05); font-size: 1.1rem; }
 .ex-item__name{ flex:1; min-width:0; }
 .ex-item small{ flex:none; color: var(--muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
@@ -405,3 +406,10 @@ body.sheet-open{ overflow: hidden; }
   .howto li{ font-size: .74rem; padding: 10px 6px; }
   .train-tab{ padding: 8px 12px; }
 }
+
+/* ============ iPhone / сенсорні екрани ============ */
+.train-page{ min-height: 100vh; min-height: 100dvh; }
+.date-chip input{ font-size: 16px; }                       /* без збільшення сторінки при виборі дати */
+.sheet__box{ max-height: 88vh; max-height: 88dvh; }
+.ex-list{ -webkit-overflow-scrolling: touch; }
+.big-stepper > button, .ctl, .mode, .soft-btn, .ex-item, .cat, .pick-btn, .today-ex__head{ -webkit-user-select: none; user-select: none; }

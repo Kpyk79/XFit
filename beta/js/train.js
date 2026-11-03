@@ -4,6 +4,8 @@
    без інтернету сторінку віддає service worker.
    ============================================================ */
 (function () {
+  // iPhone: Safari показує натискання (:active) лише коли сторінка слухає дотики
+  document.addEventListener('touchstart', () => {}, { passive: true });
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -755,11 +757,13 @@
     renderSheet();
     sheet.hidden = false;
     document.body.classList.add('sheet-open');
+    document.documentElement.classList.add('no-scroll'); // Safari: блокуємо прокрутку й на <html>
     requestAnimationFrame(() => sheet.classList.add('is-open'));
   }
   function closeSheet() {
     sheet.classList.remove('is-open');
     document.body.classList.remove('sheet-open');
+    document.documentElement.classList.remove('no-scroll');
     setTimeout(() => { sheet.hidden = true; }, 220);
   }
   function exItem(name) {
