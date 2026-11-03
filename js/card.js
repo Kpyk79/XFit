@@ -7,6 +7,8 @@
    телефоні, щоб карта показувалась і без інтернету.
    ============================================================ */
 (function (root) {
+  // iPhone: Safari показує натискання (:active) лише коли сторінка слухає дотики
+  document.addEventListener('touchstart', () => {}, { passive: true });
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const DAY = 86400000;
 
@@ -199,6 +201,7 @@
     if (!box || box.hidden) return;
     box.hidden = true;
     document.body.classList.remove('scan-open');
+    document.documentElement.classList.remove('no-scroll');
     if (scanLock) scanLock.release().catch(() => {});
     scanLock = null;
     if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
@@ -240,6 +243,7 @@
       </div>`;
     box.hidden = false;
     document.body.classList.add('scan-open');
+    document.documentElement.classList.add('no-scroll'); // Safari: блокуємо прокрутку й на <html>
     box.dataset.fs = '0';
     if (box.requestFullscreen && !document.fullscreenElement) {
       box.requestFullscreen({ navigationUI: 'hide' }).then(() => { box.dataset.fs = '1'; }).catch(() => {});

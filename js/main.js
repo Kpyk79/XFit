@@ -1,3 +1,6 @@
+// iPhone: Safari показує натискання (:active) лише коли сторінка слухає дотики
+document.addEventListener('touchstart', () => {}, { passive: true });
+
 /* ============ NAVBAR SCROLL STATE ============ */
 const navbar = document.getElementById('navbar');
 const onScrollNav = () => {
@@ -15,6 +18,7 @@ burger.addEventListener('click', () => {
   burger.setAttribute('aria-expanded', String(open));
   document.body.classList.toggle('menu-open', open);
   document.body.style.overflow = open ? 'hidden' : '';
+  document.documentElement.classList.toggle('no-scroll', open); // Safari: блокуємо прокрутку й на <html>
 });
 mobileMenu.querySelectorAll('a').forEach(a => {
   a.addEventListener('click', () => {
@@ -23,6 +27,7 @@ mobileMenu.querySelectorAll('a').forEach(a => {
     burger.setAttribute('aria-expanded', 'false');
     document.body.classList.remove('menu-open');
     document.body.style.overflow = '';
+    document.documentElement.classList.remove('no-scroll');
   });
 });
 

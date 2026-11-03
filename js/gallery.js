@@ -69,6 +69,7 @@
     const start = Math.max(0, photos.findIndex((p) => p.src === src));
     box.hidden = false;
     document.body.style.overflow = 'hidden';
+    document.documentElement.classList.add('no-scroll'); // Safari: блокуємо прокрутку й на <html>
     show(start);
     box.querySelector('.lightbox__close').focus({ preventScroll: true });
   }
@@ -76,6 +77,7 @@
   function close() {
     box.hidden = true;
     document.body.style.overflow = '';
+    document.documentElement.classList.remove('no-scroll');
     img.removeAttribute('src');
     if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
   }
@@ -110,6 +112,8 @@
     sx = e.clientX;
     sy = e.clientY;
   });
+  // iPhone може перервати жест (системний свайп, прокрутка) — тоді просто забуваємо його
+  box.addEventListener('pointercancel', () => { sx = null; });
   box.addEventListener('pointerup', (e) => {
     if (sx === null) return;
     const dx = e.clientX - sx;
