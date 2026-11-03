@@ -1,3 +1,4 @@
+/* iOS: hover-ефекти обгорнуто в (hover: hover), щоб не «залипали» після дотику */
 /* ============ XFIT — віртуальна карта клієнта ============ */
 .card-page{ min-height: 100vh; display:flex; flex-direction:column; }
 .card-main{ flex:1; width:100%; max-width: 460px; margin: 0 auto; padding: 24px max(18px, env(safe-area-inset-right, 0px)) max(32px, env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)); display:flex; flex-direction:column; gap: 22px; }
@@ -171,7 +172,7 @@ body.scan-open{ overflow:hidden; }
   background: var(--panel); border: 1px solid rgba(57,255,106,0.35); color: var(--white);
   transition: border-color .2s, transform .15s, box-shadow .2s;
 }
-.card-app:hover{ border-color: var(--green); box-shadow: 0 14px 34px -18px var(--green-glow); }
+@media (hover: hover) and (pointer: fine){ .card-app:hover{ border-color: var(--green); box-shadow: 0 14px 34px -18px var(--green-glow); } }
 .card-app:active{ transform: scale(.97); }
 .card-app__icon{ width: 46px; height: 46px; border-radius: 14px; display:grid; place-items:center; background: var(--green); margin-bottom: 8px; }
 .card-app__icon svg{ width: 24px; height: 24px; fill:none; stroke: #04140a; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
@@ -280,3 +281,15 @@ body.scan-open{ overflow:hidden; }
     linear-gradient(160deg, #2a2a30 0%, #1d1d22 45%, #16161a 100%); border: 1px solid rgba(255,255,255,0.12); }
 .scan-card__bar{ box-shadow: none; }
 .scan-card__name small{ color: #8dc63f; }
+
+/* ============ iPhone / сенсорні екрани ============ */
+.card-page{ min-height: 100vh; min-height: 100dvh; }
+/* 3D-переворот карти в Safari: обидва боки — окремі шари, інакше зворот може просвічувати дзеркально */
+.xcard__inner{ -webkit-transform-style: preserve-3d; }
+.xcard__front{ -webkit-transform: rotateY(0deg); transform: rotateY(0deg); }
+.xcard__back{ -webkit-transform: rotateY(180deg); }
+/* Режим сканування — від видимої висоти екрана (без панелі Safari) */
+.xcard-zoom{ height: 100vh; height: 100dvh; }
+.scan-card{ width: min(94vw, 88svh * 1.586); }
+@media (orientation: portrait){ .scan-card{ width: min(92svh, 148vw); } }
+.xcard, .scan-mode-btn, .card-app, .login-ways button{ -webkit-user-select: none; user-select: none; }
