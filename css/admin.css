@@ -1,7 +1,8 @@
+/* iOS: hover-ефекти обгорнуто в (hover: hover), щоб не «залипали» після дотику */
 /* ============ ADMIN LOGIN MODAL ============ */
 .admin-modal{
   position: fixed; inset:0; z-index: 3000;
-  background: rgba(3,4,3,0.82); backdrop-filter: blur(6px);
+  background: rgba(3,4,3,0.82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   display:none; align-items:center; justify-content:center; padding: 20px;
 }
 .admin-modal.open{ display:flex; }
@@ -56,7 +57,7 @@
   position: fixed; right: 20px; bottom: 20px; z-index: 2900;
   display:none; flex-direction:column;
   width: min(300px, calc(100vw - 32px));
-  background: rgba(8,10,8,0.97); backdrop-filter: blur(16px);
+  background: rgba(8,10,8,0.97); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
   border: 1px solid rgba(57,255,106,0.35);
   border-radius: 18px;
   box-shadow: 0 24px 60px -20px rgba(0,0,0,0.8), 0 0 30px -10px rgba(57,255,106,0.25);
@@ -99,15 +100,15 @@
   cursor:pointer; transition: background .2s, border-color .2s, color .2s;
   text-align:center; line-height:1.25;
 }
-.admin-bar__btn:hover{ border-color:#39ff6a; color:#39ff6a; background: rgba(57,255,106,0.06); }
+@media (hover: hover) and (pointer: fine){ .admin-bar__btn:hover{ border-color:#39ff6a; color:#39ff6a; background: rgba(57,255,106,0.06); } }
 .admin-bar__btn--primary{
   background: rgba(57,255,106,0.1); border-color: rgba(57,255,106,0.4); color:#39ff6a;
 }
 .admin-bar__btn--edit.is-active{ background:#39ff6a; color:#04140a; border-color:#39ff6a; }
 .admin-bar__btn--danger{ color:#ffb020; }
-.admin-bar__btn--danger:hover{ border-color:#ffb020; color:#ffb020; background: rgba(255,176,32,0.08); }
+@media (hover: hover) and (pointer: fine){ .admin-bar__btn--danger:hover{ border-color:#ffb020; color:#ffb020; background: rgba(255,176,32,0.08); } }
 .admin-bar__btn--exit{ color:#ff8080; }
-.admin-bar__btn--exit:hover{ border-color:#ff5c5c; color:#ff5c5c; background: rgba(255,92,92,0.08); }
+@media (hover: hover) and (pointer: fine){ .admin-bar__btn--exit:hover{ border-color:#ff5c5c; color:#ff5c5c; background: rgba(255,92,92,0.08); } }
 
 /* ============ EDITABLE STATE ============ */
 body.admin-editing [data-edit-key]{
@@ -117,10 +118,10 @@ body.admin-editing [data-edit-key]{
   cursor: text;
   transition: outline-color .2s, background .2s;
 }
-body.admin-editing [data-edit-key]:hover{
+@media (hover: hover) and (pointer: fine){ body.admin-editing [data-edit-key]:hover{
   outline-color: #39ff6a;
   background: rgba(57,255,106,0.08);
-}
+} }
 body.admin-editing [data-edit-key]:focus{
   outline: 2px solid #39ff6a;
   background: rgba(57,255,106,0.12);
@@ -141,3 +142,16 @@ body.admin-editing [data-edit-key]:focus{
   .admin-bar{ right: 12px; left: 12px; bottom: 12px; width:auto; }
   .admin-bar__btn{ padding: 10px; font-size:.76rem; }
 }
+
+/* ============ iPhone / сенсорні екрани ============ */
+/* Поля ≥ 16px — iPhone не збільшує сторінку при фокусі */
+.admin-modal__box input, .admin-modal__box select, .admin-modal__box textarea,
+.mem-body input, .mem-body select, .mem-link input{ font-size: 16px; }
+/* Вікна — на видиму висоту екрана, з відступами під виріз і смужку жестів */
+.admin-modal{ padding: max(20px, env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); }
+.admin-modal__box--wide{ max-height: 80vh; max-height: 80dvh; }
+.admin-modal__box--xwide{ max-height: 90vh; max-height: 90dvh; }
+.admin-modal__box{ overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.admin-bar{ bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 8px)); }
+.admin-toast{ top: max(18px, calc(env(safe-area-inset-top, 0px) + 8px)); }
+@media (max-width: 640px){ .admin-bar{ bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) + 6px)); } }
