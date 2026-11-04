@@ -406,3 +406,9 @@ end;
 $$;
 revoke all on function restore_member_card(text, text, date) from public;
 grant execute on function restore_member_card(text, text, date) to anon, authenticated;
+
+-- ---------- Позначка «Оброблено» для заявок (див. supabase-update-leads.sql) ----------
+alter table leads add column if not exists handled_at timestamptz;
+drop policy if exists "Admin update leads" on leads;
+create policy "Admin update leads" on leads for update
+  using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
