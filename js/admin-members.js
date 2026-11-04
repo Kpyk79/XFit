@@ -130,9 +130,18 @@
     do { n = C().newCardNumber(); } while (members.some((m) => m.card_number === n));
     return n;
   }
+  // Сканер працює як клавіатура: якщо на компʼютері увімкнена українська (чи російська) розкладка,
+  // посилання з QR-коду «надрукується» кирилицею — повертаємо латинські символи за положенням клавіш
+  const US = "qwertyuiop[]asdfghjkl;'zxcvbnm,./QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?";
+  const UA = 'йцукенгшщзхїфівапролджєячсмитьбю.ЙЦУКЕНГШЩЗХЇФІВАПРОЛДЖЄЯЧСМИТЬБЮ,';
+  const RU = 'йцукенгшщзхъфывапролджэячсмитьбю.ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,';
+  function fromLayout(text) {
+    if (!/[а-яіїєґё]/i.test(text)) return text;
+    return [...text].map((ch) => { let i = UA.indexOf(ch); if (i < 0) i = RU.indexOf(ch); return i < 0 ? ch : US[i]; }).join('');
+  }
   // Пошук за відсканованим кодом: посилання на карту, штрихкод або номер карти
   function findByCode(raw) {
-    const text = String(raw || '').trim();
+    const text = fromLayout(String(raw || '').trim());
     let token = null;
     try { token = new URL(text).searchParams.get('c'); } catch (e) { /* не посилання */ }
     const digits = text.replace(/\D/g, '');

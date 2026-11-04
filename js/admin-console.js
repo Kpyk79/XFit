@@ -171,7 +171,9 @@
   }
 
   /* ---------- Дані ---------- */
-  async function loadAll() {
+  let loadingP = null;
+  function loadAll() { if (!loadingP) loadingP = doLoad().finally(() => { loadingP = null; }); return loadingP; }
+  async function doLoad() {
     loadError = '';
     try {
       await M().loadLibs();
@@ -589,10 +591,11 @@
   function stopCamera() { if (stopScan) stopScan(); stopScan = null; }
   function checkDrawer() {
     const canScan = !!(window.XFitScanner && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-    openDrawer('<div class="xc-title" id="xcDTitle">Перевірити карту</div><div class="xc-mut" style="font-size:13px">Скануй штрихкод чи QR або введи номер</div>',
+    openDrawer('<div class="xc-title" id="xcDTitle">Перевірити карту</div><div class="xc-mut" style="font-size:13px">Відскануй сканером, камерою або введи номер</div>',
       `<div class="xc-form">${canScan ? '<div class="xc-scan"><video id="xcVideo" playsinline muted></video><span></span></div><button type="button" class="xc-btn xc-btn--pri" data-act="scan">' + ic('scan') + 'Сканувати камерою</button>' : '<p class="xc-mut" style="margin:0;font-size:13.5px">Цей браузер не вміє сканувати коди камерою. Введи номер вручну.</p>'}
       <form class="xc-two" id="xcCheckForm" style="grid-template-columns:minmax(0,1fr) auto"><label class="xc-field"><input id="xcCheckInput" inputmode="numeric" placeholder="Штрихкод або номер карти" aria-label="Штрихкод або номер карти"></label><button type="submit" class="xc-btn" style="height:46px">Перевірити</button></form>
-      <div id="xcResult" aria-live="polite"></div></div>`, '', stopCamera);
+      <div id="xcResult" aria-live="polite"></div>
+      <p class="xc-mut" style="margin:0;font-size:12.5px">Порада: сканер на рецепції працює з будь-якого розділу адмінки — просто відскануй карту, і тут одразу зʼявиться клієнт.</p></div>`, '', stopCamera);
     $('#xcCheckForm').addEventListener('submit', (e) => { e.preventDefault(); const v = $('#xcCheckInput').value; showCheck(M().findByCode(v), v); });
   }
   function showCheck(m, raw) {
@@ -625,6 +628,79 @@
       <button type="button" class="xc-row" data-act="search"><div class="xc-av xc-av--plain">${ic('search')}</div><div class="t"><div class="n">Пошук</div></div>›</button>
       <button type="button" class="xc-row" data-act="toSite"><div class="xc-av xc-av--plain">${ic('site')}</div><div class="t"><div class="n">Перейти на сайт</div></div>›</button>
       <button type="button" class="xc-row" data-act="logout"><div class="xc-av xc-av--plain xc-mut">${ic('out')}</div><div class="t"><div class="n xc-mut">Вийти з адмін-режиму</div></div></button></div>`);
+  }
+
+  /* ---------- Сканер штрихкодів на рецепції ----------
+     USB/Bluetooth-сканер «друкує» код дуже швидко (мілісекунди між символами) і натискає Enter.
+     Коли адмінка відкрита і курсор не в полі вводу — ловимо такий потік і одразу показуємо клієнта. */
+  const SHIFT_DIGITS = ')!@#$%^&*(';
+  const CODE_CHARS = { Slash: '/?', Period: '.>', Semicolon: ';:', Minus: '-_', Equal: '=+', Comma: ',<', Quote: '\'"', BracketLeft: '[{', BracketRight: ']}', Backslash: '\\|', Backquote: '`~', NumpadDecimal: '..', NumpadDivide: '//', NumpadSubtract: '--', NumpadAdd: '++', NumpadMultiply: '**' };
+  // символ за фізичною клавішею — незалежно від розкладки клавіатури
+  function keyChar(e) {
+    const c = e.code || '';
+    const k = e.key && e.key.length === 1 && e.key.charCodeAt(0) < 128 ? e.key : '';
+    // [без Shift, з Shift] для цієї клавіші; якщо розкладка англійська — e.key вже один із них
+    const pair = /^Digit\d$/.test(c) ? c[5] + SHIFT_DIGITS[+c[5]]
+      : /^Numpad\d$/.test(c) ? c[6] + c[6]
+      : /^Key[A-Z]$/.test(c) ? c[3].toLowerCase() + c[3]
+      : CODE_CHARS[c] || '';
+    if (!pair) return k;
+    if (k && pair.includes(k)) return k;
+    return pair[e.shiftKey ? 1 : 0];
+  }
+  const scan = { buf: '', t: 0, timer: null };
+  const scanReset = () => { scan.buf = ''; clearTimeout(scan.timer); };
+  // true — натискання належить сканеру і далі не обробляється
+  function scanKey(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return false;
+    const ae = document.activeElement;
+    // у полі «Штрихкод або номер карти» сканер теж перехоплюємо — щоб кожне сканування замінювало попередній код
+    if (ae && ae.id !== 'xcCheckInput' && (/INPUT|TEXTAREA|SELECT/.test(ae.tagName) || ae.isContentEditable)) { scanReset(); return false; }
+    const now = performance.now();
+    const fast = now - scan.t < 60;
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      if (scan.buf.length >= 8 && fast) { e.preventDefault(); scanDone(); return true; }
+      scanReset();
+      return false;
+    }
+    const ch = keyChar(e);
+    if (!ch) return false;
+    if (scan.buf && !fast) scan.buf = '';
+    const mine = !!scan.buf; // перший символ ще може бути звичайним натисканням
+    scan.buf += ch; scan.t = now;
+    clearTimeout(scan.timer);
+    // сканер без Enter у кінці: код завершено, якщо пауза
+    scan.timer = setTimeout(() => { if (scan.buf.length >= 8) scanDone(); else scanReset(); }, 160);
+    if (mine) e.preventDefault();
+    return mine;
+  }
+  async function scanDone() {
+    const code = scan.buf;
+    scanReset();
+    if (!isOpen()) open();
+    if (!loaded) await loadAll();
+    if (!loaded) return;
+    closePal();
+    if (!$('#xcResult') || !$('#xcDrawer').classList.contains('is-on')) checkDrawer();
+    if (document.activeElement && document.activeElement.id === 'xcCheckInput') document.activeElement.blur();
+    $('#xcCheckInput').value = code;
+    const m = M().findByCode(code);
+    showCheck(m, code);
+    if (navigator.vibrate) navigator.vibrate(m ? 80 : [60, 60, 60]);
+    beep(!!m && ['active', 'soon'].includes(stateOf(m).state));
+  }
+  // короткий сигнал: високий — абонемент активний, низький — ні
+  let audio = null;
+  function beep(ok) {
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.frequency.value = ok ? 1320 : 300;
+      g.gain.setValueAtTime(0.12, audio.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + (ok ? 0.15 : 0.35));
+      o.connect(g); g.connect(audio.destination);
+      o.start(); o.stop(audio.currentTime + (ok ? 0.15 : 0.35));
+    } catch (e) { /* без звуку */ }
   }
 
   /* ---------- Пошук Ctrl+K ---------- */
@@ -740,6 +816,7 @@
     document.addEventListener('click', onClick);
     document.addEventListener('keydown', (e) => {
       if (!A().isAdmin || !A().isAdmin()) return;
+      if (isOpen() && scanKey(e)) return;
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); $('#xcPal').hidden ? openPal() : closePal(); return; }
       if (!isOpen()) return;
       const tag = document.activeElement && document.activeElement.tagName;
