@@ -942,3 +942,9 @@ a, button, input, select, textarea, label, summary, [role="button"], [contentedi
 .hero{ min-height: 100vh; min-height: 100svh; }
 /* Сторінка під відкритим вікном не прокручується (Safari ігнорує overflow лише на body) */
 html.no-scroll, html.no-scroll body{ overflow: hidden; }
+
+/* Телефон: «Приєднатись / Моя карта» під кнопками Instagram (у шапці на вузьких екранах її немає) */
+.hero__join{ display:none; }
+@media (max-width: 860px){
+  .hero__join{ display:flex; width: fit-content; min-width: 220px; margin: -14px auto 22px; padding: 14px 28px; font-size: .95rem; box-shadow: 0 12px 30px -12px rgba(57,255,106,0.6); }
+}
