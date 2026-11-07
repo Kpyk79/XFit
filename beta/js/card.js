@@ -264,6 +264,27 @@
   const token = params.get('c');
   const demo = params.has('demo');
 
+  /* ---------- Звідки прийшов клієнт і хто запросив друга ---------- */
+  // ?src=poster — QR на рецепції, ?ref=<код> — посилання від друга. Запамʼятовуємо до реєстрації.
+  const SRC_KEY = 'xfit_signup_src';
+  try {
+    const src = (params.get('src') || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 20);
+    const ref = (params.get('ref') || '').toLowerCase().replace(/[^0-9a-f]/g, '').slice(0, 10);
+    if (src || ref.length === 10) sessionStorage.setItem(SRC_KEY, JSON.stringify({ src: src || 'friend', ref: ref.length === 10 ? ref : '' }));
+  } catch (e) { /* ignore */ }
+  function signupSource() {
+    let s = {};
+    try { s = JSON.parse(sessionStorage.getItem(SRC_KEY) || 'null') || {}; } catch (e) { /* ignore */ }
+    if (!s.src) s.src = (matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) ? 'app' : /xfit\.com\.ua/.test(document.referrer) ? 'site' : 'direct';
+    return { src: s.src, ref: s.ref || '' };
+  }
+  // Код запрошення: перші 10 знаків SHA-256 від секретного коду карти (сам код не розкривається)
+  async function refCode(t) {
+    if (!t || !window.crypto || !crypto.subtle) return '';
+    const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+    return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 10);
+  }
+
   const DEMO = {
     token: 'demo', card_number: '2026408153371829', barcode: '2510000042156', full_name: 'Олена Коваленко', phone: '+380671234567',
     plan: 'Повний', valid_from: todayISO(), valid_to: new Date(Date.now() + 23 * DAY).toISOString().slice(0, 10), gym: 'Подільськ',
@@ -288,6 +309,7 @@
     document.getElementById('regForm').hidden = true;
     document.getElementById('loginForm').hidden = true;
     document.getElementById('shareLink').hidden = !!opts.demo || !m.token;
+    document.getElementById('inviteFriend').hidden = !!opts.demo || !m.token;
     const details = document.getElementById('cardDetails');
     details.hidden = false;
     // кнопки таймера й «Моїх тренувань»: відкриваються з активною картою
@@ -298,14 +320,16 @@
     const plasticLink = document.getElementById('plasticLink');
     plasticLink.hidden = !!opts.demo || !m.token || m.barcode_source === 'plastic';
     if (plasticLink.hidden && linkPlastic) linkPlastic.stop();
-    apps.classList.toggle('is-locked', st.state !== 'active');
+    // таймер відкривається одразу після реєстрації, «Мої тренування» — з активним абонементом
+    apps.classList.toggle('is-locked', st.state === 'expired');
+    apps.classList.toggle('is-pending', st.state === 'pending');
     const note = document.getElementById('cardNote');
     if (st.state === 'pending') {
       details.innerHTML = `
         <div class="card-row"><span>Статус</span><b>Чекає оплати на рецепції</b></div>
         <div class="card-row"><span>Обраний абонемент</span><b>${esc(m.desired_plan || m.plan || '—')}</b></div>
         ${m.gym ? `<div class="card-row"><span>Зал</span><b>${esc(m.gym)}</b></div>` : ''}`;
-      note.textContent = opts.offline ? 'Немає з\'єднання — показано збережену карту.' : 'Оплати абонемент на рецепції XFit (готівкою або карткою) — адміністратор активує карту, і тут з\'являться дати абонемента. Після активації відкриються таймер і «Мої тренування».';
+      note.textContent = opts.offline ? 'Немає з\'єднання — показано збережену карту.' : 'Таймер уже твій — користуйся! Оплати абонемент на рецепції XFit (готівкою або карткою) — адміністратор активує карту, тут зʼявляться дати абонемента, а ще відкриються «Мої тренування».';
       document.getElementById('demoBadge').hidden = !opts.demo;
       return;
     }
@@ -404,6 +428,23 @@
     try { await navigator.clipboard.writeText(link); btn.textContent = 'Посилання скопійовано ✓'; }
     catch (err) { prompt('Скопіюй посилання на свою карту:', link); }
     setTimeout(() => { btn.textContent = 'Зберегти посилання на карту'; }, 2500);
+  });
+
+  // Запросити друга: посилання на реєстрацію з кодом запрошення
+  document.getElementById('inviteFriend').addEventListener('click', async (e) => {
+    const m = shownMember;
+    if (!m || !m.token) return;
+    const btn = e.currentTarget;
+    const label = btn.querySelector('span');
+    const code = await refCode(m.token);
+    const link = cardUrl('x').replace(/card\.html.*$/, '') + 'card.html?ref=' + code;
+    const text = 'Я тренуюсь у XFit 💪 Отримай свою карту клієнта в телефоні — таймер тренувань відкривається одразу:';
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Тренуймось разом у XFit', text, url: link }); return; } catch (err) { if (err && err.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(text + ' ' + link); label.textContent = 'Запрошення скопійовано ✓ Надішли другу'; }
+    catch (err) { document.getElementById('cardNote').textContent = 'Надішли другу посилання: ' + link; }
+    setTimeout(() => { label.textContent = 'Запросити друга в XFit'; }, 3000);
   });
 
   /* ---------- Додати пластикову карту до вже створеної віртуальної ---------- */
@@ -640,6 +681,32 @@
     regPlasticBox.hidden = !hasPlastic.checked;
     if (!hasPlastic.checked) regPlastic.stop();
   });
+  // «Я новенький» / «Я вже клієнт»: клієнту з пластиковою картою — сканер одразу вгорі
+  const whoBox = regForm.querySelector('.reg-who');
+  const plasticToggle = hasPlastic.closest('label');
+  const consentLabel = regForm.querySelector('input[name="consent"]').closest('label');
+  function setWho(who) {
+    whoBox.querySelectorAll('[data-who]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.who === who)));
+    const member = who === 'member';
+    if (member) whoBox.after(plasticToggle, regPlasticBox); else consentLabel.before(plasticToggle, regPlasticBox);
+    hasPlastic.checked = member;
+    hasPlastic.dispatchEvent(new Event('change'));
+    document.getElementById('regPlanLabel').textContent = member ? 'Твій абонемент' : 'Абонемент, який плануєш оплатити';
+  }
+  whoBox.querySelectorAll('[data-who]').forEach((b) => b.addEventListener('click', () => setWho(b.dataset.who)));
+  // Запрошення від друга й дані із заявки на сайті — підставляємо в форму
+  if (signupSource().ref) {
+    const inv = document.getElementById('regInvite');
+    inv.hidden = false;
+    inv.textContent = '🎉 Тебе запросив друг — реєструйся, і тренуйтесь разом!';
+  }
+  try {
+    const pre = JSON.parse(sessionStorage.getItem('xfit_prefill') || 'null') || {};
+    const name = params.get('name') || pre.name || '';
+    const phone = params.get('phone') || pre.phone || '';
+    if (name && !regForm.elements.full_name.value) regForm.elements.full_name.value = name.slice(0, 80);
+    if (phone && !regForm.elements.phone.value) regForm.elements.phone.value = phone.slice(0, 20);
+  } catch (e) { /* ignore */ }
   function normalizePhone(v) {
     let d = String(v || '').replace(/\D/g, '');
     if (d.length === 10 && d[0] === '0') d = '38' + d;      // 067… → 38067…
@@ -651,10 +718,16 @@
     const key = window.XFIT_SUPABASE_ANON_KEY || '';
     if (!window.supabase || !url || !key || url.includes('YOUR-PROJECT')) return null;
     const sb = window.supabase.createClient(url, key);
-    const { data, error } = await sb.rpc('register_member', {
+    const args = {
       p_full_name: f.full_name, p_phone: '+' + f.phone, p_gym: f.gym, p_birth_date: f.birth_date || null, p_email: f.email, p_plan: f.plan,
       p_barcode: f.barcode || null,
-    });
+    };
+    const src = signupSource();
+    let { data, error } = await sb.rpc('register_member', { ...args, p_source: src.src, p_ref: src.ref });
+    // база ще без оновлення supabase-update-growth.sql — реєструємо без джерела
+    if (error && (error.code === 'PGRST202' || /Could not find the function|schema cache/i.test(error.message || ''))) {
+      ({ data, error } = await sb.rpc('register_member', args));
+    }
     if (error) {
       if (/barcode_exists/.test(error.message)) throw new Error('Ця пластикова карта вже додана в додаток. Якщо це твоя карта — звернись на рецепцію XFit.');
       if (/invalid_barcode/.test(error.message)) throw new Error('Номер пластикової карти не розпізнано — перевір 13 цифр під штрихкодом.');
@@ -678,6 +751,7 @@
       barcode: f.barcode || newBarcode(), barcode_source: f.barcode ? 'plastic' : 'app',
       full_name: f.full_name, phone: '+' + f.phone, gym: f.gym, birth_date: f.birth_date || null, email: f.email,
       plan: '', desired_plan: f.plan, valid_from: null, valid_to: null, status: 'pending', consent_at: new Date().toISOString(), created_at: new Date().toISOString(),
+      source: signupSource().src, referred_by: signupSource().ref,
     };
     list.unshift(m);
     localStorage.setItem('xfit_members_v1', JSON.stringify(list));
@@ -711,8 +785,10 @@
     try {
       const m = (await registerRemote(f)) || registerLocal(f);
       writeCache(m);
+      try { sessionStorage.removeItem(SRC_KEY); sessionStorage.removeItem('xfit_prefill'); } catch (e) { /* ignore */ }
       document.getElementById('cardState').hidden = true;
       show(m);
+      document.querySelector('.card-actions').classList.add('is-new'); // підсвічуємо «Встановити» та «Запросити друга»
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       regError.textContent = err.message;
