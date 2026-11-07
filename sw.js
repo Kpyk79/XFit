@@ -4,17 +4,17 @@
    свіжість (кеш — лише запасний варіант офлайн), тож оновлення сайту
    видно одразу. Бібліотеки з CDN мають версію в адресі — їх беремо з
    кешу. Запити до Supabase, EmailJS та інших сайтів не чіпаємо. */
-const CACHE = 'xfit-v22'; // змінюй версію, коли міняєш сам sw.js
+const CACHE = 'xfit-v23'; // змінюй версію, коли міняєш сам sw.js
 const CORE = [
   './',
   'index.html',
   'train.html',
-  'css/style.css?v=38',
+  'css/style.css?v=39',
   'css/train.css?v=6',
-  'js/train.js?v=5',
+  'js/train.js?v=6',
   'card.html',
-  'css/card.css?v=13',
-  'js/card.js?v=15',
+  'css/card.css?v=14',
+  'js/card.js?v=16',
   'js/scanner.js?v=2',
   'js/gallery.js?v=2',
   'js/vendor/qrcode-generator-1.4.4.js',
