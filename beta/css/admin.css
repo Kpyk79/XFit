@@ -323,3 +323,31 @@ button.xc-search > span:first-of-type{ flex:1; white-space:nowrap; overflow:hidd
 @media (prefers-reduced-motion: reduce){ .xc *, .xc-layer *, .xc, .xc-layer{ animation-duration:.01ms !important; transition-duration:.01ms !important; } }
 /* в адмін-режимі внизу — панель адміна, кнопку встановлення ховаємо */
 body.admin-mode .install-fab{ display:none !important; }
+
+/* ============ Залучення в додаток ============ */
+.xc-grow{ display:grid; grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr) minmax(0,1fr); gap:18px; align-items:start; }
+.xc-big{ font:900 40px/1.05 var(--xc-disp); letter-spacing:-.02em; margin-top:6px; }
+.xc-g{ color:var(--xc-g); font:600 12.5px var(--xc-body); margin-top:6px; }
+.xc-srcs{ display:flex; flex-direction:column; gap:8px; min-width:0; }
+.xc-src{ display:grid; grid-template-columns:minmax(0,130px) minmax(0,1fr) auto; gap:10px; align-items:center; font-size:13px; }
+.xc-src span{ color:#c1cbc1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.xc-src i{ display:block; height:10px; border-radius:99px; background:rgba(255,255,255,.06); position:relative; overflow:hidden; }
+.xc-src i::after{ content:""; position:absolute; inset:0 auto 0 0; width:var(--w); border-radius:99px; background:var(--xc-g); }
+.xc-src b{ min-width:24px; text-align:right; }
+.xc-steps{ margin:8px 0 14px; padding-left:22px; display:flex; flex-direction:column; gap:12px; font-size:14px; line-height:1.5; color:#c9d3c9; }
+.xc-steps b{ color:var(--xc-tx); }
+.xc-handoff{ width:100%; margin-top:14px; height:48px; }
+/* QR для телефону клієнта */
+.xc-qr{ position:fixed; inset:0; z-index:3000; display:grid; place-items:center; padding:max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background:rgba(2,3,2,.82); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); opacity:0; transition:opacity .25s; }
+.xc-qr[hidden]{ display:none; }
+.xc-qr.is-on{ opacity:1; }
+.xc-qr__box{ width:min(420px, 100%); display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center; transform:scale(.94); transition:transform .35s var(--xc-spring); }
+.xc-qr.is-on .xc-qr__box{ transform:none; }
+.xc-qr__code{ width:min(340px, 78vw); padding:14px; border-radius:26px; background:#fff; box-shadow:0 0 0 5px var(--xc-g), 0 0 90px rgba(57,255,106,.45); }
+.xc-qr__code svg{ display:block; width:100%; height:auto; }
+.xc-qr__name{ font:800 20px var(--xc-body); }
+.xc-qr p{ margin:0; color:var(--xc-mut); font-size:14px; line-height:1.5; max-width:36ch; }
+.xc-qr .xc-btn{ min-width:200px; }
+@media (max-width: 1080px){ .xc-grow{ grid-template-columns:minmax(0,1fr) minmax(0,1.4fr); } .xc-grow > div:last-child{ grid-column:1 / -1; } }
+@media (max-width: 560px){ .xc-grow{ grid-template-columns:minmax(0,1fr); } .xc-src{ grid-template-columns:minmax(0,110px) minmax(0,1fr) auto; } }

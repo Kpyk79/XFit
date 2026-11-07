@@ -17,8 +17,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=38">
-<link rel="stylesheet" href="css/card.css?v=13">
+<link rel="stylesheet" href="css/style.css?v=39">
+<link rel="stylesheet" href="css/card.css?v=14">
 </head>
 <body class="card-page">
 <style>.beta-ribbon{position:fixed;left:50%;top:calc(4px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:5000;pointer-events:none;
@@ -48,27 +48,34 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
   <form class="reg" id="regForm" hidden autocomplete="on" novalidate>
     <button type="button" class="reg__switch" id="toLogin">Вже маєш карту XFit (новий телефон)? <b>Увійти →</b></button>
     <div class="reg__head">
+      <p class="reg__invite" id="regInvite" hidden></p>
       <h1 class="reg__title">Отримай карту клієнта XFit</h1>
-      <p class="reg__lead">Заповни дані й обери абонемент — карта з'явиться одразу. Оплати абонемент на рецепції, адміністратор активує карту, і відкриються таймер та «Мої тренування».</p>
+      <p class="reg__lead">За хвилину — і карта в телефоні. Таймер тренувань відкривається одразу, а після оплати абонемента на рецепції — ще й «Мої тренування».</p>
+    </div>
+    <div class="reg-who" role="radiogroup" aria-label="Хто ти">
+      <button type="button" role="radio" data-who="new" aria-checked="true"><b>Я новенький</b><small>Ще не займаюсь у XFit</small></button>
+      <button type="button" role="radio" data-who="member" aria-checked="false"><b>Я вже клієнт</b><small>Маю пластикову карту XFit</small></button>
     </div>
     <label class="reg__field"><span>Прізвище та імʼя</span><input name="full_name" autocomplete="name" required minlength="3" maxlength="80" placeholder="Напр. Олена Коваленко"></label>
     <label class="reg__field"><span>Телефон</span><input name="phone" type="tel" autocomplete="tel" inputmode="tel" required placeholder="+380 __ ___ __ __"></label>
-    <div class="reg__row">
-      <label class="reg__field"><span>Дата народження <i>необовʼязково</i></span><input name="birth_date" type="date" autocomplete="bday"></label>
-      <label class="reg__field"><span>Зал</span>
-        <select name="gym"><option>Подільськ</option><option>Балта</option></select>
-      </label>
-    </div>
-    <label class="reg__field"><span>Абонемент, який плануєш оплатити</span>
+    <label class="reg__field"><span>Зал</span>
+      <select name="gym"><option>Подільськ</option><option>Балта</option></select>
+    </label>
+    <label class="reg__field"><span id="regPlanLabel">Абонемент, який плануєш оплатити</span>
       <select name="plan" id="regPlan" required>
         <option value="Старт — 499₴/міс">Старт — 499₴/міс</option>
         <option value="Повний — 799₴/міс" selected>Повний — 799₴/міс</option>
         <option value="PRO — 1299₴/міс">PRO — 1299₴/міс</option>
       </select>
     </label>
-    <label class="reg__field"><span>Email <i>необовʼязково</i></span><input name="email" type="email" autocomplete="email" maxlength="120" placeholder="name@gmail.com"></label>
+    <details class="reg__more">
+      <summary>Дата народження та email <i>необовʼязково</i></summary>
+      <label class="reg__field"><span>Дата народження</span><input name="birth_date" type="date" autocomplete="bday"></label>
+      <p class="reg__hint">Знадобиться, щоб увійти в карту з нового телефона.</p>
+      <label class="reg__field"><span>Email</span><input name="email" type="email" autocomplete="email" maxlength="120" placeholder="name@gmail.com"></label>
+    </details>
     <input class="reg__hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
-    <label class="reg__consent reg__plastic-toggle"><input type="checkbox" id="hasPlastic"><span>У мене вже є пластикова карта XFit — додати її в додаток</span></label>
+    <label class="reg__consent reg__plastic-toggle" hidden><input type="checkbox" id="hasPlastic"><span>У мене вже є пластикова карта XFit — додати її в додаток</span></label>
     <div class="plastic" id="regPlastic" hidden></div>
     <label class="reg__consent"><input type="checkbox" name="consent" required><span>Погоджуюсь на обробку моїх персональних даних для обслуговування в XFit</span></label>
     <p class="reg__error" id="regError" role="alert"></p>
@@ -114,13 +121,17 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
     <div class="plastic" id="linkPlastic" hidden></div>
   </section>
 
-  <section class="card-details" id="cardDetails" aria-label="Дані абонемента"></section>
+  <section class="card-details" id="cardDetails" aria-label="Дані абонемента" hidden></section>
   <p class="card-note" id="cardNote"></p>
 
   <div class="card-actions">
     <button type="button" class="install-btn install-btn--block" data-install hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
       <span>Встановити XFit — карта завжди під рукою</span>
+    </button>
+    <button type="button" class="btn btn--primary btn--block invite-btn" id="inviteFriend" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/></svg>
+      <span>Запросити друга в XFit</span>
     </button>
     <button type="button" class="btn btn--ghost btn--block" id="shareLink" hidden>Зберегти посилання на карту</button>
     <a href="./" class="btn btn--ghost btn--block">На сайт XFit</a>
@@ -132,6 +143,6 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
 <script src="js/vendor/qrcode-generator-1.4.4.js"></script>
 <script src="js/vendor/jsbarcode-3.11.6.min.js"></script>
 <script src="js/scanner.js?v=2"></script>
-<script src="js/card.js?v=15"></script>
+<script src="js/card.js?v=16"></script>
 </body>
 </html>

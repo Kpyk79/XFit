@@ -47,7 +47,11 @@
       $('#' + t.getAttribute('aria-controls')).hidden = !on;
     });
     if (name === 'log') renderLog();
+    currentTab = name;
+    if (accessState) showLock(accessState);
   }
+  let currentTab = 'timer';
+  let accessState = null;
   tabs.forEach((t) => t.addEventListener('click', () => {
     history.replaceState(null, '', '#' + t.dataset.tab);
     showTab(t.dataset.tab);
@@ -1035,19 +1039,21 @@
     if (!m.valid_to || m.valid_to < todayISO()) return 'expired';
     return 'active';
   }
+  // Таймер відкривається одразу після реєстрації (щоб спробувати), «Мої тренування» — з активним абонементом
   function showLock(state) {
+    accessState = state;
     const lock = $('#trainLock');
     const main = $('.train-main');
-    const open = state === 'active';
+    const open = state === 'active' || (state === 'pending' && currentTab === 'timer');
     lock.hidden = open;
     main.hidden = !open;
-    document.body.classList.toggle('is-locked', !open);
+    document.body.classList.toggle('is-locked', !open && state !== 'pending'); // з новою картою вкладки лишаються — можна повернутись до таймера
     if (open) return;
     const steps = $$('.train-lock__steps li', lock);
     steps.forEach((li, i) => li.classList.toggle('is-done', (state === 'pending' && i === 0) || (state === 'expired' && i < 2)));
     const text = {
       none: ['Таймер і «Мої тренування» — для клієнтів XFit', 'Вони відкриваються разом з активною картою клієнта.', 'Отримати карту клієнта'],
-      pending: ['Майже готово', 'Твоя карта чекає оплати. Оплати обраний абонемент на рецепції — після активації таймер і «Мої тренування» відкриються автоматично.', 'Показати мою карту'],
+      pending: ['«Мої тренування» — після оплати', 'Таймер уже твій — користуйся! А щоденник з рекордами відкриється, щойно адміністратор активує карту після оплати абонемента на рецепції.', 'Показати мою карту'],
       expired: ['Абонемент закінчився', 'Продовж абонемент на рецепції, щоб знову користуватися таймером і «Моїми тренуваннями». Твої записи збережено.', 'Показати мою карту'],
     }[state];
     $('#trainLockTitle').textContent = text[0];

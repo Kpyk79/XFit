@@ -178,6 +178,7 @@
     try {
       await M().loadLibs();
       await Promise.all([M().load(), loadLeads()]);
+      await buildRefs();
       loaded = true;
     } catch (err) {
       loadError = err.message || 'Не вдалося завантажити дані';
@@ -185,6 +186,70 @@
     renderNav();
     render();
   }
+  /* ---------- Залучення: джерела реєстрацій і запрошення друзів ---------- */
+  // Код запрошення клієнта = перші 10 знаків SHA-256 від секретного коду його карти (як у js/card.js)
+  let refOwner = {};
+  async function buildRefs() {
+    refOwner = {};
+    if (!window.crypto || !crypto.subtle) return;
+    await Promise.all(members().filter((m) => m.token).map(async (m) => {
+      const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m.token));
+      refOwner[[...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 10)] = m;
+    }));
+  }
+  const SOURCES = { poster: 'QR на рецепції', friend: 'Запросив друг', site: 'Сайт', lead: 'Після заявки', app: 'Додаток', direct: 'Посилання', admin: 'Видав адміністратор' };
+  const sourceOf = (m) => (m.referred_by ? 'friend' : m.source || (m.status === 'pending' || m.desired_plan ? 'site' : 'admin'));
+  const inviter = (m) => (m.referred_by && refOwner[m.referred_by]) || null;
+  const hasCol = (k) => members().some((m) => k in m);
+  function growthPanel() {
+    const ms = members();
+    const week = Date.now() - 7 * DAY;
+    const fresh = ms.filter((m) => m.created_at && new Date(m.created_at).getTime() > week).length;
+    const by = {};
+    ms.forEach((m) => { const k = sourceOf(m); by[k] = (by[k] || 0) + 1; });
+    const max = Math.max(1, ...Object.values(by));
+    const bars = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<div class="xc-src"><span>${esc(SOURCES[k] || k)}</span><i style="--w:${Math.round((n / max) * 100)}%"></i><b class="xc-num">${n}</b></div>`).join('');
+    const counts2 = {};
+    ms.forEach((m) => { const o = inviter(m); if (o) counts2[o.id] = (counts2[o.id] || 0) + 1; });
+    const top = Object.entries(counts2).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id, n]) => { const o = M().get(id); return o ? `<div class="xc-row xc-row--m" data-member="${esc(o.id)}" role="button" tabindex="0">${avatar(o.id, o.full_name)}<div class="t"><div class="n">${esc(o.full_name)}</div><div class="s">друзів за запрошенням: ${n}</div></div></div>` : ''; }).join('');
+    const tracked = hasCol('source');
+    return `<section class="xc-panel" style="margin-top:14px"><div class="xc-ph"><h2>Залучення в додаток</h2><button type="button" class="xc-link" data-act="growHelp">Як залучати? →</button></div>
+      <div class="xc-grow">
+        <div><div class="xc-mut" style="font-size:12.5px">Карт у додатку</div><div class="xc-big xc-num">${ms.length}</div><div class="xc-g">${fresh ? '+' + fresh + ' за 7 днів' : 'за тиждень нових немає'}</div></div>
+        <div class="xc-srcs">${bars || '<div class="xc-empty">Ще немає клієнтів</div>'}${tracked ? '' : '<p class="xc-mut" style="font-size:12px;margin:6px 0 0">Джерела стануть точнішими після supabase-update-growth.sql.</p>'}</div>
+        <div>${top ? '<div class="xc-mut" style="font-size:12.5px;margin-bottom:4px">Найбільше запросили</div><div class="xc-list">' + top + '</div>' : '<p class="xc-mut" style="font-size:13px;margin:0">Коли клієнти почнуть запрошувати друзів кнопкою «Запросити друга» у своїй карті, тут зʼявляться лідери.</p>'}</div>
+      </div>
+      <div class="xc-quick" style="margin-top:14px"><a class="xc-btn xc-btn--sm xc-btn--pri" href="poster.html" target="_blank" rel="noopener">${ic('scan')}Плакат з QR для рецепції ↗</a><button type="button" class="xc-btn xc-btn--sm" data-act="check">${ic('card')}Видати карту клієнту з пластиком</button></div></section>`;
+  }
+  function growHelp() {
+    openDrawer('<div class="xc-title" id="xcDTitle">Як залучити клієнтів у додаток</div><div class="xc-mut" style="font-size:13px">Сценарій для рецепції</div>', `
+      <ol class="xc-steps">
+        <li><b>Плакат з QR на рецепції й у роздягальні.</b> Новенькі реєструються самі за хвилину, поки чекають тренера. <a class="xc-link" href="poster.html" target="_blank" rel="noopener">Відкрити плакат ↗</a></li>
+        <li><b>Клієнт з пластиковою картою на вході.</b> Відскануй карту → якщо клієнта ще немає в додатку, натисни «Створити клієнта з цією карткою» → «Видати в телефон» → клієнт наводить камеру на QR на твоєму екрані. Готово: його пластик тепер і в телефоні.</li>
+        <li><b>Нова реєстрація на телефоні клієнта.</b> Приходить у «Клієнти» з позначкою «Нова реєстрація» → прийми оплату → «Активувати». Відкриються «Мої тренування».</li>
+        <li><b>Абонемент закінчується.</b> Блок «Потребує уваги» показує, кому нагадати. Продовження — «+1 міс» в один дотик.</li>
+        <li><b>Запросити друга.</b> Порадь кожному активному клієнту кнопку «Запросити друга» у його карті. Тут видно, хто скільки привів, — можна дарувати бонус (наприклад, тиждень безкоштовно).</li>
+      </ol>
+      <p class="xc-mut" style="font-size:13px">Таймер відкривається клієнту одразу після реєстрації — це головна причина встановити додаток ще до оплати.</p>`, '<button type="button" class="xc-btn xc-btn--pri" data-act="close">Зрозуміло</button>');
+  }
+  // Видати карту в телефон: великий QR на екрані адміністратора — клієнт сканує своєю камерою
+  function handoff(m) {
+    const url = C().cardUrl(m.token);
+    let box = $('#xcQr');
+    if (!box) {
+      document.body.insertAdjacentHTML('beforeend', '<div class="xc-qr xc-layer" id="xcQr" role="dialog" aria-modal="true" aria-labelledby="xcQrName" hidden><div class="xc-qr__box"><div class="xc-qr__code" id="xcQrCode"></div><div class="xc-qr__name" id="xcQrName"></div><p>Клієнт наводить камеру свого телефону на код — карта відкриється й збережеться. Потім «Встановити XFit», щоб карта була на екрані.</p><button type="button" class="xc-btn xc-btn--pri" data-act="qrClose">Готово</button></div></div>');
+      box = $('#xcQr');
+    }
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    $('#xcQrCode').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 3, scalable: true });
+    $('#xcQrName').textContent = m.full_name || '';
+    box.hidden = false;
+    requestAnimationFrame(() => box.classList.add('is-on'));
+  }
+  function closeHandoff() { const b = $('#xcQr'); if (!b) return; b.classList.remove('is-on'); setTimeout(() => { b.hidden = true; }, 250); }
+
   async function loadLeads() {
     const { sb, isRemote } = A();
     leadsError = '';
@@ -298,7 +363,7 @@
         <div class="xc-grid2">
           <section class="xc-panel"><div class="xc-ph"><h2>Потребує уваги</h2><button type="button" class="xc-link" data-go="clients" data-filter="all">Усі клієнти →</button></div><div class="xc-list">${attention.slice(0, 6).map(memberRow).join('') || '<div class="xc-empty">Усе під контролем ✓</div>'}</div></section>
           <section class="xc-panel"><div class="xc-ph"><h2>Останні заявки</h2><button type="button" class="xc-link" data-go="leads">Усі →</button></div><div class="xc-list">${leadsError ? `<div class="xc-empty">${esc(leadsError)}</div>` : vl.filter((l) => !isHandled(l)).slice(0, 4).map(leadRow).join('') || '<div class="xc-empty">Нових заявок немає</div>'}</div></section>
-        </div>`;
+        </div>` + growthPanel();
     },
     clients() {
       const f = filter.clients;
@@ -437,8 +502,10 @@
         ${m.gym ? `<dt>Зал</dt><dd>${esc(m.gym)}</dd>` : ''}
         <dt>Карта</dt><dd class="xc-num">${plastic ? '🪪 №' + esc(plastic) + ' · ' : ''}${esc(m.barcode ? C().fmtBarcode(m.barcode) : C().groupNumber(m.card_number))}</dd>
         ${m.birth_date ? `<dt>Народження</dt><dd class="xc-num">${fmtD(m.birth_date)}</dd>` : ''}
+        <dt>Прийшов</dt><dd>${esc(SOURCES[sourceOf(m)] || sourceOf(m))}${inviter(m) ? ' · ' + esc(inviter(m).full_name) : ''}</dd>
         ${m.notes ? `<dt>Нотатка</dt><dd>${esc(m.notes)}</dd>` : ''}</dl>
       ${m.valid_to && st.state !== 'pending' ? `<div class="xc-prog"><i data-w="${Math.min(100, (left / total) * 100)}"></i></div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px"><span class="xc-mut">${st.state === 'expired' ? 'Абонемент закінчився' : 'Залишилось'}</span><b class="xc-num">${st.state === 'expired' ? fmtD(m.valid_to) : left + ' ' + plural(left, ['день', 'дні', 'днів'])}</b></div>` : ''}
+      <button type="button" class="xc-btn xc-btn--pri xc-handoff" data-act="handoff" data-id="${esc(m.id)}">${ic('phone')}Видати карту в телефон клієнта</button>
       <div class="xc-actions">
         <button type="button" class="xc-btn xc-btn--sm" data-copy="${esc(url)}">${ic('copy')}Посилання на карту</button>
         ${sms ? `<a class="xc-btn xc-btn--sm" href="${sms}">${ic('msg')}SMS клієнту</a>` : ''}
@@ -525,7 +592,7 @@
     const rec = { ...(m || {}), ...d, birth_date: d.birth_date || null, status: 'active' };
     if (!rec.barcode) rec.barcode = M().uniqueBarcode();
     rec.barcode_source = rec.barcode.startsWith('251') ? 'app' : 'plastic';
-    if (!m) { rec.card_number = M().uniqueNumber(); rec.token = C().newToken(); }
+    if (!m) { rec.card_number = M().uniqueNumber(); rec.token = C().newToken(); if (hasCol('source') || !A().isRemote) rec.source = 'admin'; }
     const btn = $('#xcDFoot [data-act="saveMember"]');
     btn.disabled = true;
     try {
@@ -533,7 +600,9 @@
       toast(!m ? `Карту створено: ${saved.full_name}` : wasPending ? `Карту активовано: ${saved.full_name}` : 'Збережено');
       render(); renderNav();
       if (wasPending) bump('pending');
+      await buildRefs();
       memberDrawer(saved.id);
+      if (!m) setTimeout(() => handoff(saved), 450); // нова карта — одразу показуємо QR для телефону клієнта
     } catch (e) {
       btn.disabled = false;
       err(e.message);
@@ -601,7 +670,12 @@
   function showCheck(m, raw) {
     const box = $('#xcResult');
     if (!box) return;
-    if (!m) { box.innerHTML = `<div class="xc-result xc-result--none"><b>Карту не знайдено</b><span class="xc-mut xc-num">${esc(raw)}</span></div>`; return; }
+    if (!m) {
+      const d = String(raw || '').replace(/\D/g, '');
+      const plastic = C().isBarcode(d) && !d.startsWith('251');
+      box.innerHTML = `<div class="xc-result xc-result--none"><b>${plastic ? 'Цієї пластикової карти ще немає в додатку' : 'Карту не знайдено'}</b><span class="xc-mut xc-num">${esc(raw)}</span>${plastic ? `<button type="button" class="xc-btn xc-btn--sm xc-btn--pri" style="margin-top:8px" data-act="fromPlastic" data-code="${esc(d)}">${ic('plus')}Створити клієнта з цією карткою</button>` : ''}</div>`;
+      return;
+    }
     const st = stateOf(m);
     box.innerHTML = `<div class="xc-result xc-result--${st.state}"><b>${st.state === 'expired' || st.state === 'pending' ? '✕ Абонемент неактивний' : '✓ Абонемент активний'}</b><span style="font-size:18px;font-weight:800">${esc(m.full_name)}</span><span class="xc-mut">${esc(m.plan || m.desired_plan || '—')}${m.valid_to ? ' · до ' + fmtD(m.valid_to) : ''}${['active', 'soon'].includes(st.state) ? ` · ще ${st.left} ${plural(st.left, ['день', 'дні', 'днів'])}` : ''}</span><button type="button" class="xc-btn xc-btn--sm" style="margin-top:8px" data-act="openMember" data-id="${esc(m.id)}">Відкрити клієнта</button></div>`;
   }
@@ -821,7 +895,7 @@
       if (!isOpen()) return;
       const tag = document.activeElement && document.activeElement.tagName;
       if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(tag) && !document.activeElement.isContentEditable) { e.preventDefault(); openPal(); }
-      else if (e.key === 'Escape') { if (!$('#xcPal').hidden) closePal(); else if (!$('#xcDrawer').hidden) closeDrawer(); }
+      else if (e.key === 'Escape') { if ($('#xcQr') && !$('#xcQr').hidden) closeHandoff(); else if (!$('#xcPal').hidden) closePal(); else if (!$('#xcDrawer').hidden) closeDrawer(); }
       else if (e.key === 'Enter' && e.target.matches && e.target.matches('.xc-row[data-member], .xc-row[data-lead]')) e.target.click();
     });
     document.addEventListener('visibilitychange', () => { if (!document.hidden && isOpen()) refreshLeads(); });
@@ -866,6 +940,10 @@
     const id = d.id;
     switch (d.act) {
       case 'search': openPal(); break;
+      case 'growHelp': growHelp(); break;
+      case 'handoff': { const m = M().get(id); if (m) handoff(m); break; }
+      case 'qrClose': closeHandoff(); break;
+      case 'fromPlastic': memberForm(null, { barcode: d.code }); break;
       case 'close': closeDrawer(); break;
       case 'reload': loadAll(); go(current, true); break;
       case 'refresh': await refreshLeads(); render(); toast('Оновлено'); break;
