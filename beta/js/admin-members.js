@@ -16,7 +16,7 @@
     if (libsReady) return libsReady;
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'css/card.css?v=15';
+    css.href = 'css/card.css?v=16';
     document.head.appendChild(css);
     const load = (src) => new Promise((res, rej) => {
       const s = document.createElement('script');
@@ -28,7 +28,7 @@
     libsReady = load('js/vendor/qrcode-generator-1.4.4.js')
       .then(() => load('js/vendor/jsbarcode-3.11.6.min.js'))
       .then(() => load('js/scanner.js?v=2'))
-      .then(() => load('js/card.js?v=17'))
+      .then(() => load('js/card.js?v=18'))
       .catch((e) => { libsReady = null; throw e; });
     return libsReady;
   }
@@ -101,23 +101,77 @@
     return upsert({ ...m, status: 'active', valid_from: running ? m.valid_from : today, valid_to: addMonths(from, 1) });
   }
 
-  /* ---------- Абонементи й зали з розділів сайту ---------- */
-  // Назва й тривалість за підписом ціни (/міс, /6 міс, /рік, порожньо — разове)
-  function planInfo() {
-    return [...document.querySelectorAll('#pricing .price-card')].map((card) => {
-      const name = ((card.querySelector('h3') || {}).textContent || '').trim();
-      const period = ((card.querySelector('.price-card__period') || {}).textContent || '').trim().toLowerCase();
-      const n = parseInt(period.replace(/\D/g, ''), 10);
-      const months = !period ? 0 : /рік/.test(period) ? 12 * (n || 1) : /міс/.test(period) ? (n || 1) : 1;
-      return { name, months };
-    }).filter((x) => x.name);
+  /* ---------- Зали й абонементи ---------- */
+  // Два зали; у кожного свої абонементи — на його сторінці (podilsk.html / balta.html),
+  // у базі з префіксом ключа 'podilsk:' / 'balta:'.
+  const GYMS = [{ slug: 'podilsk', name: 'Подільськ' }, { slug: 'balta', name: 'Балта' }];
+  const gymSlug = (name) => (GYMS.find((g) => g.name === name || g.slug === name) || GYMS[0]).slug;
+  const gymName = (slug) => (GYMS.find((g) => g.slug === slug || g.name === slug) || { name: '' }).name;
+  const gyms = () => GYMS.map((g) => g.name);
+  const DEFAULT_PLANS = [['price1', 'Старт', '499₴', '/міс'], ['price2', 'Повний', '799₴', '/міс'], ['price3', 'PRO', '1299₴', '/міс']];
+  let plans = {};
+  // тривалість за підписом ціни: /міс, /6 міс, /рік; порожньо — разове
+  const monthsOf = (period) => {
+    const p = String(period || '').trim().toLowerCase();
+    const n = parseInt(p.replace(/\D/g, ''), 10);
+    return !p ? 0 : /рік/.test(p) ? 12 * (n || 1) : /міс/.test(p) ? (n || 1) : 1;
+  };
+  async function loadPlans() {
+    const { sb, isRemote } = A();
+    const next = {};
+    for (const g of GYMS) {
+      const PFX = g.slug + ':';
+      let ids = DEFAULT_PLANS.map((x) => x[0]);
+      const content = {};
+      try {
+        const lists = JSON.parse(localStorage.getItem('xfit_lists_v1_' + g.slug) || '{}');
+        if (Array.isArray(lists.pricing)) ids = lists.pricing;
+        Object.assign(content, JSON.parse(localStorage.getItem('xfit_content_v1_' + g.slug) || '{}'));
+      } catch (e) { /* ignore */ }
+      if (isRemote) {
+        const lst = await sb.from('site_settings').select('value').eq('key', PFX + 'list:pricing');
+        if (!lst.error && lst.data && lst.data[0]) { try { ids = JSON.parse(lst.data[0].value); } catch (e) { /* ignore */ } }
+        const keys = ids.flatMap((id) => [id + '.name', id + '.amount', id + '.period']).map((k) => PFX + k);
+        const rows = await sb.from('site_content').select('key,value').in('key', keys);
+        if (!rows.error) rows.data.forEach((r) => { content[r.key.slice(PFX.length)] = r.value; });
+      }
+      next[g.slug] = ids.map((id) => {
+        const d = DEFAULT_PLANS.find((x) => x[0] === id) || [id, '', '', '/міс'];
+        const name = content[id + '.name'] != null ? content[id + '.name'] : d[1];
+        const amount = content[id + '.amount'] != null ? content[id + '.amount'] : d[2];
+        const period = content[id + '.period'] != null ? content[id + '.period'] : d[3];
+        return { id, name: String(name).trim(), amount, period, months: monthsOf(period) };
+      }).filter((x) => x.name);
+    }
+    plans = next;
+    return plans;
   }
-  const gyms = () => [...document.querySelectorAll('#locations .location-card h3')].map((h) => h.textContent.trim()).filter(Boolean);
+  // Абонементи залу (назва або slug); без залу — усі без повторів
+  function planInfo(gym) {
+    if (gym) return plans[gymSlug(gym)] || [];
+    const seen = new Set();
+    return Object.values(plans).flat().filter((p) => !seen.has(p.name) && seen.add(p.name));
+  }
+  // Зберегти назви/ціни/періоди абонементів залу: { 'price1.amount': '850₴', … }
+  async function savePlans(gym, changes) {
+    const { sb, isRemote } = A();
+    const slug = gymSlug(gym);
+    if (isRemote) {
+      const rows = Object.entries(changes).map(([key, value]) => ({ key: slug + ':' + key, value }));
+      const { error } = await sb.from('site_content').upsert(rows);
+      if (error) throw new Error('Не вдалося зберегти ціни: ' + error.message);
+    }
+    try {
+      const k = 'xfit_content_v1_' + slug;
+      localStorage.setItem(k, JSON.stringify({ ...JSON.parse(localStorage.getItem(k) || '{}'), ...changes }));
+    } catch (e) { /* ignore */ }
+    await loadPlans();
+  }
   // «Повний — 799₴/міс» → «Повний», якщо такий абонемент є в розділі «Абонементи»
-  function matchPlan(desired) {
+  function matchPlan(desired, gym) {
     if (!desired) return '';
     const name = desired.split(' — ')[0].trim();
-    return planInfo().map((x) => x.name).find((x) => x.toLowerCase() === name.toLowerCase()) || name;
+    return planInfo(gym).map((x) => x.name).find((x) => x.toLowerCase() === name.toLowerCase()) || name;
   }
 
   function uniqueBarcode() {
@@ -149,7 +203,7 @@
   }
 
   window.XFitMembers = {
-    loadLibs, load, upsert, remove, renew, addMonths, addDays, planInfo, gyms, matchPlan, uniqueBarcode, uniqueNumber, findByCode,
+    loadLibs, load, upsert, remove, renew, addMonths, addDays, planInfo, loadPlans, savePlans, gyms, gymSlug, gymName, GYMS, matchPlan, uniqueBarcode, uniqueNumber, findByCode,
     list: () => members,
     get: (id) => members.find((m) => m.id === id) || null,
   };

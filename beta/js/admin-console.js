@@ -80,10 +80,44 @@
   const pendingLeadDeletes = new Map();
   const HANDLED_KEY = 'xfit_leads_handled_v1';
   const localHandled = () => { try { return new Set(JSON.parse(localStorage.getItem(HANDLED_KEY) || '[]')); } catch (e) { return new Set(); } };
-  const members = () => (M() ? M().list() : []);
+  /* ---------- Роль адміністратора і зал ----------
+     owner — бачить усе й перемикає «Усі / Подільськ / Балта»; gym — лише свій зал; none — без доступу. */
+  let role = { role: 'owner', gym: null, email: '' };
+  let scope = 'all';
+  const GYM_LIST = [['podilsk', 'Подільськ'], ['balta', 'Балта']];
+  const nameOf = (slug) => (GYM_LIST.find((g) => g[0] === slug) || [, ''])[1];
+  const slugOf = (name) => (GYM_LIST.find((g) => g[1] === name || g[0] === name) || [''])[0];
+  const isOwner = () => role.role === 'owner';
+  const inScope = (gymName) => scope === 'all' || gymName === nameOf(scope);
+  async function loadRole() {
+    const { sb, isRemote } = A();
+    if (!isRemote) { role = { role: 'owner', gym: null, email: '' }; }
+    else {
+      const { data, error } = await sb.rpc('my_admin_role');
+      // база ще без ролей (до supabase-update-gyms.sql) — як раніше, повний доступ
+      role = error || !data ? { role: 'owner', gym: null, email: '' } : data;
+    }
+    scope = role.role === 'gym' ? role.gym : (['all', 'podilsk', 'balta'].includes(store.get('xc_gym')) ? store.get('xc_gym') : 'all');
+  }
+  function setScope(next) {
+    if (!isOwner() || !['all', 'podilsk', 'balta'].includes(next)) return;
+    scope = next;
+    store.set('xc_gym', next);
+    renderScope(); renderNav(); render();
+  }
+  function renderScope() {
+    if (!built) return;
+    const html = isOwner()
+      ? `<div class="xc-scope" role="radiogroup" aria-label="Зал">${[['all', 'Усі'], ...GYM_LIST].map(([k, t]) => `<button type="button" role="radio" aria-checked="${scope === k}" data-scope="${k}">${t}</button>`).join('')}</div>`
+      : role.role === 'gym' ? `<div class="xc-scope xc-scope--fixed">${ic('home')}XFit ${esc(nameOf(role.gym))}</div>` : '';
+    $('#xcScopeSide').innerHTML = html;
+    $('#xcScopeTop').innerHTML = html;
+  }
+  const allMembers = () => (M() ? M().list() : []);
+  const members = () => allMembers().filter((m) => inScope(m.gym));
   const stateOf = (m) => C().stateOf(m);
   const isHandled = (l) => !!l.handled_at || localHandled().has(l.id);
-  const visibleLeads = () => leads.filter((l) => !pendingLeadDeletes.has(l.id));
+  const visibleLeads = () => leads.filter((l) => !pendingLeadDeletes.has(l.id) && (!l.gym || inScope(l.gym)));
 
   const SECTIONS = [['overview', 'Огляд', 'home'], ['clients', 'Клієнти', 'users', 'pending'], ['leads', 'Заявки', 'mail', 'newLeads'], ['site', 'Сайт', 'globe'], ['news', 'Оголошення', 'mega'], ['prefs', 'Налаштування', 'gear']];
   const counts = () => {
@@ -104,6 +138,7 @@
       <div class="xc" id="xc" hidden>
         <aside class="xc-side" aria-label="Розділи адмінки">
           <div class="xc-brand">${LOGO}<span>ADMIN</span></div>
+          <div id="xcScopeSide"></div>
           <nav id="xcSideNav"></nav>
           <div class="xc-side-foot">
             <button type="button" class="xc-btn xc-btn--sm xc-btn--ghost" data-act="search">${ic('search')}Пошук<span class="xc-kbd" style="margin-left:auto">Ctrl K</span></button>
@@ -113,6 +148,7 @@
         </aside>
         <main class="xc-main" id="xcMain">
           <div class="xc-mtop">${LOGO}
+            <div id="xcScopeTop"></div>
             <button type="button" class="xc-btn xc-btn--sm xc-btn--icon" data-act="search" aria-label="Пошук">${ic('search')}</button>
             <button type="button" class="xc-btn xc-btn--sm" data-act="toSite" aria-label="Перейти на сайт">${ic('site')}Сайт</button>
           </div>
@@ -177,7 +213,9 @@
     loadError = '';
     try {
       await M().loadLibs();
-      await Promise.all([M().load(), loadLeads()]);
+      await loadRole();
+      renderScope();
+      await Promise.all([M().load(), loadLeads(), M().loadPlans()]);
       await buildRefs();
       loaded = true;
     } catch (err) {
@@ -192,7 +230,7 @@
   async function buildRefs() {
     refOwner = {};
     if (!window.crypto || !crypto.subtle) return;
-    await Promise.all(members().filter((m) => m.token).map(async (m) => {
+    await Promise.all(allMembers().filter((m) => m.token).map(async (m) => {
       const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m.token));
       refOwner[[...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 10)] = m;
     }));
@@ -311,6 +349,10 @@
       return;
     }
     if (!loaded) return;
+    if (role.role === 'none') {
+      v.innerHTML = `<div class="xc-view"><div class="xc-top"><div><div class="xc-eyebrow">${esc(role.email || '')}</div><h1 class="xc-h1 xc-disp">Немає доступу</h1></div></div><section class="xc-panel"><p class="xc-mut" style="margin:0 0 14px">Цьому акаунту ще не призначено зал. Попроси власника XFit відкрити «Налаштування → Адміністратори залів» і вибрати твій зал.</p><button type="button" class="xc-btn" data-act="logout">${ic('out')}Вийти</button></section></div>`;
+      return;
+    }
     v.innerHTML = `<div class="xc-view">${VIEWS[current]()}</div>`;
     bindView();
   }
@@ -333,8 +375,10 @@
   };
   const pillText = (st) => (st.state === 'pending' ? 'Нова реєстрація' : st.state === 'expired' ? 'Неактивна' : st.state === 'soon' ? (st.left === 0 ? 'Останній день' : `Ще ${st.left} ${plural(st.left, ['день', 'дні', 'днів'])}`) : 'Активна');
   const pill = (m) => { const st = stateOf(m); return `<span class="xc-pill xc-st-${st.state}">${pillText(st)}</span>`; };
-  const memberRow = (m) => `<div class="xc-row xc-row--m" data-member="${esc(m.id)}" role="button" tabindex="0">${avatar(m.id, m.full_name)}<div class="t"><div class="n">${esc(m.full_name || 'Без імені')}</div><div class="s">${memberSub(m)}</div></div>${pill(m)}${stateOf(m).state === 'pending' ? `<button type="button" class="xc-btn xc-btn--sm xc-btn--pri" data-activate="${esc(m.id)}">Активувати</button>` : `<button type="button" class="xc-btn xc-btn--sm" data-renew="${esc(m.id)}">+1 міс</button>`}</div>`;
-  const leadRow = (l) => `<div class="xc-row${isHandled(l) ? ' is-done' : ''}" data-lead="${esc(l.id)}" role="button" tabindex="0"><div class="xc-av" style="background:${COLORS[hash(l.id) % COLORS.length]}">${esc(initials(l.name))}</div><div class="t"><div class="n">${esc(l.name || 'Без імені')} <span class="xc-mut" style="font-weight:500">· <span class="xc-num">${esc(l.phone)}</span></span></div><div class="s">${esc(l.message || '—')}</div></div><span class="when">${ago(l.created_at)}</span></div>`;
+  const memberRow = (m) => `<div class="xc-row xc-row--m" data-member="${esc(m.id)}" role="button" tabindex="0">${avatar(m.id, m.full_name)}<div class="t"><div class="n">${esc(m.full_name || 'Без імені')}${gymTag(m.gym)}</div><div class="s">${memberSub(m)}</div></div>${pill(m)}${stateOf(m).state === 'pending' ? `<button type="button" class="xc-btn xc-btn--sm xc-btn--pri" data-activate="${esc(m.id)}">Активувати</button>` : `<button type="button" class="xc-btn xc-btn--sm" data-renew="${esc(m.id)}">+1 міс</button>`}</div>`;
+  const leadRow = (l) => `<div class="xc-row${isHandled(l) ? ' is-done' : ''}" data-lead="${esc(l.id)}" role="button" tabindex="0"><div class="xc-av" style="background:${COLORS[hash(l.id) % COLORS.length]}">${esc(initials(l.name))}</div><div class="t"><div class="n">${esc(l.name || 'Без імені')}${gymTag(l.gym)} <span class="xc-mut" style="font-weight:500">· <span class="xc-num">${esc(l.phone)}</span></span></div><div class="s">${esc(l.message || '—')}</div></div><span class="when">${ago(l.created_at)}</span></div>`;
+  // у режимі «Усі» біля клієнта й заявки видно зал
+  const gymTag = (g) => (scope === 'all' && g ? `<span class="xc-gymtag">${esc(g)}</span>` : '');
   const top = (eyebrow, title, acts = '') => `<div class="xc-top"><div><div class="xc-eyebrow">${eyebrow}</div><h1 class="xc-h1 xc-disp">${title}</h1></div>${acts ? `<div class="xc-acts">${acts}</div>` : ''}</div>`;
   const localNote = () => (A().isRemote ? '' : '<div class="xc-note">Локальний режим: зміни зберігаються лише в цьому браузері.</div>');
 
@@ -352,7 +396,7 @@
       const h = new Date().getHours();
       const hi = h < 5 ? 'Доброї ночі' : h < 12 ? 'Доброго ранку' : h < 18 ? 'Доброго дня' : 'Доброго вечора';
       const date = new Date().toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
-      return top(esc(date), hi + ' 👋', `<button type="button" class="xc-search" data-act="search">${ic('search')}<span>Пошук по клієнтах і заявках</span><span class="xc-kbd">Ctrl K</span></button><button type="button" class="xc-btn xc-btn--pri" data-act="new">${ic('plus')}Новий клієнт</button>`)
+      return top(esc(date) + (scope !== 'all' ? ' · XFit ' + esc(nameOf(scope)) : ''), hi + ' 👋', `<button type="button" class="xc-search" data-act="search">${ic('search')}<span>Пошук по клієнтах і заявках</span><span class="xc-kbd">Ctrl K</span></button><button type="button" class="xc-btn xc-btn--pri" data-act="new">${ic('plus')}Новий клієнт</button>`)
         + localNote()
         + `<div class="xc-stats">
           <button type="button" class="xc-stat" data-go="leads"><div class="k">${ic('mail')}Нові заявки</div><div class="v xc-num">${c.newLeads}</div><div class="d">${leadsToday ? '+' + leadsToday + ' за сьогодні' : 'сьогодні ще немає'}</div>${spark(series((d) => vl.filter((l) => dayISO(l.created_at) === d).length))}</button>
@@ -388,49 +432,146 @@
         <p class="xc-mut" style="text-align:center;font-size:13px;margin-top:14px">Натисни на заявку, щоб подзвонити, позначити як оброблену або видалити.</p>`;
     },
     site() {
-      const cards = $$('#pricing .price-card');
-      const field = (el, cls) => (el && el.dataset.editKey ? `<span class="${cls}" contenteditable="true" spellcheck="false" data-k="${esc(el.dataset.editKey)}">${esc(el.textContent.trim())}</span>` : '');
-      const plans = cards.map((card) => {
-        const name = card.querySelector('h3[data-edit-key]');
-        const amount = card.querySelector('.price-card__price [data-edit-key]:not(.price-card__period)');
-        const period = card.querySelector('.price-card__period');
-        return `<div class="xc-plan${card.classList.contains('price-card--featured') ? ' is-hot' : ''}"><div class="pn">${field(name, '')}</div><div class="pp"><b>${field(amount, '')}</b><span>${field(period, '')}</span></div></div>`;
-      }).join('');
-      const tile = (sel, title, sub, icon) => `<button type="button" class="xc-tile" data-edit-section="${sel}"><div class="xc-av xc-av--plain">${ic(icon)}</div><div><b>${title}</b><small>${sub}</small></div></button>`;
-      return top('xfit.com.ua', 'Сайт', `<button type="button" class="xc-btn xc-btn--pri" data-edit-section="#home">${ic('edit')}Редагувати сторінку</button>`)
-        + localNote()
-        + `<section class="xc-panel"><div class="xc-ph"><h2>Абонементи й ціни</h2></div><p class="xc-mut" style="margin:0 0 14px;font-size:13.5px">Натисни на назву, ціну чи період і зміни текст. Період («/міс», «/6 міс», «/рік») визначає, на скільки активується абонемент клієнта.</p>
-          <div class="xc-prev"><div class="xc-plans">${plans || '<div class="xc-empty">Абонементів не знайдено</div>'}</div></div>
+      const t = siteTarget();
+      const tabs = isOwner() ? `<div class="xc-chips" style="margin:0 0 14px">${[...GYM_LIST, ['main', 'Головна']].map(([k, n]) => `<button type="button" class="xc-chip" data-site-target="${k}" aria-pressed="${t === k}">${k === 'main' ? 'Головна сторінка' : 'XFit ' + n}</button>`).join('')}</div>` : '';
+      const tile = (sel, title, sub, icon) => `<button type="button" class="xc-tile" data-edit-section="${sel}" data-edit-page="${t}"><div class="xc-av xc-av--plain">${ic(icon)}</div><div><b>${title}</b><small>${sub}</small></div></button>`;
+      const url = t === 'main' ? 'xfit.com.ua' : `xfit.com.ua/${t}.html`;
+      const head = top(esc(url), t === 'main' ? 'Головна сторінка' : 'Сторінка XFit ' + esc(nameOf(t)), `<a class="xc-btn" href="${t === 'main' ? './' : t + '.html'}" target="_blank" rel="noopener">${ic('site')}Відкрити</a><button type="button" class="xc-btn xc-btn--pri" data-edit-section="#home" data-edit-page="${t}">${ic('edit')}Редагувати сторінку</button>`);
+      if (t === 'main') {
+        return head + localNote() + tabs + `<div class="xc-tiles">
+          ${tile('#home', 'Головний екран', 'Заголовок, опис, цифри', 'home')}
+          ${tile('#about', 'Про нас', 'Історія мережі', 'users')}
+          ${tile('#programs', 'Програми', 'Напрями тренувань', 'bolt')}
+          ${tile('#locations', 'Наші зали', 'Адреси й телефони обох залів', 'globe')}
+          ${tile('#contact', 'Контакти', 'Текст біля форми заявки', 'phone')}
+        </div><p class="xc-mut" style="text-align:center;font-size:13px;margin-top:14px">Тренери, галерея, ціни й розклад — на сторінках залів.</p>`;
+      }
+      const plans = M().planInfo(t);
+      const field = (k, v) => `<span contenteditable="true" spellcheck="false" data-k="${esc(k)}">${esc(v)}</span>`;
+      const cards = plans.map((p, i) => `<div class="xc-plan${i === 1 ? ' is-hot' : ''}"><div class="pn">${field(p.id + '.name', p.name)}</div><div class="pp"><b>${field(p.id + '.amount', p.amount)}</b><span>${field(p.id + '.period', p.period)}</span></div></div>`).join('');
+      return head + localNote() + tabs
+        + `<section class="xc-panel"><div class="xc-ph"><h2>Абонементи й ціни · ${esc(nameOf(t))}</h2></div><p class="xc-mut" style="margin:0 0 14px;font-size:13.5px">Натисни на назву, ціну чи період і зміни текст. Період («/міс», «/6 міс», «/рік») визначає, на скільки активується абонемент клієнта. Додати чи прибрати абонемент — на сторінці залу (розділ «Абонементи»).</p>
+          <div class="xc-prev"><div class="xc-plans" data-plans-gym="${t}">${cards || '<div class="xc-empty">Абонементів не знайдено</div>'}</div></div>
           <div class="xc-bar" id="xcPriceBar" hidden><span class="dot"></span><span>Є незбережені зміни</span><span class="sp"><button type="button" class="xc-btn xc-btn--sm" data-act="priceCancel">Скасувати</button><button type="button" class="xc-btn xc-btn--sm xc-btn--pri" data-act="priceSave">${ic('check')}Зберегти</button></span></div></section>
         <div class="xc-tiles">
-          ${tile('#home', 'Головний екран', 'Заголовок, опис, цифри', 'home')}
-          ${tile('#programs', 'Програми', 'Напрями тренувань', 'bolt')}
+          ${tile('#home', 'Головний екран залу', 'Заголовок і опис', 'home')}
           ${tile('#trainers', 'Тренери', 'Фото, імена, ролі', 'users')}
           ${tile('#gallery', 'Галерея', 'Фото залу', 'img')}
           ${tile('#pricing', 'Абонементи', 'Переваги кожного плану', 'card')}
-          ${tile('#contact', 'Контакти й розклад', 'Телефони, адреси, години', 'phone')}
+          ${tile('#schedule', 'Розклад', 'Години роботи', 'bolt')}
+          ${tile('#location', 'Як знайти', 'Адреса, телефон, Instagram', 'phone')}
         </div>
-        <p class="xc-mut" style="text-align:center;font-size:13px;margin-top:14px">Фото й тексти решти сторінки редагуються прямо на сайті — натисни на розділ.</p>`;
+        <p class="xc-mut" style="text-align:center;font-size:13px;margin-top:14px">Фото й тексти редагуються прямо на сторінці залу — натисни на розділ.</p>`;
     },
     news() {
-      const st = A().announcements();
-      const items = [...st.items].sort((a, b) => (b.sortOrder || 0) - (a.sortOrder || 0));
-      return top(st.enabled ? 'Показуються на сайті' : 'Сховано з сайту', 'Оголошення', `<button type="button" class="xc-btn xc-btn--pri" data-act="addNews">${ic('plus')}Нове оголошення</button>`)
-        + localNote()
-        + `<section class="xc-panel" style="display:flex;align-items:center;gap:14px"><div style="flex:1"><b>Розділ «Анонси» на сайті</b><div class="xc-mut" style="font-size:13px">${st.enabled ? 'Відвідувачі бачать оголошення й пункт «Анонси» в меню' : 'Увімкни, щоб відвідувачі побачили оголошення'}</div></div><button type="button" class="xc-switch" role="switch" aria-checked="${st.enabled}" aria-label="Показувати оголошення на сайті" data-act="newsToggle"></button></section>
-        <div class="xc-news${st.enabled ? '' : ' xc-off'}">${items.map((n) => `<article class="xc-ncard">${n.image ? `<img src="${esc(n.image)}" alt="" loading="lazy">` : ''}<span class="xc-mut" style="font-size:12px">${esc(n.date || '')}</span><h4>${esc(n.title || 'Без заголовка')}</h4><p>${esc(n.text || '')}</p><div class="xc-quick" style="margin-top:auto"><button type="button" class="xc-btn xc-btn--sm" data-news-edit="${esc(n.id)}">${ic('edit')}Змінити</button><button type="button" class="xc-btn xc-btn--sm xc-btn--ghost xc-btn--danger" data-news-del="${esc(n.id)}">${ic('trash')}Видалити</button></div></article>`).join('') || '<div class="xc-empty">Оголошень ще немає</div>'}</div>
-        <p class="xc-mut" style="text-align:center;font-size:13px;margin-top:14px">Афішу (фото) до оголошення можна додати на сайті — <button type="button" class="xc-link" data-edit-section="#announcements">відкрити розділ</button>.</p>`;
+      const g = newsTarget();
+      const tabs = isOwner() ? `<div class="xc-chips" style="margin:0 0 14px">${[['', 'Уся мережа (головна)'], ...GYM_LIST.map(([k, n]) => [k, 'XFit ' + n])].map(([k, n]) => `<button type="button" class="xc-chip" data-news-target="${k}" aria-pressed="${g === k}">${n}</button>`).join('')}</div>` : '';
+      if (!news.loaded || news.gym !== g) { loadNews(g).then(() => { if (current === 'news') render(); }); return top('&nbsp;', 'Оголошення') + tabs + '<div class="xc-skel"></div>'.repeat(3); }
+      const items = [...news.items].sort((a, b) => (b.sortOrder || 0) - (a.sortOrder || 0));
+      const where = g ? 'на сторінці XFit ' + nameOf(g) : 'на головній сторінці';
+      return top(news.enabled ? 'Показуються ' + esc(where) : 'Сховано з сайту', 'Оголошення', `<button type="button" class="xc-btn xc-btn--pri" data-act="addNews">${ic('plus')}Нове оголошення</button>`)
+        + localNote() + tabs
+        + `<section class="xc-panel" style="display:flex;align-items:center;gap:14px"><div style="flex:1"><b>Розділ «Анонси» ${esc(where)}</b><div class="xc-mut" style="font-size:13px">${news.enabled ? 'Відвідувачі бачать оголошення й пункт «Анонси» в меню' : 'Увімкни, щоб відвідувачі побачили оголошення'}</div></div><button type="button" class="xc-switch" role="switch" aria-checked="${news.enabled}" aria-label="Показувати оголошення на сайті" data-act="newsToggle"></button></section>
+        <div class="xc-news${news.enabled ? '' : ' xc-off'}">${items.map((n) => `<article class="xc-ncard">${n.image ? `<img src="${esc(n.image)}" alt="" loading="lazy">` : ''}<span class="xc-mut" style="font-size:12px">${esc(n.date || '')}</span><h4>${esc(n.title || 'Без заголовка')}</h4><p>${esc(n.text || '')}</p><div class="xc-quick" style="margin-top:auto"><button type="button" class="xc-btn xc-btn--sm" data-news-edit="${esc(n.id)}">${ic('edit')}Змінити</button><button type="button" class="xc-btn xc-btn--sm xc-btn--ghost xc-btn--danger" data-news-del="${esc(n.id)}">${ic('trash')}Видалити</button></div></article>`).join('') || '<div class="xc-empty">Оголошень ще немає</div>'}</div>
+        <p class="xc-mut" style="text-align:center;font-size:13px;margin-top:14px">Афішу (фото) до оголошення можна додати на сайті — <button type="button" class="xc-link" data-edit-section="#announcements" data-edit-page="${g || 'main'}">відкрити розділ</button>.</p>`;
     },
     prefs() {
-      return top('Обліковий запис і сайт', 'Налаштування')
+      const pageName = A().gym ? 'сторінки XFit ' + nameOf(A().gym) : 'головної сторінки';
+      const canReset = isOwner() || A().gym === role.gym;
+      const admins = isOwner() && A().isRemote ? `<section class="xc-panel" style="margin-top:14px"><div class="xc-ph"><h2>Адміністратори залів</h2></div>
+          <p class="xc-mut" style="margin:0 0 12px;font-size:13.5px">Власник бачить обидва зали. Адміністратор залу — лише клієнтів, заявки й сторінку свого залу. Новий акаунт: Supabase → Authentication → Users → <b>Add user</b> (email і пароль, «Auto Confirm User») — потім признач йому зал тут.</p>
+          <div class="xc-list" id="xcAdmins">${adminsHtml()}</div></section>` : '';
+      return top(role.email ? esc(role.email) : 'Обліковий запис і сайт', 'Налаштування')
         + localNote()
         + `<div class="xc-grid2" style="margin-top:0">
           <section class="xc-panel"><div class="xc-ph"><h2>Пароль адміністратора</h2></div><form class="xc-form" id="xcPw" novalidate><label class="xc-field"><span>Поточний пароль</span><input name="cur" type="password" autocomplete="current-password" required></label><label class="xc-field"><span>Новий пароль</span><input name="next" type="password" autocomplete="new-password" minlength="6" placeholder="щонайменше 6 символів" required></label><p class="xc-err" id="xcPwErr"></p><button class="xc-btn xc-btn--pri" type="submit">Оновити пароль</button></form></section>
-          <section class="xc-panel xc-danger"><div class="xc-ph"><h2>Небезпечна зона</h2></div><p class="xc-mut" style="margin:0 0 12px;font-size:13.5px">Скидання поверне тексти, фото, тренерів та оголошення сайту до початкових${A().isRemote ? ' — для всіх відвідувачів' : ''}. Клієнтів і заявки не зачепить.</p><div id="xcResetBox"><button type="button" class="xc-btn xc-btn--danger" data-act="reset">${ic('trash')}Скинути зміни сайту</button></div>
+          <section class="xc-panel xc-danger"><div class="xc-ph"><h2>Небезпечна зона</h2></div>${canReset ? `<p class="xc-mut" style="margin:0 0 12px;font-size:13.5px">Скидання поверне тексти, фото, тренерів і оголошення ${esc(pageName)} до початкових${A().isRemote ? ' — для всіх відвідувачів' : ''}. Клієнтів, заявки й інші сторінки не зачепить.</p><div id="xcResetBox"><button type="button" class="xc-btn xc-btn--danger" data-act="reset">${ic('trash')}Скинути зміни ${esc(pageName)}</button></div>` : '<p class="xc-mut" style="margin:0 0 12px;font-size:13.5px">Скинути можна лише сторінку свого залу — відкрий її.</p>'}
           <div style="height:1px;background:var(--xc-line);margin:18px 0"></div><button type="button" class="xc-btn" data-act="logout">${ic('out')}Вийти з адмін-режиму</button></section>
-        </div>`;
+        </div>` + admins;
     },
   };
+
+  /* ---------- Сторінки залів: що редагуємо й де ---------- */
+  const pageOf = (t) => (t === 'main' ? '' : t);
+  const pageUrl = (t) => (t === 'main' || !t ? './' : t + '.html');
+  function siteTarget() {
+    if (!isOwner()) return role.gym || 'podilsk';
+    if (scope !== 'all') return scope;
+    const t = store.get('xc_site_target');
+    return ['podilsk', 'balta', 'main'].includes(t) ? t : (A().gym || 'podilsk');
+  }
+  function newsTarget() {
+    if (!isOwner()) return role.gym || '';
+    if (scope !== 'all') return scope;
+    const t = store.get('xc_news_target');
+    return ['', 'podilsk', 'balta'].includes(t) ? t : (A().gym || '');
+  }
+
+  /* ---------- Оголошення залу або мережі (напряму з бази) ---------- */
+  const news = { gym: null, loaded: false, enabled: false, items: [] };
+  const enabledKey = (g) => (g ? g + ':' : '') + 'announcements_enabled';
+  async function loadNews(g) {
+    const { sb, isRemote } = A();
+    if (!isRemote) {
+      const st = A().announcements();
+      Object.assign(news, { gym: g, loaded: true, enabled: st.enabled, items: st.items });
+      return;
+    }
+    const [it, en] = await Promise.all([
+      sb.from('announcements').select('*').eq('gym', g).order('sort_order', { ascending: false }),
+      sb.from('site_settings').select('value').eq('key', enabledKey(g)),
+    ]);
+    Object.assign(news, {
+      gym: g, loaded: true,
+      enabled: !en.error && en.data && en.data[0] ? en.data[0].value === 'true' : false,
+      items: (it.data || []).map((r) => ({ id: r.id, title: r.title, text: r.body, date: r.date_label, image: r.image_url, sortOrder: r.sort_order })),
+    });
+  }
+  // після змін — оновити оголошення на поточній сторінці, якщо це та сама сторінка
+  const syncPage = (g) => { if ((A().gym || '') === g && A().resync) A().resync(); };
+  async function newsSave(item, g) {
+    const { sb } = A();
+    const { error } = await sb.from('announcements').upsert({ id: item.id, title: item.title || '', body: item.text || '', date_label: item.date || '', image_url: item.image || null, sort_order: item.sortOrder || Date.now(), gym: g });
+    if (error) throw new Error('Не вдалося зберегти оголошення');
+  }
+  async function newsDelete(id) {
+    const g = news.gym;
+    const gone = news.items.find((x) => x.id === id);
+    if (!gone) return;
+    if (!A().isRemote) { await A().deleteAnnouncement(id); news.loaded = false; render(); return; }
+    const { error } = await A().sb.from('announcements').delete().eq('id', id);
+    if (error) { toast('Не вдалося видалити'); return; }
+    news.items = news.items.filter((x) => x.id !== id);
+    render(); syncPage(g);
+    toast('Оголошення видалено', async () => { await newsSave(gone, g).catch(() => {}); news.loaded = false; render(); syncPage(g); });
+  }
+
+  /* ---------- Адміністратори залів (лише власник) ---------- */
+  let admins = null;
+  const ROLE_NAMES = [['owner', 'Власник — усі зали'], ['podilsk', 'Адміністратор Подільська'], ['balta', 'Адміністратор Балти'], ['none', 'Без доступу']];
+  function adminsHtml() {
+    if (!admins) { loadAdmins(); return '<div class="xc-skel"></div>'; }
+    if (admins.error) return `<div class="xc-empty">${esc(admins.error)}</div>`;
+    return admins.list.map((a) => {
+      const r = !a.has_access ? 'none' : a.gym || 'owner';
+      const self = a.email === role.email;
+      return `<div class="xc-row xc-row--admin"><div class="xc-av xc-av--plain">${esc(initials(a.email))}</div><div class="t"><div class="n">${esc(a.email)}${self ? ' <span class="xc-mut" style="font-weight:500">· це ти</span>' : ''}</div><div class="s">${a.last_sign_in ? 'входив ' + ago(a.last_sign_in) + ' тому' : 'ще не входив'}</div></div>
+        <select class="xc-role" data-admin-email="${esc(a.email)}" ${self ? 'disabled' : ''} aria-label="Роль ${esc(a.email)}">${ROLE_NAMES.map(([k, n]) => `<option value="${k}"${k === r ? ' selected' : ''}>${n}</option>`).join('')}</select></div>`;
+    }).join('') || '<div class="xc-empty">Акаунтів не знайдено</div>';
+  }
+  async function loadAdmins() {
+    const { data, error } = await A().sb.rpc('list_admins');
+    admins = error ? { error: /function|schema cache/i.test(error.message || '') ? 'Спершу виконай supabase-update-gyms.sql.' : 'Не вдалося завантажити список.' } : { list: data || [] };
+    const box = $('#xcAdmins');
+    if (box) box.innerHTML = adminsHtml();
+  }
+  async function setRole(email, r) {
+    const { error } = await A().sb.rpc('set_admin_role', { p_email: email, p_role: r });
+    if (error) toast(/cannot_change_self/.test(error.message) ? 'Свою роль змінити не можна' : 'Не вдалося змінити роль');
+    else toast(`${email}: ${ROLE_NAMES.find((x) => x[0] === r)[1]}`);
+    admins = null;
+    loadAdmins();
+  }
 
   function bindView() {
     const cq = $('#xcCq');
@@ -526,13 +667,13 @@
     const isNew = !m;
     const activating = m && stateOf(m).state === 'pending';
     const today = C().todayISO();
-    const info = M().planInfo();
+    // адміністратор залу — лише свій зал; власник — обидва
+    const gymList = role.role === 'gym' ? [nameOf(role.gym)] : M().gyms();
+    const curGym = (m && m.gym) || (prefill && prefill.gym) || (scope !== 'all' ? nameOf(scope) : '') || gymList[0];
+    const info = M().planInfo(curGym);
     const names = info.map((x) => x.name);
-    const curPlan = (m && m.plan) || (m && M().matchPlan(m.desired_plan)) || names[1] || names[0] || '';
+    const curPlan = (m && m.plan) || (m && M().matchPlan(m.desired_plan, curGym)) || names[1] || names[0] || '';
     const planList = curPlan && !names.includes(curPlan) ? [curPlan, ...names] : names;
-    const g = M().gyms();
-    const gymList = g.length ? g : ['Подільськ', 'Балта'];
-    const curGym = (m && m.gym) || gymList[0];
     const from = (m && !activating && m.valid_from) || today;
     const months = (info.find((x) => x.name === curPlan) || { months: 1 }).months;
     const to = (m && !activating && m.valid_to) || (months ? M().addMonths(from, months) : from);
@@ -562,7 +703,7 @@
     </form>`, `<button type="button" class="xc-btn" data-act="${m ? 'openMember' : 'close'}" data-id="${m ? esc(m.id) : ''}">Скасувати</button><button type="button" class="xc-btn xc-btn--pri" data-act="saveMember" data-id="${m ? esc(m.id) : ''}">${ic('check')}${isNew ? 'Створити карту' : activating ? 'Активувати карту' : 'Зберегти'}</button>`);
     const f = $('#xcMemForm');
     const recalc = () => {
-      const i = M().planInfo().find((x) => x.name === f.plan.value);
+      const i = M().planInfo(f.gym.value).find((x) => x.name === f.plan.value);
       if (i) f.valid_to.value = i.months ? M().addMonths(f.valid_from.value || today, i.months) : (f.valid_from.value || today);
     };
     f.plan.addEventListener('change', () => {
@@ -571,6 +712,14 @@
       if (other) f.plan_other.focus(); else recalc();
     });
     f.valid_from.addEventListener('change', recalc);
+    // інший зал — свої абонементи
+    f.gym.addEventListener('change', () => {
+      const keep = f.plan.value;
+      const ns = M().planInfo(f.gym.value).map((x) => x.name);
+      f.plan.innerHTML = ns.map((x) => `<option${x === keep ? ' selected' : ''}>${esc(x)}</option>`).join('') + `<option value="${OTHER}">✎ Інший…</option>`;
+      if (!ns.includes(keep)) f.plan.value = ns[1] || ns[0] || OTHER;
+      recalc();
+    });
     $$('[data-months]', f).forEach((b) => b.addEventListener('click', () => { f.valid_to.value = M().addMonths(f.valid_from.value || today, Number(b.dataset.months)); }));
     f.addEventListener('submit', (e) => { e.preventDefault(); saveMember(m ? m.id : ''); });
   }
@@ -692,7 +841,7 @@
   }
 
   function newsDrawer(id) {
-    const n = A().announcements().items.find((x) => x.id === id);
+    const n = news.items.find((x) => x.id === id);
     if (!n) return;
     openDrawer('<div class="xc-title" id="xcDTitle">Оголошення</div>', `<form class="xc-form" id="xcNewsForm"><label class="xc-field"><span>Заголовок</span><input name="title" maxlength="120" value="${esc(n.title)}"></label><label class="xc-field"><span>Текст</span><textarea name="text" rows="5" maxlength="2000">${esc(n.text)}</textarea></label><label class="xc-field"><span>Дата або підпис</span><input name="date" maxlength="40" value="${esc(n.date)}" placeholder="Напр. 12 грудня"></label></form>`,
       `<button type="button" class="xc-btn" data-act="close">Скасувати</button><button type="button" class="xc-btn xc-btn--pri" data-act="saveNews" data-id="${esc(id)}">${ic('check')}Зберегти</button>`);
@@ -860,7 +1009,15 @@
       : `<span class="xc-fab__dot"></span><span class="xc-fab__txt">Адмін</span><button type="button" class="xc-btn xc-btn--sm" data-act="editStart">${ic('edit')}Редагувати</button><button type="button" class="xc-btn xc-btn--sm xc-btn--pri" data-act="openConsole">${ic('grid')}Панель</button>`;
     fab.hidden = false;
   }
-  function editSite(sel) {
+  function editSite(sel, page) {
+    if (page === undefined && role.role === 'gym' && (A().gym || '') !== role.gym) page = role.gym;
+    // розділ на іншій сторінці (зал / головна) — відкриваємо її одразу в режимі редагування
+    if (page !== undefined && pageOf(page) !== (A().gym || '')) {
+      store.set('xc_edit', sel || '#home');
+      store.set('xc_closed', '1');
+      location.href = pageUrl(page) + (sel || '');
+      return;
+    }
     close();
     A().setEditing(true);
     const target = sel && document.querySelector(sel);
@@ -869,7 +1026,14 @@
   }
   async function addNews() {
     if (current !== 'news') go('news');
-    const item = await A().addAnnouncement();
+    const g = newsTarget();
+    let item;
+    if (!A().isRemote) { item = await A().addAnnouncement(); news.loaded = false; await loadNews(g); }
+    else {
+      item = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title: 'Нове оголошення', text: 'Опис події, акції чи анонсу…', date: new Date().toLocaleDateString('uk-UA', { day: '2-digit', month: 'long' }), image: null, sortOrder: Date.now() };
+      try { await newsSave(item, g); } catch (e) { toast(e.message); return; }
+      news.items.unshift(item); syncPage(g);
+    }
     render();
     newsDrawer(item.id);
     setTimeout(() => { const t = $('#xcNewsForm [name=title]'); if (t) { t.focus(); t.select(); } }, 350);
@@ -888,6 +1052,7 @@
     $('#xcPalRes').addEventListener('click', (e) => { const r = e.target.closest('[data-pi]'); if (r) runPal(+r.dataset.pi); });
 
     document.addEventListener('click', onClick);
+    document.addEventListener('change', (e) => { const sel = e.target.closest && e.target.closest('.xc-role'); if (sel) setRole(sel.dataset.adminEmail, sel.value); });
     document.addEventListener('keydown', (e) => {
       if (!A().isAdmin || !A().isAdmin()) return;
       if (isOpen() && scanKey(e)) return;
@@ -903,7 +1068,7 @@
   }
 
   async function onClick(e) {
-    const el = e.target.closest('[data-go], [data-act], [data-member], [data-lead], [data-activate], [data-renew], [data-filter], [data-copy], [data-news-edit], [data-news-del], [data-edit-section]');
+    const el = e.target.closest('[data-go], [data-act], [data-member], [data-lead], [data-activate], [data-renew], [data-filter], [data-copy], [data-news-edit], [data-news-del], [data-edit-section], [data-scope], [data-site-target], [data-news-target]');
     if (!el || !el.closest('.xc, .xc-layer')) return;
     const d = el.dataset;
     if (d.activate) { e.stopPropagation(); const m = M().get(d.activate); if (m) memberForm(m); return; }
@@ -926,8 +1091,15 @@
       return;
     }
     if (d.newsEdit) { newsDrawer(d.newsEdit); return; }
-    if (d.newsDel) { await A().deleteAnnouncement(d.newsDel); render(); return; }
-    if (d.editSection) { editSite(d.editSection); return; }
+    if (d.newsDel) { await newsDelete(d.newsDel); return; }
+    if (d.editSection) {
+      // адміністратор залу редагує лише свою сторінку
+      editSite(d.editSection, d.editPage);
+      return;
+    }
+    if (d.scope) { setScope(d.scope); return; }
+    if (d.siteTarget) { store.set('xc_site_target', d.siteTarget); render(); return; }
+    if (d.newsTarget !== undefined) { store.set('xc_news_target', d.newsTarget); render(); return; }
     if (d.filter && el.classList.contains('xc-chip')) { filter.clients = d.filter; render(); return; }
     if (d.go) {
       if (el.closest('#xcDrawer')) closeDrawer();
@@ -973,26 +1145,46 @@
       }
       case 'leadDone': toggleHandled(id); break;
       case 'delLead': deleteLead(id); break;
-      case 'leadToMember': { const l = leads.find((x) => x.id === id); memberForm(null, l ? { full_name: l.name, phone: l.phone } : null); break; }
+      case 'leadToMember': { const l = leads.find((x) => x.id === id); memberForm(null, l ? { full_name: l.name, phone: l.phone, gym: l.gym } : null); break; }
       case 'priceSave': {
-        $$('.xc-plan [data-k]').forEach((x) => { const t = document.querySelector(`[data-edit-key="${CSS.escape(x.dataset.k)}"]`); const v = x.textContent.trim(); if (t && v) t.textContent = v; });
+        const g = ($('[data-plans-gym]') || {}).dataset ? $('[data-plans-gym]').dataset.plansGym : siteTarget();
+        const changes = {};
+        $$('.xc-plan [data-k]').forEach((x) => { const v = x.textContent.trim(); if (v || /period$/.test(x.dataset.k)) changes[x.dataset.k] = v; });
         el.disabled = true;
-        const ok = await A().saveContent();
-        el.disabled = false;
-        if (ok) render();
+        try {
+          await M().savePlans(g, changes);
+          // ця ж сторінка — одразу показуємо нові ціни
+          if ((A().gym || '') === g) Object.entries(changes).forEach(([k, v]) => { const t = document.querySelector(`[data-edit-key="${CSS.escape(k)}"]`); if (t) t.textContent = v; });
+          toast('Ціни збережено ✓ — уже на сайті');
+          render();
+        } catch (err) { el.disabled = false; toast(err.message); }
         break;
       }
       case 'priceCancel': render(); toast('Зміни скасовано'); break;
       case 'addNews': addNews(); break;
       case 'saveNews': {
         const f = $('#xcNewsForm');
+        const fields = { title: f.title.value.trim() || 'Без заголовка', text: f.text.value.trim(), date: f.date.value.trim() };
         el.disabled = true;
-        const ok = await A().saveAnnouncement(id, { title: f.title.value.trim() || 'Без заголовка', text: f.text.value.trim(), date: f.date.value.trim() });
+        let ok = true;
+        if (!A().isRemote) { ok = await A().saveAnnouncement(id, fields); news.loaded = false; }
+        else {
+          const item = news.items.find((x) => x.id === id);
+          try { Object.assign(item, fields); await newsSave(item, news.gym); syncPage(news.gym); } catch (err) { ok = false; }
+        }
         closeDrawer(); render();
         toast(ok ? 'Оголошення збережено' : 'Не вдалося зберегти. Перевір інтернет.');
         break;
       }
-      case 'newsToggle': await A().setAnnouncementsEnabled(el.getAttribute('aria-checked') !== 'true'); render(); break;
+      case 'newsToggle': {
+        const on = el.getAttribute('aria-checked') !== 'true';
+        if (!A().isRemote) { await A().setAnnouncementsEnabled(on); news.loaded = false; render(); break; }
+        const { error } = await A().sb.from('site_settings').upsert({ key: enabledKey(news.gym), value: String(on) });
+        if (error) { toast('Не вдалося зберегти'); break; }
+        news.enabled = on; render(); syncPage(news.gym);
+        toast(on ? 'Оголошення показуються на сайті' : 'Оголошення сховано з сайту');
+        break;
+      }
       case 'reset':
         $('#xcResetBox').innerHTML = `<div class="xc-confirm"><b>Точно скинути зміни сайту?</b><label class="xc-field"><span>Щоб підтвердити, введи СКИНУТИ</span><input id="xcRsIn" autocomplete="off" autocapitalize="characters"></label><div class="xc-quick"><button type="button" class="xc-btn xc-btn--sm" data-act="noReset">Скасувати</button><button type="button" class="xc-btn xc-btn--sm xc-btn--solid-danger" data-act="doReset">Скинути</button></div></div>`;
         $('#xcRsIn').focus();
@@ -1005,7 +1197,9 @@
         break;
       case 'toSite': close(); break;
       case 'openConsole': open(); break;
-      case 'editStart': A().setEditing(true); toast('Натискай на текст, щоб змінити. Фото — кнопками на них.'); break;
+      case 'editStart':
+        if (role.role === 'gym' && (A().gym || '') !== role.gym) { editSite('#home', role.gym); break; }
+        A().setEditing(true); toast('Натискай на текст, щоб змінити. Фото — кнопками на них.'); break;
       case 'editCancel': A().setEditing(false, true); toast('Зміни скасовано'); break;
       case 'editSave': el.disabled = true; if (await A().saveContent()) A().setEditing(false); else el.disabled = false; break;
       case 'logout': close(); await A().logout(); break;
@@ -1015,17 +1209,19 @@
   /* ---------- Звʼязок з js/admin.js ---------- */
   function onAdmin(quiet) {
     build();
+    const editSel = store.get('xc_edit');
+    if (editSel) { store.set('xc_edit', ''); store.set('xc_closed', '1'); renderFab(); setTimeout(() => editSite(editSel), 400); return; }
     if (store.get('xc_closed') === '1') { renderFab(); if (!quiet) toast('Адмін-режим увімкнено'); } else open();
   }
   document.addEventListener('xfit:admin', (e) => {
     if (e.detail.on) onAdmin();
     else {
-      loaded = false; leads = [];
+      loaded = false; leads = []; admins = null; news.loaded = false;
       if (built) { close(); store.set('xc_closed', ''); $('#xcFab').hidden = true; }
     }
   });
   document.addEventListener('xfit:editing', () => renderFab());
-  document.addEventListener('xfit:announcements', () => { if (isOpen() && current === 'news' && $('#xcDrawer').hidden) render(); });
+  document.addEventListener('xfit:announcements', () => { if (!A().isRemote && isOpen() && current === 'news' && $('#xcDrawer').hidden) { news.loaded = false; render(); } });
 
   window.XFitConsole = { open, close, toast };
   // адмін-режим міг увімкнутись ще до завантаження цього файлу (збережений вхід)
