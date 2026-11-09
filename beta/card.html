@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css?v=39">
-<link rel="stylesheet" href="css/card.css?v=14">
+<link rel="stylesheet" href="css/card.css?v=15">
 </head>
 <body class="card-page">
 <style>.beta-ribbon{position:fixed;left:50%;top:calc(4px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:5000;pointer-events:none;
@@ -100,6 +100,12 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
       <h1 class="reg__title">Увійти в мою карту</h1>
       <p class="reg__lead">Новий телефон чи очищений браузер? Введи номер, з яким реєструвався, і підтверди, що карта твоя.</p>
     </div>
+    <button type="button" class="btn btn--primary btn--block login-qr" id="loginQr">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><rect x="8" y="8" width="3" height="3"/><rect x="13" y="8" width="3" height="3"/><rect x="8" y="13" width="3" height="3"/><path d="M13 13h3v3"/></svg>
+      <span>Відсканувати QR-код карти</span>
+    </button>
+    <div class="login-qr__cam" id="loginQrCam" hidden><video aria-label="Камера"></video><span class="plastic__frame" aria-hidden="true"></span></div>
+    <p class="login-help login-qr__hint">QR-код — на екрані адміністратора або на звороті карти на старому телефоні. Або підтвердь карту телефоном:</p>
     <label class="reg__field"><span>Телефон</span><input name="phone" type="tel" autocomplete="tel" inputmode="tel" required placeholder="+380 __ ___ __ __"></label>
     <div class="login-ways" role="radiogroup" aria-label="Як підтвердити">
       <button type="button" role="radio" data-way="plastic" aria-checked="true">🪪 Пластикова карта</button>
@@ -136,6 +142,11 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
     <button type="button" class="btn btn--ghost btn--block" id="shareLink" hidden>Зберегти посилання на карту</button>
     <a href="./" class="btn btn--ghost btn--block">На сайт XFit</a>
   </div>
+  <div class="card-legal">
+    <button type="button" class="card-delete" id="deleteCard" hidden>Видалити мою карту</button>
+    <div id="deleteBox" aria-live="polite"></div>
+    <a href="privacy.html">Політика конфіденційності</a>
+  </div>
 </main>
 
 <script src="js/supabase-config.js?v=28"></script>
@@ -143,6 +154,6 @@ font:700 .62rem Inter,system-ui,sans-serif;letter-spacing:.16em;text-transform:u
 <script src="js/vendor/qrcode-generator-1.4.4.js"></script>
 <script src="js/vendor/jsbarcode-3.11.6.min.js"></script>
 <script src="js/scanner.js?v=2"></script>
-<script src="js/card.js?v=16"></script>
+<script src="js/card.js?v=17"></script>
 </body>
 </html>

@@ -77,7 +77,8 @@
   }
 
   function cardUrl(token) {
-    const base = location.origin && location.origin !== 'null' ? location.origin + location.pathname.replace(/[^/]*$/, '') : 'https://xfit.com.ua/';
+    // у мобільному додатку сторінки вбудовані — посилання ведуть на сайт
+    const base = !root.XFitNative && location.origin && location.origin !== 'null' && /^https?:$/.test(location.protocol) ? location.origin + location.pathname.replace(/[^/]*$/, '') : 'https://xfit.com.ua/';
     return base + 'card.html?c=' + encodeURIComponent(token);
   }
 
@@ -204,6 +205,7 @@
     document.documentElement.classList.remove('no-scroll');
     if (scanLock) scanLock.release().catch(() => {});
     scanLock = null;
+    if (root.XFitNative) root.XFitNative.scanMode(false);
     if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
   }
   function openZoom(cardEl, kind) {
@@ -238,7 +240,7 @@
           ${DECO_FRONT}
           <div class="scan-card__top">${LOGO}<span class="scan-card__name">${esc(name)}${no ? `<small>${esc(no)}</small>` : ''}</span></div>
           ${code}
-          <p class="scan-card__tip">Підніми яскравість екрана · торкнись, щоб закрити</p>
+          <p class="scan-card__tip">${root.XFitNative ? 'Торкнись, щоб закрити' : 'Підніми яскравість екрана · торкнись, щоб закрити'}</p>
         </div>
       </div>`;
     box.hidden = false;
@@ -249,6 +251,7 @@
       box.requestFullscreen({ navigationUI: 'hide' }).then(() => { box.dataset.fs = '1'; }).catch(() => {});
     }
     if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then((l) => { scanLock = l; }).catch(() => {});
+    if (root.XFitNative) root.XFitNative.scanMode(true); // у додатку: максимальна яскравість, екран не гасне
   }
 
   root.XFitCard = { openZoom, render, stateOf, newCardNumber, newToken, groupNumber, maskPhone, fmtDate, cardUrl, todayISO, daysBetween, isBarcode, newBarcode, fmtBarcode, plasticNo };
@@ -310,6 +313,7 @@
     document.getElementById('loginForm').hidden = true;
     document.getElementById('shareLink').hidden = !!opts.demo || !m.token;
     document.getElementById('inviteFriend').hidden = !!opts.demo || !m.token;
+    document.getElementById('deleteCard').hidden = !!opts.demo || !m.token;
     const details = document.getElementById('cardDetails');
     details.hidden = false;
     // кнопки таймера й «Моїх тренувань»: відкриваються з активною картою
@@ -359,7 +363,7 @@
   function switchForm(toLogin) {
     document.getElementById('regForm').hidden = toLogin;
     loginForm.hidden = !toLogin;
-    if (!toLogin) loginPlastic.stop();
+    if (!toLogin) { loginPlastic.stop(); stopLoginQr(); }
     regPlastic.stop();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -372,6 +376,38 @@
     document.getElementById('loginBirth').hidden = loginWay !== 'birth';
     if (loginWay !== 'plastic') loginPlastic.stop();
   }));
+  // Вхід за QR-кодом карти: з екрана адміністратора або зі звороту карти на старому телефоні
+  let stopQr = null;
+  const qrCam = document.getElementById('loginQrCam');
+  function stopLoginQr() { if (stopQr) stopQr(); stopQr = null; qrCam.hidden = true; document.querySelector('#loginQr span').textContent = 'Відсканувати QR-код карти'; }
+  document.getElementById('loginQr').addEventListener('click', async () => {
+    if (stopQr) { stopLoginQr(); return; }
+    if (!window.XFitScanner) { loginError.textContent = 'Сканер недоступний — підтвердь карту телефоном нижче.'; return; }
+    loginError.textContent = '';
+    qrCam.hidden = false;
+    document.querySelector('#loginQr span').textContent = 'Закрити камеру';
+    try {
+      stopQr = await window.XFitScanner.start(qrCam.querySelector('video'), ['qr_code'], async (raw) => {
+        let t = null;
+        try { t = new URL(String(raw)).searchParams.get('c'); } catch (err) { /* не посилання */ }
+        if (!t || t.length < 16) { loginError.textContent = 'Це не QR-код карти XFit. Наведи камеру на QR з екрана адміністратора або зі звороту карти.'; return; }
+        if (navigator.vibrate) navigator.vibrate(120);
+        stopLoginQr();
+        try {
+          const res = await fetchRemote(t);
+          const m = res.unavailable ? fromLocalAdmin(t) : res.member;
+          if (!m) throw new Error('Карту за цим QR-кодом не знайдено. Звернись на рецепцію XFit.');
+          writeCache(m);
+          show(m);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (err) { loginError.textContent = err.message || 'Не вдалося відкрити карту. Перевір інтернет і спробуй ще раз.'; }
+      });
+    } catch (err) {
+      stopLoginQr();
+      loginError.textContent = window.XFitScanner.errorText(err);
+    }
+  });
+
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     loginError.textContent = '';
@@ -428,6 +464,52 @@
     try { await navigator.clipboard.writeText(link); btn.textContent = 'Посилання скопійовано ✓'; }
     catch (err) { prompt('Скопіюй посилання на свою карту:', link); }
     setTimeout(() => { btn.textContent = 'Зберегти посилання на карту'; }, 2500);
+  });
+
+  // Видалити свою карту й дані (вимога Google Play та App Store)
+  const deleteBox = document.getElementById('deleteBox');
+  document.getElementById('deleteCard').addEventListener('click', () => {
+    deleteBox.innerHTML = `<div class="card-delete-confirm"><b>Видалити карту назавжди?</b>
+      <p>Буде видалено карту, імʼя, телефон, дату народження, email і дати абонемента. Якщо абонемент оплачено — адміністратор зможе створити карту знову на рецепції.</p>
+      <div><button type="button" class="btn btn--ghost" data-del="no">Скасувати</button><button type="button" class="btn btn--danger" data-del="yes">Так, видалити</button></div></div>`;
+    deleteBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+  deleteBox.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-del]');
+    if (!b) return;
+    if (b.dataset.del === 'no') { deleteBox.innerHTML = ''; return; }
+    const m = shownMember;
+    if (!m || !m.token) return;
+    b.disabled = true;
+    b.textContent = 'Видаляємо…';
+    try {
+      const url = window.XFIT_SUPABASE_URL || '';
+      const key = window.XFIT_SUPABASE_ANON_KEY || '';
+      if (window.supabase && url && key && !url.includes('YOUR-PROJECT')) {
+        const sb = window.supabase.createClient(url, key);
+        const { error } = await sb.rpc('delete_member_card', { p_token: m.token });
+        if (error) throw new Error(/Could not find the function|schema cache/i.test(error.message || '') || error.code === 'PGRST202'
+          ? 'Видалення ще не налаштоване. Звернись на рецепцію XFit — ми видалимо дані протягом 7 днів.'
+          : 'Не вдалося видалити. Перевір інтернет і спробуй ще раз.');
+      } else {
+        const list = JSON.parse(localStorage.getItem('xfit_members_v1') || '[]').filter((x) => x.token !== m.token);
+        localStorage.setItem('xfit_members_v1', JSON.stringify(list));
+      }
+      try { localStorage.removeItem(CACHE_KEY); } catch (err) { /* ignore */ }
+      shownMember = null;
+      deleteBox.innerHTML = '';
+      showState('Карту видалено', 'Твої дані видалено з бази XFit. Якщо захочеш повернутись — зареєструйся знову будь-коли.', true);
+      document.getElementById('inviteFriend').hidden = true;
+      document.getElementById('deleteCard').hidden = true;
+      document.getElementById('shareLink').hidden = true;
+      document.getElementById('plasticLink').hidden = true;
+      document.getElementById('cardNote').textContent = '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      b.disabled = false;
+      b.textContent = 'Так, видалити';
+      deleteBox.querySelector('p').textContent = err.message;
+    }
   });
 
   // Запросити друга: посилання на реєстрацію з кодом запрошення
