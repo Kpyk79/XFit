@@ -85,6 +85,23 @@
   let role = { role: 'owner', gym: null, email: '' };
   let scope = 'all';
   const GYM_LIST = [['podilsk', 'Подільськ'], ['balta', 'Балта']];
+  // Instagram-стрічка (Behold) на сторінці залу: site_settings '<зал>:behold_feed'
+  const INSTA_DEFAULT = { podilsk: 'M7bGSF2KmUeXIosYqRnm', balta: '' };
+  const insta = {};
+  const beholdId = (raw) => {
+    const v = String(raw || '').trim();
+    const m = v.match(/feed-id=["']?([A-Za-z0-9_-]{6,})/) || v.match(/behold\.so\/([A-Za-z0-9_-]{6,})/) || v.match(/^([A-Za-z0-9_-]{6,})$/);
+    return m ? m[1] : '';
+  };
+  async function loadInsta(g) {
+    const { sb, isRemote } = A();
+    let v = INSTA_DEFAULT[g] || '';
+    if (isRemote) {
+      const { data, error } = await sb.from('site_settings').select('key,value').eq('key', g + ':behold_feed');
+      if (!error && data && data[0]) v = beholdId(data[0].value);
+    }
+    insta[g] = v;
+  }
   const nameOf = (slug) => (GYM_LIST.find((g) => g[0] === slug) || [, ''])[1];
   const slugOf = (name) => (GYM_LIST.find((g) => g[1] === name || g[0] === name) || [''])[0];
   const isOwner = () => role.role === 'owner';
@@ -453,6 +470,7 @@
         + `<section class="xc-panel"><div class="xc-ph"><h2>Абонементи й ціни · ${esc(nameOf(t))}</h2></div><p class="xc-mut" style="margin:0 0 14px;font-size:13.5px">Натисни на назву, ціну чи період і зміни текст. Період («/міс», «/6 міс», «/рік») визначає, на скільки активується абонемент клієнта. Додати чи прибрати абонемент — на сторінці залу (розділ «Абонементи»).</p>
           <div class="xc-prev"><div class="xc-plans" data-plans-gym="${t}">${cards || '<div class="xc-empty">Абонементів не знайдено</div>'}</div></div>
           <div class="xc-bar" id="xcPriceBar" hidden><span class="dot"></span><span>Є незбережені зміни</span><span class="sp"><button type="button" class="xc-btn xc-btn--sm" data-act="priceCancel">Скасувати</button><button type="button" class="xc-btn xc-btn--sm xc-btn--pri" data-act="priceSave">${ic('check')}Зберегти</button></span></div></section>
+        ${instaPanel(t)}
         <div class="xc-tiles">
           ${tile('#home', 'Головний екран залу', 'Заголовок і опис', 'home')}
           ${tile('#trainers', 'Тренери', 'Фото, імена, ролі', 'users')}
@@ -494,6 +512,14 @@
   /* ---------- Сторінки залів: що редагуємо й де ---------- */
   const pageOf = (t) => (t === 'main' ? '' : t);
   const pageUrl = (t) => (t === 'main' || !t ? './' : t + '.html');
+  function instaPanel(t) {
+    if (insta[t] === undefined) { loadInsta(t).then(() => { if (current === 'site') render(); }); return '<div class="xc-skel" style="margin-top:14px"></div>'; }
+    const v = insta[t];
+    const ig = t === 'balta' ? '@xfitbalta' : '@xfit_podilsk';
+    return `<section class="xc-panel" style="margin-top:14px"><div class="xc-ph"><h2>Instagram на сторінці · ${esc(nameOf(t))}</h2><span class="xc-mut" style="font-size:13px">${v ? '● показується' : '○ вимкнено'}</span></div>
+      <p class="xc-mut" style="margin:0 0 12px;font-size:13.5px">Блок «Життя залу в Instagram» зі свіжими постами ${ig}. Створи стрічку на <a class="xc-link" href="https://app.behold.so" target="_blank" rel="noopener">behold.so</a> (підключи Instagram залу → New feed → Widget), скопіюй код вставки або ID стрічки й встав сюди. Порожнє поле — блок не показується.</p>
+      <form class="xc-form" id="xcInsta" data-gym="${t}" novalidate><label class="xc-field"><span>Код або ID стрічки Behold</span><input name="feed" value="${esc(v)}" placeholder="напр. M7bGSF2KmUeXIosYqRnm" autocomplete="off" spellcheck="false"></label><p class="xc-err" id="xcInstaErr"></p><button class="xc-btn xc-btn--pri" type="submit">${ic('check')}Зберегти</button></form></section>`;
+  }
   function siteTarget() {
     if (!isOwner()) return role.gym || 'podilsk';
     if (scope !== 'all') return scope;
@@ -578,6 +604,24 @@
     if (cq) cq.addEventListener('input', () => { query.clients = cq.value; const pos = cq.selectionStart; render(); const n = $('#xcCq'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) { /* type=search */ } });
     $$('.xc-plan [data-k]').forEach((el) => el.addEventListener('input', () => { $('#xcPriceBar').hidden = false; }));
     $$('.xc-plan [data-k]').forEach((el) => el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } }));
+    const ins = $('#xcInsta');
+    if (ins) ins.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const g = ins.dataset.gym;
+      const raw = ins.feed.value.trim();
+      const id = beholdId(raw);
+      if (raw && !id) { $('#xcInstaErr').textContent = 'Не бачу ID стрічки. Встав код вставки з Behold або сам ID (напр. M7bGSF2KmUeXIosYqRnm).'; return; }
+      const { sb, isRemote } = A();
+      if (!isRemote) { $('#xcInstaErr').textContent = 'Стрічку можна змінити, коли сайт підключено до бази даних.'; return; }
+      const btn = ins.querySelector('button[type=submit]');
+      btn.disabled = true;
+      const { error } = await sb.from('site_settings').upsert({ key: g + ':behold_feed', value: id });
+      btn.disabled = false;
+      if (error) { $('#xcInstaErr').textContent = 'Не вдалося зберегти: ' + error.message; return; }
+      insta[g] = id;
+      toast(id ? 'Instagram-стрічку збережено ✓ — уже на сайті' : 'Блок Instagram вимкнено');
+      render();
+    });
     const pw = $('#xcPw');
     if (pw) pw.addEventListener('submit', async (e) => {
       e.preventDefault();
