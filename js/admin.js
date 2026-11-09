@@ -204,7 +204,15 @@
     });
   }
 
+  // Фото, які не вмістились у сховище браузера, — тримаємо в пам'яті, щоб сторінка все одно їх показала
+  let photoMem = null;
+  // Головна сторінка — лише свої ключі; ключі сторінок залів ('podilsk:…', 'balta:…') не завантажуємо
+  const mainOnly = (q) => q.not('key', 'like', 'podilsk:%').not('key', 'like', 'balta:%');
+  function safeSet(key, value) {
+    try { localStorage.setItem(key, value); return true; } catch (e) { return false; }
+  }
   function getPhotoStore() {
+    if (photoMem) return photoMem;
     try {
       return JSON.parse(localStorage.getItem(PHOTO_STORAGE_KEY) || '{}');
     } catch (e) {
@@ -247,7 +255,7 @@
 
   /* ---------- Запити до Supabase ---------- */
   async function remotePullContent() {
-    const { data, error } = await sb.from('site_content').select('key,value');
+    const { data, error } = await mainOnly(sb.from('site_content').select('key,value'));
     if (error) return null;
     const map = {};
     data.forEach((row) => { map[row.key] = row.value; });
@@ -262,7 +270,7 @@
   }
 
   async function remotePullPhotos() {
-    const { data, error } = await sb.from('site_photos').select('key,data_url');
+    const { data, error } = await mainOnly(sb.from('site_photos').select('key,data_url'));
     if (error) return null;
     const map = {};
     data.forEach((row) => { map[row.key] = row.data_url; });
@@ -281,7 +289,7 @@
 
   async function remotePullAnnouncements() {
     const [itemsRes, settingsRes] = await Promise.all([
-      sb.from('announcements').select('*').order('sort_order', { ascending: false }),
+      sb.from('announcements').select('*').eq('gym', '').order('sort_order', { ascending: false }),
       sb.from('site_settings').select('key,value').eq('key', 'announcements_enabled'),
     ]);
     if (itemsRes.error || settingsRes.error) return null;
@@ -373,11 +381,15 @@
       const [content, photos, announcements, trainers, lists] = await Promise.all([
         remotePullContent(), remotePullPhotos(), remotePullAnnouncements(), remotePullTrainers(), remotePullLists(),
       ]);
-      if (lists) localStorage.setItem(LISTS_KEY, JSON.stringify(lists));
-      if (content) localStorage.setItem(STORAGE_CONTENT_KEY, JSON.stringify(content));
-      if (photos) localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
-      if (announcements) localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
-      if (trainers) localStorage.setItem(TRAINERS_KEY, JSON.stringify(trainers));
+      // переповнене сховище браузера не повинно ламати показ сторінки
+      if (lists) safeSet(LISTS_KEY, JSON.stringify(lists));
+      if (content) safeSet(STORAGE_CONTENT_KEY, JSON.stringify(content));
+      if (photos) {
+        photoMem = null;
+        if (!safeSet(PHOTO_STORAGE_KEY, JSON.stringify(photos))) { try { localStorage.removeItem(PHOTO_STORAGE_KEY); } catch (e) { /* ignore */ } photoMem = photos; }
+      }
+      if (announcements) safeSet(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
+      if (trainers) safeSet(TRAINERS_KEY, JSON.stringify(trainers));
       else if (trainers === undefined) localStorage.removeItem(TRAINERS_KEY);
       renderTrainers();
       renderAllLists();
@@ -572,10 +584,11 @@
     if (isRemote) {
       try {
         await Promise.all([
-          sb.from('site_content').delete().neq('key', ''),
-          sb.from('site_photos').delete().neq('key', ''),
-          sb.from('announcements').delete().neq('id', ''),
-          sb.from('site_settings').delete().neq('key', ''),
+          // лише головна сторінка; сторінки залів не чіпаємо
+          mainOnly(sb.from('site_content').delete()),
+          mainOnly(sb.from('site_photos').delete()),
+          sb.from('announcements').delete().eq('gym', ''),
+          mainOnly(sb.from('site_settings').delete()),
         ]);
       } catch (e) { /* ignore */ }
     }
@@ -643,8 +656,10 @@
     photos[key] = dataUrl;
     try {
       localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+      if (photoMem) photoMem = photos;
       return true;
     } catch (e) {
+      if (isRemote) { photoMem = photos; return true; } // у хмарному режимі фото збережеться в базі
       showToast('Забракло місця в браузері для цього фото. Спробуй менше зображення.');
       return false;
     }
@@ -686,7 +701,7 @@
     if (!photos[key]) return;
     if (!confirm('Видалити це фото?')) return;
     delete photos[key];
-    localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+    if (!safeSet(PHOTO_STORAGE_KEY, JSON.stringify(photos))) photoMem = photos;
     applySavedPhotos();
     if (isRemote) await remoteDeletePhoto(key);
     showToast('Фото видалено');
@@ -1081,7 +1096,7 @@
     const photos = getPhotoStore();
     if (photos[id]) {
       delete photos[id];
-      localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+      if (!safeSet(PHOTO_STORAGE_KEY, JSON.stringify(photos))) photoMem = photos;
     }
     const keys = [id + '.name', id + '.role', id + '.instagram'];
     const cache = getContentCache();
@@ -1574,7 +1589,7 @@
     localStorage.setItem(STORAGE_CONTENT_KEY, JSON.stringify(cache));
     const photos = getPhotoStore();
     photoKeys.forEach((k) => delete photos[k]);
-    localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+    if (!safeSet(PHOTO_STORAGE_KEY, JSON.stringify(photos))) photoMem = photos;
     const store = getListsStore();
     nestedLists.forEach((n) => { delete store[n]; delete lists[n]; });
     localStorage.setItem(LISTS_KEY, JSON.stringify(store));
