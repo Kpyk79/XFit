@@ -422,6 +422,7 @@ body.admin-editing .trainer-card__ig-handle:empty::before{ content:"@instagram";
 .gallery.is-wheel .gallery-tile{
   position:absolute; top:0; left:0; width:100%;
   backface-visibility: hidden; will-change: transform, opacity;
+  transition: none; /* колесо анімує JS покадрово — CSS-перехід смикав картки */
 }
 .gallery.is-wheel .gallery-tile{ border-radius: var(--radius); }
 .gallery.is-wheel .gallery-tile.is-front{ border-color: rgba(57,255,106,0.45); box-shadow: 0 0 0 1px rgba(57,255,106,0.25), 0 18px 40px -22px rgba(57,255,106,0.55); }
