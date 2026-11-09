@@ -471,11 +471,32 @@ contactForm.addEventListener('submit', async (e) => {
   }));
 })();
 
-/* ============ INSTAGRAM (Behold) У РОЗДІЛІ «ПРО НАС» ============ */
-// Скрипт віджета вантажимо, коли розділ наближається до екрана, — головна лишається швидкою
-(function initBehold() {
+/* ============ INSTAGRAM (Behold) ============ */
+// Головна — стрічка мережі в розділі «Про нас»; сторінка залу — своя стрічка (код Behold задається в адмінці).
+// Скрипт віджета вантажимо, коли блок наближається до екрана, — сторінка лишається швидкою.
+const beholdFeedId = (raw) => {
+  const v = String(raw || '').trim();
+  const m = v.match(/feed-id=["']?([A-Za-z0-9_-]{6,})/) || v.match(/behold\.so\/([A-Za-z0-9_-]{6,})/) || v.match(/^([A-Za-z0-9_-]{6,})$/);
+  return m ? m[1] : '';
+};
+(async function initBehold() {
+  const sec = document.querySelector('[data-behold]');
+  if (sec) {
+    let feed = sec.dataset.feed || '';
+    if (leadsClient) {
+      try {
+        const { data, error } = await leadsClient.from('site_settings').select('value').eq('key', sec.dataset.behold);
+        if (!error && data && data[0]) feed = beholdFeedId(data[0].value); // порожньо — блок вимкнено
+      } catch (e) { /* лишаємо стрічку за замовчуванням */ }
+    }
+    if (!feed) { sec.hidden = true; return; }
+    const w = document.createElement('behold-widget');
+    w.setAttribute('feed-id', feed);
+    sec.querySelector('.behold-slot').replaceChildren(w);
+    sec.hidden = false;
+  }
   const block = document.querySelector('.about__insta');
-  if (!block) return;
+  if (!block || (sec && sec.hidden)) return;
   const load = () => {
     if (window.__bhldScript) return;
     window.__bhldScript = true;
