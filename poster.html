@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>XFit — плакат з QR для рецепції</title>
+<link rel="icon" href="assets/favicon.svg?v=2" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Плакат A4 для друку: білий фон (економія фарби), фірмовий зелений і чорний */
+:root{ --g:#39ff6a; --g-dark:#13a83b; --ink:#0b0d0b; --mut:#5c665c; --line:#e3e8e3; }
+*{ box-sizing:border-box; }
+html,body{ margin:0; background:#e9ece9; color:var(--ink); font-family:"Inter", system-ui, sans-serif; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+.bar{ position:sticky; top:0; z-index:2; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:center; padding:12px max(16px, env(safe-area-inset-left, 0px)); background:#0b0d0b; color:#fff; font-size:14px; }
+.bar b{ color:var(--g); }
+.bar button{ height:40px; padding:0 18px; border-radius:999px; border:0; background:var(--g); color:#04140a; font:800 14px "Inter", sans-serif; cursor:pointer; }
+.bar label{ display:flex; align-items:center; gap:6px; }
+.bar select{ height:36px; border-radius:10px; border:1px solid #333; background:#151915; color:#fff; padding:0 10px; font:600 14px "Inter", sans-serif; }
+.sheet{ width:210mm; min-height:297mm; margin:20px auto; background:#fff; padding:16mm 16mm 14mm; display:flex; flex-direction:column; align-items:center; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.18); }
+.logo{ width:58mm; height:auto; }
+.kicker{ margin:7mm 0 0; font:800 11pt "Inter", sans-serif; letter-spacing:.22em; text-transform:uppercase; color:var(--g-dark); }
+h1{ margin:3mm 0 0; font:900 30pt/1.05 "Unbounded", "Arial Black", sans-serif; letter-spacing:-.02em; text-wrap:balance; }
+h1 span{ color:var(--g-dark); }
+.qr{ position:relative; margin:10mm 0 0; padding:7mm; border-radius:9mm; border:2.2mm solid var(--g); background:#fff; }
+.qr svg{ display:block; width:92mm; height:92mm; }
+.qr .x{ position:absolute; left:50%; top:50%; width:20mm; height:20mm; margin:-10mm 0 0 -10mm; border-radius:5mm; background:#0b0d0b; display:grid; place-items:center; }
+.qr .x svg{ width:15mm; height:auto; }
+.hint{ margin:5mm 0 0; font:700 13pt "Inter", sans-serif; }
+.steps{ list-style:none; margin:9mm 0 0; padding:0; display:grid; grid-template-columns:repeat(3, 1fr); gap:5mm; width:100%; counter-reset:s; }
+.steps li{ counter-increment:s; padding:5mm 4mm; border-radius:5mm; border:1px solid var(--line); font:600 10.5pt/1.35 "Inter", sans-serif; }
+.steps li::before{ content:counter(s); display:grid; place-items:center; width:9mm; height:9mm; margin:0 auto 3mm; border-radius:3mm; background:var(--g); color:#04140a; font:900 12pt "Unbounded", sans-serif; }
+.perks{ margin:8mm 0 0; display:flex; flex-wrap:wrap; justify-content:center; gap:3mm; }
+.perks span{ padding:2.5mm 5mm; border-radius:999px; background:#0b0d0b; color:#fff; font:700 10pt "Inter", sans-serif; }
+.perks span b{ color:var(--g); }
+.foot{ margin-top:auto; padding-top:8mm; font:600 10pt "Inter", sans-serif; color:var(--mut); }
+.foot b{ color:var(--ink); }
+@media print{
+  html,body{ background:#fff; }
+  .bar{ display:none; }
+  .sheet{ margin:0; box-shadow:none; width:auto; min-height:auto; height:297mm; }
+  @page{ size:A4 portrait; margin:0; }
+}
+@media (max-width: 820px){
+  .sheet{ width:100%; min-height:0; margin:0; padding:24px 16px; box-shadow:none; }
+  h1{ font-size:24px; }
+  .qr svg{ width:min(70vw, 300px); height:min(70vw, 300px); }
+  .steps{ grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+<div class="bar">
+  <span>Плакат для рецепції · QR веде на реєстрацію (<b>джерело «плакат»</b>)</span>
+  <label>Зал <select id="gym"><option>Подільськ</option><option>Балта</option></select></label>
+  <button type="button" id="print">Надрукувати A4</button>
+</div>
+<main class="sheet">
+  <svg class="logo" viewBox="314 60 792 435" role="img" aria-label="XFit"><path fill="#13a83b" d="M 845 69 Q 845 66 842 66 L 727 66 Q 721 66 716.8 70.2 L 574.1 212.9 Q 570 217 564.5 215 L 564.5 215 Q 559 213 556.4 207.8 L 535.7 166.4 Q 533 161 527 161 L 436 161 Q 430 161 432.8 166.3 L 495.2 284.7 Q 498 290 496.7 295.9 L 496.3 298.1 Q 495 304 490.8 308.2 L 321.8 477.2 Q 320 479 320 481.5 L 320 481.5 Q 320 484 322.5 484 L 420 484 Q 426 484 430.2 479.7 L 532.8 374.3 Q 537 370 539.9 375.2 L 599.1 480.8 Q 602 486 608 486 L 656 486 Q 662 486 663.4 480.2 L 676.6 425.8 Q 678 420 675.1 414.8 L 616.9 310.2 Q 614 305 618.2 300.7 L 842.9 74.1 Q 845 72 845 69 Z"/><path fill="#0b0d0b" d="M 735.7 242.9 Q 737 237 743 237 L 884 237 Q 890 237 888.8 242.9 L 882.2 276.1 Q 881 282 875 282 L 786 282 Q 780 282 778.7 287.9 L 767.3 338.1 Q 766 344 772 344 L 845 344 Q 851 344 849.8 349.9 L 843.2 384.1 Q 842 390 836 390 L 762 390 Q 756 390 754.7 395.9 L 735.3 483.1 Q 734 489 728 489 L 687 489 Q 681 489 682.3 483.1 Z M 899.7 311.9 Q 901 306 907 306 L 946 306 Q 952 306 950.7 311.9 L 912.3 483.1 Q 911 489 905 489 L 866 489 Q 860 489 861.3 483.1 Z M 910.8 242.9 Q 912 237 918 237 L 960 237 Q 966 237 964.8 242.9 L 958.2 277.1 Q 957 283 951 283 L 909 283 Q 903 283 904.2 277.1 Z M 1010.5 266.8 Q 1012 261 1018 261 L 1056 261 Q 1062 261 1060.7 266.9 L 1053.3 299.1 Q 1052 305 1058 305 L 1093 305 Q 1099 305 1097.6 310.8 L 1090.4 342.2 Q 1089 348 1083 348 L 1049 348 Q 1043 348 1041.8 353.9 L 1027.5 422.7 Q 1027 425 1026.6 427.3 Q 1026.1 433.6 1026.3 435.4 Q 1027.3 440.4 1028 441.7 Q 1030.7 445.2 1031.9 446 Q 1036.3 448 1037.9 448.4 Q 1044 449 1046.1 449 L 1065 449 Q 1071 449 1069.7 454.9 L 1063.3 483.1 Q 1062 489 1056 489 L 1016.3 489 Q 1003.3 488.5 999.5 487.8 Q 989.1 484.6 986.3 482.9 Q 979 476.8 977.3 474.1 Q 973.1 465 972.4 461.6 Q 971.3 449.3 971.6 445.2 Q 972 440 972.9 435.4 L 988.8 353.9 Q 990 348 984 348 L 972 348 Q 966 348 967.2 342.1 L 973.8 310.9 Q 975 305 981 305 L 995 305 Q 1001 305 1002.5 299.2 Z"/></svg>
+  <p class="kicker">Карта клієнта XFit</p>
+  <h1>Твій абонемент — <span>у телефоні</span></h1>
+  <div class="qr"><div id="qr" aria-label="QR-код на реєстрацію карти клієнта"></div><div class="x"><svg viewBox="314 60 540 430" aria-hidden="true"><path fill="#39ff6a" d="M 845 69 Q 845 66 842 66 L 727 66 Q 721 66 716.8 70.2 L 574.1 212.9 Q 570 217 564.5 215 L 564.5 215 Q 559 213 556.4 207.8 L 535.7 166.4 Q 533 161 527 161 L 436 161 Q 430 161 432.8 166.3 L 495.2 284.7 Q 498 290 496.7 295.9 L 496.3 298.1 Q 495 304 490.8 308.2 L 321.8 477.2 Q 320 479 320 481.5 L 320 481.5 Q 320 484 322.5 484 L 420 484 Q 426 484 430.2 479.7 L 532.8 374.3 Q 537 370 539.9 375.2 L 599.1 480.8 Q 602 486 608 486 L 656 486 Q 662 486 663.4 480.2 L 676.6 425.8 Q 678 420 675.1 414.8 L 616.9 310.2 Q 614 305 618.2 300.7 L 842.9 74.1 Q 845 72 845 69 Z"/></svg></div></div>
+  <p class="hint">Наведи камеру телефону на код</p>
+  <ol class="steps">
+    <li>Відскануй QR-код камерою телефону</li>
+    <li>Введи імʼя й телефон — це хвилина</li>
+    <li>Покажи карту на рецепції — і тренуйся</li>
+  </ol>
+  <div class="perks">
+    <span><b>✓</b> Таймер тренувань — одразу</span>
+    <span><b>✓</b> Без пластикової карти</span>
+    <span><b>✓</b> Видно, скільки днів лишилось</span>
+    <span><b>✓</b> Щоденник і рекорди</span>
+  </div>
+  <p class="foot">Вже маєш пластикову карту? Обери «Я вже клієнт» і відскануй її — вона зʼявиться в телефоні.<br><b id="gymLine">XFit Подільськ</b> · xfit.com.ua</p>
+</main>
+<script src="js/vendor/qrcode-generator-1.4.4.js"></script>
+<script>
+(function () {
+  // QR веде на реєстрацію на цьому ж сайті (у тестовій версії — на /beta)
+  const base = location.href.replace(/[^/]*([?#].*)?$/, '');
+  function draw() {
+    const qr = qrcode(0, 'H');
+    qr.addData(base + 'card.html?src=poster');
+    qr.make();
+    document.getElementById('qr').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+  }
+  draw();
+  const gym = document.getElementById('gym');
+  gym.addEventListener('change', () => { document.getElementById('gymLine').textContent = 'XFit ' + gym.value; });
+  document.getElementById('print').addEventListener('click', () => window.print());
+})();
+</script>
+</body>
+</html>

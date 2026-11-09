@@ -4,11 +4,22 @@
    свіжість (кеш — лише запасний варіант офлайн), тож оновлення сайту
    видно одразу. Бібліотеки з CDN мають версію в адресі — їх беремо з
    кешу. Запити до Supabase, EmailJS та інших сайтів не чіпаємо. */
-const CACHE = 'xfit-v6'; // змінюй версію, коли міняєш сам sw.js
+const CACHE = 'xfit-v24'; // змінюй версію, коли міняєш сам sw.js
 const CORE = [
   './',
   'index.html',
-  'manifest.webmanifest?v=2',
+  'train.html',
+  'css/style.css?v=39',
+  'css/train.css?v=6',
+  'js/train.js?v=6',
+  'card.html',
+  'css/card.css?v=15',
+  'js/card.js?v=17',
+  'js/scanner.js?v=2',
+  'js/gallery.js?v=2',
+  'js/vendor/qrcode-generator-1.4.4.js',
+  'js/vendor/jsbarcode-3.11.6.min.js',
+  'manifest.webmanifest?v=3',
   'assets/favicon.svg?v=2',
   'assets/logo.svg',
   'assets/icon-192.png?v=2',
@@ -21,7 +32,8 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      // чистимо лише старі кеші основного сайту (xfit-v…), кеш тестової версії /beta/ не чіпаємо
+      .then((keys) => Promise.all(keys.filter((k) => /^xfit-v\d+$/.test(k) && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -39,7 +51,9 @@ self.addEventListener('fetch', (event) => {
   // = браузер питає сервер, чи файл змінився; якщо ні — відповідь миттєва)
   if (sameOrigin) {
     const isPage = req.mode === 'navigate';
-    const key = isPage ? 'index.html' : req;
+    // кожна сторінка кешується окремо (без ?source=… та #…)
+    const page = url.pathname.split('/').pop() || 'index.html';
+    const key = isPage ? page : req;
     event.respondWith(
       fetch(isPage ? req.url : req, { cache: 'no-cache', credentials: 'same-origin' })
         .then((res) => {
@@ -49,7 +63,7 @@ self.addEventListener('fetch', (event) => {
           }
           return res;
         })
-        .catch(() => caches.match(key).then((cached) => cached || (isPage ? caches.match('./') : undefined)))
+        .catch(() => caches.match(key).then((cached) => cached || (isPage ? caches.match('index.html') : undefined)))
     );
     return;
   }

@@ -1,0 +1,352 @@
+/* iOS: hover-ефекти обгорнуто в (hover: hover), щоб не «залипали» після дотику */
+/* ============ XFIT — віртуальна карта клієнта ============ */
+.card-page{ min-height: 100vh; display:flex; flex-direction:column; }
+.card-main{ flex:1; width:100%; max-width: 460px; margin: 0 auto; padding: 24px max(18px, env(safe-area-inset-right, 0px)) max(32px, env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)); display:flex; flex-direction:column; gap: 22px; }
+.card-head{ display:flex; align-items:center; justify-content:space-between; padding-top: env(safe-area-inset-top, 0px); }
+.card-head a{ display:flex; align-items:center; gap:6px; color: var(--muted); font-size:.85rem; }
+.card-head .logo__svg{ height: 26px; }
+.card-head__title{ font-size:.72rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color: var(--green); }
+
+/* ---------- Сама карта ---------- */
+.xcard{
+  --mx: 50%; --my: 30%;
+  position:relative; width:100%; aspect-ratio: 1.586; perspective: 1400px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; user-select:none;
+}
+.xcard:focus-visible{ outline: 2px solid var(--green); outline-offset: 6px; border-radius: 22px; }
+.xcard__inner{ position:absolute; inset:0; transform-style: preserve-3d; transition: transform .7s cubic-bezier(.2,.8,.2,1); }
+.xcard.is-flipped .xcard__inner{ transform: rotateY(180deg); }
+.xcard__face{
+  position:absolute; inset:0; border-radius: 20px; overflow:hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(57,255,106,0.30), transparent 55%),
+    radial-gradient(80% 70% at 0% 100%, rgba(57,255,106,0.14), transparent 60%),
+    linear-gradient(135deg, #0f1a11 0%, #070907 52%, #0c160e 100%);
+  border: 1px solid rgba(57,255,106,0.28);
+  box-shadow: 0 30px 70px -30px rgba(57,255,106,0.55), 0 10px 30px -10px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.08);
+  color: var(--white);
+}
+/* блиск, що рухається за пальцем / нахилом */
+.xcard__face::after{
+  content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode: screen;
+  background: radial-gradient(60% 50% at var(--mx) var(--my), rgba(255,255,255,0.14), transparent 60%);
+}
+.xcard__grid{
+  position:absolute; inset:0; opacity:.55;
+  background-image: linear-gradient(rgba(57,255,106,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(57,255,106,0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(90% 90% at 80% 10%, #000 10%, transparent 75%);
+}
+.xcard__watermark{ position:absolute; right: -6%; bottom: -12%; width: 62%; opacity: .07; fill: var(--green); }
+
+.xcard__front{ padding: 6.2% 7%; display:flex; flex-direction:column; }
+.xcard__top{ position:relative; display:flex; align-items:flex-start; justify-content:space-between; }
+.xcard__logo{ height: clamp(22px, 7.5cqw, 32px); width:auto; overflow:visible; }
+.xcard__logo .m{ fill: var(--green); filter: drop-shadow(0 0 8px rgba(57,255,106,0.55)); }
+.xcard__logo .w{ fill: var(--white); }
+.xcard__band{
+  position:absolute; top:-30%; right: 18%; width: 22%; height: 170%; transform: rotate(32deg);
+  background: linear-gradient(180deg, rgba(57,255,106,0) 0%, rgba(57,255,106,0.16) 45%, rgba(57,255,106,0) 100%);
+  pointer-events:none;
+}
+.xcard__top .xcard__status{
+  padding: 5px 10px; border-radius: 999px; border: 1px solid currentColor; background: rgba(6,7,6,0.55);
+}
+.xcard__plan-block{ position:relative; margin-top: auto; display:flex; flex-direction:column; gap: 4px; }
+.xcard__kicker{ font-size: .56rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(244,246,244,0.55); }
+.xcard__plan{
+  font-family: var(--font-display); font-weight: 900; text-transform: uppercase; letter-spacing: .02em; line-height: 1;
+  font-size: clamp(1.5rem, 10cqw, 2.6rem); color: var(--white); text-shadow: 0 0 24px rgba(57,255,106,0.35);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.xcard[data-state="pending"] .xcard__plan{ color: rgba(244,246,244,0.75); text-shadow:none; }
+.xcard__bottom{ position:relative; display:flex; align-items:flex-end; justify-content:space-between; gap: 12px; margin-top: 6%; }
+.xcard__field{ display:flex; flex-direction:column; gap: 3px; min-width:0; }
+.xcard__field span{ font-size: .52rem; letter-spacing:.18em; text-transform:uppercase; color: rgba(244,246,244,0.55); }
+.xcard__field b{ font-weight: 700; font-size: clamp(.72rem, 3.6cqw, .95rem); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow: ellipsis; }
+/* Імʼя клієнта — до двох рядків замість обрізання трикрапкою */
+.xcard__field:not(.xcard__field--right) b{ white-space:normal; line-height:1.2; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow-wrap:anywhere; }
+.xcard__field--right{ text-align:right; flex-shrink:0; }
+.xcard{ container-type: inline-size; }
+
+.xcard__back{ transform: rotateY(180deg); display:flex; flex-direction:column; }
+.xcard__backbody{ position:relative; flex:1; display:flex; align-items:center; gap: 6%; padding: 6% 6% 0; min-height:0; }
+.xcard__qr{ flex-shrink:0; height: 92%; aspect-ratio:1; background:#fff; border-radius: 10px; padding: 3.5%; box-shadow: 0 0 0 3px rgba(57,255,106,0.35); }
+.xcard__qr svg, .xcard__qr img{ display:block; width:100%; height:100%; }
+.xcard__info{ display:flex; flex-direction:column; gap: 6px; min-width:0; }
+.xcard__info .xcard__field b{ font-size: clamp(.68rem, 3.3cqw, .88rem); }
+.xcard__hint{ font-size: .6rem; line-height:1.4; color: rgba(244,246,244,0.6); margin:0; }
+.xcard__barcode{ position:relative; margin: 3% 6% 5%; background:#fff; border-radius: 8px; padding: 2.4% 2%; height: 23%; display:flex; align-items:center; justify-content:center; }
+.xcard__barcode{ flex-direction:column; gap: 1px; cursor: zoom-in; }
+.xcard__barcode svg{ width:100%; flex:1; min-height:0; }
+.xcard__qr{ cursor: zoom-in; }
+
+.xcard-zoom{
+  position:fixed; inset:0; z-index: 300; display:flex; align-items:center; justify-content:center;
+  background: #000; cursor: zoom-out; overflow:hidden;
+}
+.xcard-zoom[hidden]{ display:none; }
+body.scan-open{ overflow:hidden; }
+
+/* Збільшена карта: на вертикальному екрані повертається боком і займає всю висоту */
+.scan-card{ position:relative; flex:none; aspect-ratio: 1.586; width: min(94vw, 88vh * 1.586); container-type: inline-size; }
+@media (orientation: portrait){
+  .scan-card{ width: min(92vh, 148vw); transform: rotate(90deg); }
+}
+.scan-card__face{ backface-visibility: visible; -webkit-backface-visibility: visible; display:flex; flex-direction:column; padding: 4.5cqw 5cqw 3.5cqw; gap: 3cqw; border-radius: 4.6cqw; }
+.scan-card__top{ position:relative; display:flex; align-items:center; justify-content:space-between; gap: 4cqw; }
+.scan-card__top .xcard__logo{ height: 7cqw; }
+.scan-card__name{ font-weight: 700; font-size: 3.4cqw; letter-spacing: .08em; text-transform: uppercase; text-align:right; white-space:nowrap; overflow:hidden; text-overflow: ellipsis; }
+.scan-card__bar{ position:relative; flex:1; height:auto; margin:0; padding: 3cqw 3cqw 2cqw; border-radius: 2.4cqw; cursor: inherit; gap: 1cqw; box-shadow: 0 0 0 0.6cqw rgba(57,255,106,0.35); }
+.scan-card__bar .xcard__digits{ font-size: 4cqw; letter-spacing: .22em; }
+.scan-card__qr{ position:relative; flex:1; align-self:center; aspect-ratio:1; background:#fff; border-radius: 2.4cqw; padding: 2cqw; }
+.scan-card__qr svg{ width:100%; height:100%; display:block; }
+.scan-card__tip{ position:relative; margin:0; text-align:center; font-size: 2.6cqw; color: rgba(244,246,244,0.6); }
+
+.scan-mode-btn{
+  align-self:center; display:inline-flex; align-items:center; gap: 10px; padding: 12px 22px; border-radius: 999px; cursor:pointer;
+  background: #fff; color: #060706; border: 0; font: 700 .92rem var(--font-body);
+  box-shadow: 0 10px 30px -12px rgba(255,255,255,0.45);
+}
+.scan-mode-btn[hidden]{ display:none; }
+.scan-mode-btn svg{ width: 22px; height: 22px; fill:none; stroke: #060706; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* стан абонемента */
+.xcard__status{ display:inline-flex; align-items:center; gap:6px; font-size:.6rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color: var(--green); }
+.xcard__status::before{ content:""; width:7px; height:7px; border-radius:50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+.xcard[data-state="soon"] .xcard__status{ color: #ffb020; }
+.xcard[data-state="expired"] .xcard__status{ color: #ff6b6b; }
+.xcard[data-state="expired"] .xcard__face{ filter: saturate(.35); }
+
+.card-flip-hint{ text-align:center; font-size:.8rem; color: var(--muted); margin: -8px 0 0; display:flex; align-items:center; justify-content:center; gap:6px; }
+.card-flip-hint svg{ width:14px; height:14px; fill:none; stroke: currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+/* ---------- Деталі під картою ---------- */
+.card-details{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; display:flex; flex-direction:column; gap: 14px; }
+.card-row{ display:flex; justify-content:space-between; gap: 16px; font-size:.92rem; }
+.card-row span{ color: var(--muted); }
+.card-row b{ font-weight:600; text-align:right; font-variant-numeric: tabular-nums; }
+.card-progress{ display:flex; flex-direction:column; gap: 8px; }
+.card-progress__bar{ height: 8px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow:hidden; }
+.card-progress__bar i{ display:block; height:100%; border-radius: 999px; background: var(--green); box-shadow: 0 0 12px var(--green-glow); transition: width .6s ease; }
+.xcard-wrap[data-state="soon"] .card-progress__bar i{ background:#ffb020; box-shadow:none; }
+.xcard-wrap[data-state="expired"] .card-progress__bar i{ background:#ff6b6b; box-shadow:none; }
+.card-progress__label{ display:flex; justify-content:space-between; font-size:.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.card-progress__label b{ color: var(--white); }
+.card-note{ font-size:.82rem; color: var(--muted); text-align:center; margin:0; }
+.card-actions{ display:flex; flex-direction:column; gap: 10px; }
+.card-state{ text-align:center; padding: 40px 18px; border:1px dashed var(--border); border-radius: var(--radius); color: var(--muted); }
+.card-state h2{ font-size: 1.1rem; color: var(--white); margin-bottom: 8px; }
+.card-demo-badge{ align-self:center; font-size:.7rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#ffb020; border:1px solid rgba(255,176,32,0.4); border-radius:999px; padding: 5px 12px; }
+
+@media (prefers-reduced-motion: reduce){ .xcard__inner{ transition: none; } }
+
+/* ---------- Реєстрація ---------- */
+.reg{ background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding: 22px 20px; display:flex; flex-direction:column; gap: 14px; }
+.reg[hidden]{ display:none; }
+.reg__title{ font-size: 1.25rem; line-height:1.2; margin-bottom: 8px; text-wrap: balance; }
+.reg__lead{ font-size:.9rem; margin:0; }
+.reg__row{ display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; }
+.reg__field{ display:flex; flex-direction:column; gap: 6px; min-width:0; }
+.reg__field > span{ font-size:.74rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color: var(--muted); }
+.reg__field i{ font-style:normal; text-transform:none; letter-spacing:0; opacity:.7; }
+.reg__field input, .reg__field select{
+  width:100%; min-width:0; background: var(--bg); border:1px solid var(--border); border-radius: 12px; color: var(--white);
+  font: 500 1rem var(--font-body); padding: 13px 14px; color-scheme: dark;
+}
+.reg__field input:focus, .reg__field select:focus{ outline:none; border-color: var(--green); }
+.reg__field input[aria-invalid="true"]{ border-color: #ff6b6b; }
+.reg__hp{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
+.reg__consent{ display:flex; gap: 10px; align-items:flex-start; font-size:.84rem; color: var(--muted); cursor:pointer; }
+.reg__consent input{ width:20px; height:20px; margin-top: 1px; accent-color: var(--green); flex-shrink:0; }
+.reg__error{ color:#ff8080; font-size:.85rem; margin:0; min-height: 1.1em; }
+.xcard[data-state="pending"] .xcard__status{ color: #ffb020; }
+.xcard-wrap[data-state="pending"] .card-progress__bar i{ background: rgba(255,255,255,0.25); box-shadow:none; }
+@media (max-width: 420px){ .reg__row{ grid-template-columns: minmax(0,1fr); } }
+
+/* ---------- Кнопки «Таймер» і «Мої тренування» ---------- */
+.card-apps{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.card-apps[hidden]{ display:none; }
+.card-app{
+  position:relative; display:flex; flex-direction:column; gap: 4px; padding: 16px; border-radius: 20px;
+  background: var(--panel); border: 1px solid rgba(57,255,106,0.35); color: var(--white);
+  transition: border-color .2s, transform .15s, box-shadow .2s;
+}
+@media (hover: hover) and (pointer: fine){ .card-app:hover{ border-color: var(--green); box-shadow: 0 14px 34px -18px var(--green-glow); } }
+.card-app:active{ transform: scale(.97); }
+.card-app__icon{ width: 46px; height: 46px; border-radius: 14px; display:grid; place-items:center; background: var(--green); margin-bottom: 8px; }
+.card-app__icon svg{ width: 24px; height: 24px; fill:none; stroke: #04140a; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.card-app b{ font-size: 1rem; }
+.card-app small{ color: var(--muted); font-size: .78rem; line-height: 1.3; }
+.card-app__lock{ display:none; margin-top: 6px; font-size: .74rem; font-weight: 600; color: #ffb020; }
+.card-apps.is-locked .card-app{ border-color: var(--border); }
+.card-apps.is-locked .card-app__icon{ background: rgba(255,255,255,0.08); }
+.card-apps.is-locked .card-app__icon svg{ stroke: var(--muted); }
+.card-apps.is-locked .card-app__lock{ display:block; }
+
+/* ---------- Штрихкод EAN-13: цифри під штрихами, як на пластиковій карті ---------- */
+.xcard__digits{ font: 600 clamp(.5rem, 2.6cqw, .72rem)/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .14em; color:#060706; }
+.xcard-zoom__sheet--bar .xcard__digits{ font-size: 1.15rem; }
+
+/* ---------- Пластикова карта: сканування або ввід цифр ---------- */
+.plastic{ display:flex; flex-direction:column; gap: 12px; padding: 16px; border-radius: 18px; border: 1px solid rgba(57,255,106,0.35); background: rgba(57,255,106,0.05); }
+.plastic[hidden]{ display:none; }
+.plastic__lead{ margin:0; font-size: .86rem; color: var(--muted); line-height: 1.45; }
+.plastic__cam{ position:relative; border-radius: 16px; overflow:hidden; background:#000; aspect-ratio: 4 / 3; }
+.plastic__cam[hidden]{ display:none; }
+.plastic__cam video{ width:100%; height:100%; object-fit: cover; display:block; }
+.plastic__frame{ position:absolute; left: 10%; right: 10%; top: 32%; bottom: 32%; border: 2px solid var(--green); border-radius: 12px; box-shadow: 0 0 0 999px rgba(0,0,0,0.35); }
+.plastic__frame::after{ content:""; position:absolute; left: 6%; right: 6%; top: 50%; height: 2px; background: rgba(255,80,80,0.85); animation: scanLine 1.6s ease-in-out infinite; }
+@keyframes scanLine{ 50%{ transform: translateY(-20px); } }
+.plastic__scan{ display:flex; align-items:center; justify-content:center; gap: 10px; }
+.plastic__scan svg{ width: 22px; height: 22px; fill:none; stroke: var(--green); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.plastic__input{ font-family: ui-monospace, "SF Mono", Menlo, monospace !important; letter-spacing: .12em; font-size: 1.1rem !important; }
+.plastic__status{ margin:0; min-height: 1.2em; font-size: .85rem; color: var(--muted); }
+.plastic__status.is-ok{ color: var(--green); font-weight: 600; }
+.plastic__status.is-bad{ color: #ff8080; }
+.reg__plastic-toggle span{ color: var(--white); font-weight: 600; }
+.plastic-link{ display:flex; flex-direction:column; gap: 10px; }
+.plastic-link[hidden]{ display:none; }
+
+/* Номер пластикової карти поруч із логотипом (як на лицьовому боці пластикової) */
+.xcard__brand{ display:flex; align-items:center; gap: 3cqw; }
+.xcard__no{ font: 800 clamp(.7rem, 3.6cqw, 1rem) var(--font-display); letter-spacing: .04em; color: var(--white); opacity: .9; }
+.scan-card__name small{ display:block; margin-top: .6cqw; font-size: 2.8cqw; letter-spacing: .1em; color: var(--green); }
+
+/* ---------- Вхід / реєстрація ---------- */
+.reg__switch{ align-self:stretch; padding: 12px 14px; border-radius: 14px; border: 1px dashed rgba(57,255,106,0.45); background: rgba(57,255,106,0.05); color: var(--muted); font: 500 .88rem var(--font-body); cursor:pointer; text-align:center; }
+.reg__switch b{ color: var(--green); }
+.login-ways{ display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.login-ways button{ padding: 12px 8px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg); color: var(--white); font: 600 .86rem var(--font-body); cursor:pointer; }
+.login-ways button[aria-checked="true"]{ border-color: var(--green); color: var(--green); background: rgba(57,255,106,0.08); }
+.login-help{ margin:0; font-size: .8rem; color: var(--muted); line-height: 1.45; text-align:center; }
+
+/* ============ Дизайн як у пластикової карти XFit ============ */
+.xcard{ --xc-lime: #8dc63f; }
+.xcard__face{
+  background:
+    radial-gradient(60% 80% at 22% 30%, rgba(255,255,255,0.07), transparent 70%),
+    radial-gradient(50% 60% at 78% 75%, rgba(255,255,255,0.05), transparent 70%),
+    linear-gradient(160deg, #2a2a30 0%, #1d1d22 45%, #16161a 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 30px 70px -32px rgba(0,0,0,0.9), 0 10px 30px -10px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.08);
+  border-radius: 4.4cqw;
+}
+/* розмиті «фото залу» на тлі, як на пластиковій */
+.xc-light{
+  position:absolute; inset: -10%; pointer-events:none; opacity:.55; filter: blur(2.4cqw);
+  background:
+    linear-gradient(115deg, transparent 18%, rgba(255,255,255,0.06) 19%, transparent 26%),
+    linear-gradient(115deg, transparent 38%, rgba(255,255,255,0.05) 39%, transparent 47%),
+    linear-gradient(115deg, transparent 60%, rgba(255,255,255,0.045) 61%, transparent 70%);
+}
+.xc-deco{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; fill:none; stroke: rgba(255,255,255,0.16); stroke-width: 4; vector-effect: non-scaling-stroke; }
+.xcard .xcard__logo .m{ fill: var(--xc-lime); filter: none; }
+.xcard .xcard__logo .w{ fill: #f6f7f6; }
+
+/* лицьовий бік */
+.xcard__front{ padding: 0; display:block; }
+.xcard__front .xcard__status{ position:absolute; left: 5.5cqw; top: 5cqw; font-size: max(.55rem, 2.3cqw); padding: .9cqw 2cqw; border-radius: 99px; border: 1px solid currentColor; background: rgba(0,0,0,0.35); }
+.xc-center{ position:absolute; left:0; right:0; top: 47%; transform: translateY(-50%); display:flex; flex-direction:column; align-items:center; gap: 2.2cqw; }
+.xc-center .xcard__logo{ width: 48cqw; height: auto; }
+.xc-tagline{ font: 600 3.1cqw var(--font-body); letter-spacing: .14em; text-transform: uppercase; color: rgba(246,247,246,0.85); }
+.xc-bottom{ position:absolute; left: 5.5cqw; right: 6cqw; bottom: 5cqw; display:flex; align-items:flex-end; justify-content:space-between; gap: 3cqw; }
+.xc-meta{ font: 500 2.7cqw var(--font-body); color: rgba(246,247,246,0.6); white-space:nowrap; overflow:hidden; text-overflow: ellipsis; min-width:0; }
+.xc-bottom .xcard__no{ font: 800 5.6cqw var(--font-display); color: #f6f7f6; opacity:1; letter-spacing: .02em; }
+.xcard[data-state="pending"] .xc-center{ opacity: .8; }
+
+/* зворот: QR, імʼя, контакти зліва — вертикальний штрихкод справа */
+.xcard__back{ padding:0; display:block; }
+.xc-back{ position:absolute; left: 6cqw; top: 6cqw; bottom: 5cqw; width: 52cqw; display:flex; flex-direction:column; align-items:flex-start; gap: 1.6cqw; }
+.xc-back .xcard__qr{ height: auto; width: 25cqw; aspect-ratio: 1; padding: 1.4cqw; border-radius: 2cqw; box-shadow: none; flex:none; }
+.xc-back .xcard__info{ display:block; max-width: 100%; }
+.xc-back .xcard__field b{
+  display:inline-block; max-width: 100%; background:#fff; color:#111; border-radius: 1.4cqw; padding: .6cqw 1.8cqw;
+  font: 700 2.7cqw var(--font-body); letter-spacing: .02em; text-transform:none; white-space:nowrap; overflow:hidden; text-overflow: ellipsis; -webkit-line-clamp: unset;
+}
+.xc-line{ margin:0; display:flex; align-items:center; gap: 1.6cqw; font: 600 3cqw var(--font-body); color: #f2f3f2; white-space:nowrap; }
+.xc-line svg{ width: 3.4cqw; height: 3.4cqw; fill: var(--xc-lime); flex:none; }
+.xc-vbar{ position:absolute; right: 6cqw; top: 5cqw; bottom: 5cqw; width: 13cqw; height:auto; margin:0; padding:0; border-radius: 1.6cqw; background:#fff; overflow:hidden; display:block; }
+.xc-vbar__in{
+  position:absolute; left:50%; top:50%; width: 50cqw; height: 11cqw; transform: translate(-50%, -50%) rotate(90deg);
+  display:flex; flex-direction:column; align-items:stretch; gap: .4cqw; padding: .8cqw 0 .6cqw;
+}
+.xc-vbar__in svg{ width:100%; flex:1; min-height:0; }
+.xc-vbar__in .xcard__digits{ text-align:center; font-size: 2.2cqw; letter-spacing: .18em; }
+
+/* режим сканування — той самий стиль */
+.scan-card .xcard__logo .m{ fill: #8dc63f; filter:none; }
+.scan-card__face{ background:
+    radial-gradient(60% 80% at 22% 30%, rgba(255,255,255,0.07), transparent 70%),
+    linear-gradient(160deg, #2a2a30 0%, #1d1d22 45%, #16161a 100%); border: 1px solid rgba(255,255,255,0.12); }
+.scan-card__bar{ box-shadow: none; }
+.scan-card__name small{ color: #8dc63f; }
+
+/* ============ iPhone / сенсорні екрани ============ */
+.card-page{ min-height: 100vh; min-height: 100dvh; }
+/* 3D-переворот карти в Safari: обидва боки — окремі шари, інакше зворот може просвічувати дзеркально */
+.xcard__inner{ -webkit-transform-style: preserve-3d; }
+.xcard__front{ -webkit-transform: rotateY(0deg); transform: rotateY(0deg); }
+.xcard__back{ -webkit-transform: rotateY(180deg); }
+/* Режим сканування — від видимої висоти екрана (без панелі Safari) */
+.xcard-zoom{ height: 100vh; height: 100dvh; }
+.scan-card{ width: min(94vw, 88svh * 1.586); }
+@media (orientation: portrait){ .scan-card{ width: min(92svh, 148vw); } }
+.xcard, .scan-mode-btn, .card-app, .login-ways button{ -webkit-user-select: none; user-select: none; }
+
+/* ============ Залучення клієнтів ============ */
+/* «Я новенький» / «Я вже клієнт» */
+.reg-who{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.reg-who button{ display:flex; flex-direction:column; align-items:flex-start; gap: 2px; padding: 14px 14px; border-radius: 14px; text-align:left; cursor:pointer;
+  border:1px solid var(--border); background: rgba(255,255,255,0.03); color: var(--white); font: inherit; touch-action: manipulation; transition: border-color .2s, background .2s; }
+.reg-who b{ font-size: .95rem; }
+.reg-who small{ color: var(--muted); font-size: .78rem; }
+.reg-who [aria-checked="true"]{ border-color: var(--green); background: rgba(57,255,106,0.1); }
+.reg-who [aria-checked="true"] b{ color: var(--green); }
+.reg__invite{ margin: 0 0 10px; padding: 10px 14px; border-radius: 12px; background: rgba(57,255,106,0.1); border:1px solid rgba(57,255,106,0.35); color: var(--green); font-weight: 700; font-size: .9rem; }
+.reg__invite[hidden]{ display:none; }
+/* необовʼязкові поля — згорнуті */
+.reg__more{ border:1px solid var(--border); border-radius: 14px; padding: 0 14px; }
+.reg__more summary{ cursor:pointer; padding: 14px 0; font-weight: 600; font-size: .9rem; color: var(--white); list-style: none; }
+.reg__more summary::-webkit-details-marker{ display:none; }
+.reg__more summary::after{ content:"+"; float:right; color: var(--green); font-weight: 800; }
+.reg__more[open] summary::after{ content:"–"; }
+.reg__more summary i{ font-style: normal; color: var(--muted); font-weight: 500; margin-left: 6px; }
+.reg__more[open]{ padding-bottom: 14px; display:flex; flex-direction:column; gap: 10px; }
+.reg__hint{ margin: -4px 0 0; color: var(--muted); font-size: .78rem; }
+/* таймер відкритий одразу; «Мої тренування» — після активації */
+.card-apps.is-pending .card-app:nth-child(2){ border-color: var(--border); }
+.card-apps.is-pending .card-app:nth-child(2) .card-app__icon{ background: rgba(255,255,255,0.08); }
+.card-apps.is-pending .card-app:nth-child(2) .card-app__icon svg{ stroke: var(--muted); }
+.card-apps.is-pending .card-app:nth-child(2) .card-app__lock{ display:block; }
+/* запросити друга */
+.invite-btn{ display:inline-flex; align-items:center; justify-content:center; gap: 10px; }
+.invite-btn svg{ width: 20px; height: 20px; fill:none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; flex:none; }
+.invite-btn[hidden]{ display:none; }
+.card-actions.is-new [data-install]:not([hidden]), .card-actions.is-new .invite-btn:not([hidden]){ animation: inviteGlow 1.6s ease-in-out 3; }
+@keyframes inviteGlow{ 50%{ box-shadow: 0 0 0 8px rgba(57,255,106,0.18); } }
+@media (prefers-reduced-motion: reduce){ .card-actions.is-new *{ animation: none !important; } }
+.reg__consent[hidden], .card-details[hidden]{ display:none; }
+/* видалення карти й політика конфіденційності */
+.card-legal{ display:flex; flex-direction:column; align-items:center; gap: 10px; margin-top: 18px; padding-bottom: 8px; font-size: .82rem; }
+.card-legal a{ color: var(--muted); }
+.card-delete{ border:0; background:none; color: #ff8080; font: 600 .84rem var(--font-body); cursor:pointer; padding: 8px; text-decoration: underline; text-underline-offset: 3px; }
+.card-delete[hidden]{ display:none; }
+.card-delete-confirm{ width:100%; padding: 16px; border-radius: 16px; border:1px solid rgba(255,107,107,0.4); background: rgba(255,107,107,0.08); display:flex; flex-direction:column; gap: 8px; text-align:left; }
+.card-delete-confirm b{ color: var(--white); }
+.card-delete-confirm p{ margin:0; font-size: .85rem; line-height: 1.5; }
+.card-delete-confirm div{ display:flex; gap: 10px; margin-top: 4px; }
+.card-delete-confirm .btn{ flex:1; padding: 12px; font-size: .88rem; }
+.btn--danger{ background: #ff6b6b; color: #1a0505; border-color: transparent; }
+#deleteBox{ width:100%; }
+/* у нативному додатку кнопка «Встановити» не потрібна */
+.is-native [data-install]{ display:none !important; }
+/* вхід за QR-кодом карти */
+.login-qr{ display:inline-flex; align-items:center; justify-content:center; gap: 10px; }
+.login-qr svg{ width: 22px; height: 22px; fill:none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; flex:none; }
+.login-qr__cam{ position:relative; border-radius: 16px; overflow:hidden; background:#000; aspect-ratio: 1; }
+.login-qr__cam[hidden]{ display:none; }
+.login-qr__cam video{ width:100%; height:100%; object-fit: cover; display:block; }
+.login-qr__hint{ margin-top: -2px; }
+.card-flip-hint[hidden], .scan-mode-btn[hidden]{ display:none; }
+.reg__field[hidden], .plastic[hidden]{ display:none; }

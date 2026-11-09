@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">XFit</string>
+    <string name="title_activity_main">XFit</string>
+    <string name="package_name">ua.com.xfit.app</string>
+    <string name="custom_url_scheme">ua.com.xfit.app</string>
+</resources>

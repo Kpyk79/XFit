@@ -160,6 +160,20 @@ if (emailjsReady) {
 }
 
 const LEAD_SENT_KEY = 'xfit_lead_sent_at';
+
+// Після заявки — одразу запрошуємо отримати карту клієнта (імʼя й телефон уже підставлені)
+function offerCard(name, phone) {
+  let hasCard = false;
+  try { hasCard = !!(JSON.parse(localStorage.getItem('xfit_card_v1') || 'null') || {}).token; } catch (err) { /* ignore */ }
+  if (hasCard || document.getElementById('leadCardCta')) return;
+  try { sessionStorage.setItem('xfit_prefill', JSON.stringify({ name, phone })); } catch (err) { /* ignore */ }
+  const a = document.createElement('a');
+  a.id = 'leadCardCta';
+  a.className = 'btn btn--ghost btn--block lead-card-cta';
+  a.href = 'card.html?src=lead';
+  a.textContent = 'Поки чекаєш дзвінка — отримай карту клієнта в телефоні →';
+  formNote.after(a);
+}
 const LEAD_COOLDOWN_MS = 60 * 1000;
 
 contactForm.addEventListener('submit', async (e) => {
@@ -224,6 +238,7 @@ contactForm.addEventListener('submit', async (e) => {
   if (results.some((r) => r.status === 'fulfilled')) {
     try { localStorage.setItem(LEAD_SENT_KEY, String(Date.now())); } catch (err) { /* ignore */ }
     showNote('Дякуємо! Ми звʼяжемось з тобою найближчим часом.');
+    offerCard(name, phone);
     contactForm.reset();
     return;
   }
@@ -466,4 +481,13 @@ contactForm.addEventListener('submit', async (e) => {
     if (entries.some((e) => e.isIntersecting)) { io.disconnect(); load(); }
   }, { rootMargin: '600px 0px' });
   io.observe(block);
+})();
+
+/* ============ КНОПКА «ПРИЄДНАТИСЬ» → «МОЯ КАРТА», ЯКЩО КАРТА ВЖЕ Є ============ */
+(function initJoinButtons() {
+  let card = null;
+  try { card = JSON.parse(localStorage.getItem('xfit_card_v1') || 'null'); } catch (e) { /* ignore */ }
+  if (!card || !card.token) return;
+  document.querySelectorAll('[data-join]').forEach((el) => { el.textContent = 'Моя карта'; });
+  document.querySelectorAll('[data-join-go]').forEach((el) => { el.textContent = 'Відкрити карту →'; });
 })();

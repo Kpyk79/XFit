@@ -2,6 +2,21 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
+<script>
+/* Встановлений додаток відкривається на «Моїй карті», якщо клієнт уже має карту.
+   Спрацьовує лише на старті додатка (?source=app з маніфесту або перший екран сеансу),
+   тож кнопка «На сайт XFit» з карти відкриває сайт як звичайно. */
+(function () {
+  try {
+    var fromApp = /[?&]source=app\b/.test(location.search);
+    var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+    if (!fromApp && !(standalone && !sessionStorage.getItem('xfit_app_started'))) return;
+    sessionStorage.setItem('xfit_app_started', '1');
+    var card = JSON.parse(localStorage.getItem('xfit_card_v1') || 'null');
+    if (card && card.token) location.replace('card.html');
+  } catch (e) { /* немає доступу до сховища — лишаємось на головній */ }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>XFit — Твоя нова спортсім'я</title>
 <meta name="description" content="XFit — мережа сучасних тренажерних залів у Подільську та Балті. Тренажери, кросфіт, персональні тренування та групові заняття.">
@@ -92,7 +107,7 @@
 <link rel="icon" href="assets/favicon-32.png?v=2" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=2">
 <meta name="theme-color" content="#060706">
-<link rel="manifest" href="manifest.webmanifest?v=2">
+<link rel="manifest" href="manifest.webmanifest?v=3">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="XFit">
@@ -100,8 +115,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=33">
-<link rel="stylesheet" href="css/admin.css?v=25">
+<link rel="stylesheet" href="css/style.css?v=39">
+<link rel="stylesheet" href="css/admin.css?v=32">
 </head>
 <body>
 
@@ -132,7 +147,7 @@
       <span class="install-btn__full">Встановити додаток</span><span class="install-btn__short" aria-hidden="true">Додаток</span>
     </button>
 
-    <a href="#pricing" class="btn btn--primary btn--nav">Приєднатись</a>
+    <a href="card.html" class="btn btn--primary btn--nav" data-join>Приєднатись</a>
 
     <button class="burger" id="burger" aria-label="Меню" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -165,7 +180,9 @@
   <a href="#pricing" class="mobile-link">Абонементи</a>
   <a href="#schedule" class="mobile-link">Розклад</a>
   <a href="#contact" class="mobile-link">Контакти</a>
-  <a href="#pricing" class="btn btn--primary" style="margin-top:20px;">Приєднатись</a>
+  <a href="card.html" class="mobile-link">Карта клієнта</a>
+  <a href="train.html" class="mobile-link">Таймер і мої тренування</a>
+  <a href="card.html" class="btn btn--primary" style="margin-top:20px;" data-join>Приєднатись</a>
   <div class="ig-bar__links mobile-menu__ig">
     <a href="https://instagram.com/xfit_podilsk" class="ig-pill" target="_blank" rel="noopener" data-ig-handle-key="location1.instagram" aria-label="Instagram XFit Подільськ">
       <span class="ig-pill__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle class="ig-dot" cx="17.3" cy="6.7" r="1.1"/></svg></span>
@@ -193,6 +210,7 @@
   <div class="hero__glow hero__glow--2"></div>
 
   <div class="container hero__content">
+    <a href="card.html" class="btn btn--primary hero__join" data-join>Приєднатись</a>
     <p class="eyebrow reveal"><span class="dot"></span> <span data-edit-key="hero.eyebrow">XFIT · ПОДІЛЬСЬК · БАЛТА · ТВОЯ НОВА СПОРТСІМ'Я</span></p>
     <h1 class="hero__title reveal">
       <span data-edit-key="hero.title1">СИЛА.</span><br>
@@ -568,6 +586,35 @@
   </div>
 </section>
 
+<!-- ===== ДОДАТОК: таймер і «Мої тренування» ===== -->
+<section class="section" id="app">
+  <div class="container">
+    <p class="section-eyebrow reveal center">// ДОДАТОК XFIT</p>
+    <h2 class="section-title reveal center">Тренуйся з телефоном</h2>
+    <p class="reveal center app-promo__lead">Карта клієнта, таймер і «Мої тренування» — прямо в залі, навіть без інтернету. Встанови XFit на головний екран і відкривай одним дотиком.</p>
+    <div class="app-promo">
+      <a href="train.html#timer" class="app-card reveal">
+        <span class="app-card__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 2M9.5 2.5h5M19 6l1.5-1.5"/></svg></span>
+        <h3>Інтервальний таймер</h3>
+        <p>Табата, інтервали, EMOM, відпочинок, секундомір і дихальні вправи. Звук, вібрація, екран не гасне. Для клієнтів з активною картою.</p>
+        <span class="app-card__go">Відкрити таймер →</span>
+      </a>
+      <a href="train.html#log" class="app-card reveal">
+        <span class="app-card__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2zM4 19a2 2 0 0 1 2-2h12M8 7h6M8 11h4"/></svg></span>
+        <h3>Мої тренування</h3>
+        <p>Обирай вправу зі списку, записуй підходи в два дотики, святкуй рекорди й дивись прогрес на графіку. Дані лишаються на твоєму телефоні. Для клієнтів з активною картою.</p>
+        <span class="app-card__go">Відкрити мої тренування →</span>
+      </a>
+      <a href="card.html" class="app-card reveal">
+        <span class="app-card__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3"/><path d="M2.5 9.5h19M6 15h4"/></svg></span>
+        <h3>Карта клієнта</h3>
+        <p>Зареєструйся й обери абонемент, оплати на рецепції — адміністратор активує карту, і відкриються таймер та «Мої тренування».</p>
+        <span class="app-card__go" data-join-go>Отримати карту →</span>
+      </a>
+    </div>
+  </div>
+</section>
+
 <!-- ===== LOCATIONS ===== -->
 <section class="section section--alt" id="locations">
   <div class="container">
@@ -648,6 +695,9 @@
       <a href="#programs">Програми</a>
       <a href="#pricing">Абонементи</a>
       <a href="#contact">Контакти</a>
+      <a href="card.html">Карта клієнта</a>
+      <a href="train.html">Таймер і мої тренування</a>
+      <a href="privacy.html">Політика конфіденційності</a>
     </nav>
     <div class="footer__social">
       <a href="https://instagram.com/xfit_podilsk" target="_blank" rel="noopener" data-ig-handle-key="location1.instagram">Instagram Подільськ</a>
@@ -705,41 +755,7 @@
   </form>
 </div>
 
-<div class="admin-modal" id="adminLeadsModal">
-  <div class="admin-modal__box admin-modal__box--wide">
-    <p class="admin-modal__title">📋 Заявки з сайту</p>
-    <div class="admin-leads-list" id="adminLeadsList">
-      <p class="admin-leads-empty">Завантаження…</p>
-    </div>
-    <div class="admin-modal__actions">
-      <button type="button" class="btn btn--ghost" id="adminLeadsClose">Закрити</button>
-    </div>
-  </div>
-</div>
-
-<div class="admin-bar" id="adminBar">
-  <button type="button" class="admin-bar__collapse-toggle" id="adminBarCollapseToggle" aria-label="Згорнути/розгорнути панель">
-    <span class="admin-bar__label">⚙ Адмін-панель</span>
-    <span class="admin-bar__sync" id="adminBarSync"></span>
-    <span class="admin-bar__chevron">▾</span>
-  </button>
-
-  <div class="admin-bar__body" id="adminBarBody">
-    <button class="admin-bar__btn admin-bar__btn--primary admin-bar__btn--edit" id="adminEditToggle">✎ Редагувати сторінку</button>
-
-    <div class="admin-bar__grid">
-      <button class="admin-bar__btn" id="adminAnnouncementsToggle">Оголошення: Вимкнено</button>
-      <button class="admin-bar__btn" id="adminLeadsBtn">📋 Заявки</button>
-      <button class="admin-bar__btn" id="adminSaveBtn">💾 Зберегти</button>
-      <button class="admin-bar__btn" id="adminPasswordBtn">🔑 Пароль</button>
-    </div>
-
-    <button class="admin-bar__btn admin-bar__btn--danger" id="adminResetBtn">Скинути все</button>
-
-    <div class="admin-bar__divider"></div>
-    <button class="admin-bar__btn admin-bar__btn--exit" id="adminLogoutBtn">Вийти з адмін-режиму</button>
-  </div>
-</div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><path id="xfMark" d="M 845 69 Q 845 66 842 66 L 727 66 Q 721 66 716.8 70.2 L 574.1 212.9 Q 570 217 564.5 215 L 564.5 215 Q 559 213 556.4 207.8 L 535.7 166.4 Q 533 161 527 161 L 436 161 Q 430 161 432.8 166.3 L 495.2 284.7 Q 498 290 496.7 295.9 L 496.3 298.1 Q 495 304 490.8 308.2 L 321.8 477.2 Q 320 479 320 481.5 L 320 481.5 Q 320 484 322.5 484 L 420 484 Q 426 484 430.2 479.7 L 532.8 374.3 Q 537 370 539.9 375.2 L 599.1 480.8 Q 602 486 608 486 L 656 486 Q 662 486 663.4 480.2 L 676.6 425.8 Q 678 420 675.1 414.8 L 616.9 310.2 Q 614 305 618.2 300.7 L 842.9 74.1 Q 845 72 845 69 Z"/><path id="xfWord" d="M 735.7 242.9 Q 737 237 743 237 L 884 237 Q 890 237 888.8 242.9 L 882.2 276.1 Q 881 282 875 282 L 786 282 Q 780 282 778.7 287.9 L 767.3 338.1 Q 766 344 772 344 L 845 344 Q 851 344 849.8 349.9 L 843.2 384.1 Q 842 390 836 390 L 762 390 Q 756 390 754.7 395.9 L 735.3 483.1 Q 734 489 728 489 L 687 489 Q 681 489 682.3 483.1 Z M 899.7 311.9 Q 901 306 907 306 L 946 306 Q 952 306 950.7 311.9 L 912.3 483.1 Q 911 489 905 489 L 866 489 Q 860 489 861.3 483.1 Z M 910.8 242.9 Q 912 237 918 237 L 960 237 Q 966 237 964.8 242.9 L 958.2 277.1 Q 957 283 951 283 L 909 283 Q 903 283 904.2 277.1 Z M 1010.5 266.8 Q 1012 261 1018 261 L 1056 261 Q 1062 261 1060.7 266.9 L 1053.3 299.1 Q 1052 305 1058 305 L 1093 305 Q 1099 305 1097.6 310.8 L 1090.4 342.2 Q 1089 348 1083 348 L 1049 348 Q 1043 348 1041.8 353.9 L 1027.5 422.7 Q 1027 425 1026.6 427.3 L 1026.6 427.5 Q 1026.3 429.6 1026.2 431.6 L 1026.2 431.8 Q 1026.1 433.6 1026.3 435.4 L 1026.3 435.6 Q 1026.4 437.2 1026.9 438.8 L 1026.9 438.9 Q 1027.3 440.4 1028 441.7 L 1028.1 441.7 Q 1028.8 443 1029.7 444.1 L 1029.7 444.1 Q 1030.7 445.2 1031.9 446 L 1032 446 Q 1033.2 446.8 1034.6 447.4 L 1034.8 447.4 Q 1036.3 448 1037.9 448.4 L 1038.1 448.4 Q 1039.9 448.8 1041.7 448.9 L 1041.9 448.9 Q 1044 449 1046.1 449 L 1065 449 Q 1071 449 1069.7 454.9 L 1063.3 483.1 Q 1062 489 1056 489 L 1016.3 489 Q 1012 489 1007.7 488.8 L 1007.2 488.7 Q 1003.3 488.5 999.5 487.8 L 999.1 487.7 Q 995.7 487 992.4 485.8 L 992.1 485.7 Q 989.1 484.6 986.3 482.9 L 986.2 482.8 Q 983.5 481.2 981.3 479 L 981.3 479 Q 979 476.8 977.3 474.1 L 977.3 474.1 Q 975.5 471.4 974.4 468.4 L 974.3 468.2 Q 973.1 465 972.4 461.6 L 972.4 461.3 Q 971.7 457.6 971.5 453.9 L 971.5 453.5 Q 971.3 449.3 971.6 445.2 L 971.7 444.7 Q 972 440 972.9 435.4 L 988.8 353.9 Q 990 348 984 348 L 972 348 Q 966 348 967.2 342.1 L 973.8 310.9 Q 975 305 981 305 L 995 305 Q 1001 305 1002.5 299.2 Z"/></defs></svg>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -747,8 +763,10 @@
 <script src="js/supabase-config.js?v=25"></script>
 <script src="js/emailjs-config.js?v=24"></script>
 <script src="js/logo3d.js?v=24"></script>
-<script src="js/main.js?v=28"></script>
-<script src="js/admin.js?v=29"></script>
+<script src="js/main.js?v=33"></script>
+<script src="js/admin.js?v=31"></script>
+<script src="js/admin-members.js?v=9"></script>
+<script src="js/admin-console.js?v=3"></script>
 <script src="js/gallery.js?v=2"></script>
 </body>
 </html>
