@@ -13,13 +13,24 @@
       повноцінним захистом).
    ============================================================ */
 (function () {
-  const STORAGE_CONTENT_KEY = 'xfit_content_v1';
+  /* Сторінка залу (podilsk.html / balta.html) має <body data-gym="podilsk|balta">.
+     Її тексти, фото, тренери й списки зберігаються з префіксом ключа 'podilsk:' / 'balta:',
+     оголошення — з полем gym. Головна сторінка — без префікса. */
+  const GYM = (document.body && document.body.dataset.gym) || '';
+  const PFX = GYM ? GYM + ':' : '';
+  const SFX = GYM ? '_' + GYM : '';
+  const GYM_PFX_RE = /^(podilsk|balta):/;
+  const ownKey = (k) => (GYM ? String(k).startsWith(PFX) : !GYM_PFX_RE.test(k));
+  const unPfx = (k) => (GYM ? String(k).slice(PFX.length) : k);
+  // запит лише до ключів цієї сторінки
+  const scoped = (q) => (GYM ? q.like('key', PFX + '%') : q.not('key', 'like', 'podilsk:%').not('key', 'like', 'balta:%'));
+  const STORAGE_CONTENT_KEY = 'xfit_content_v1' + SFX;
   const STORAGE_PASSWORD_KEY = 'xfit_admin_password';
   const SESSION_FLAG_KEY = 'xfit_admin_session';
-  const PHOTO_STORAGE_KEY = 'xfit_photos_v1';
-  const ANNOUNCEMENTS_KEY = 'xfit_announcements_v1';
-  const TRAINERS_KEY = 'xfit_trainers_v1';
-  const LISTS_KEY = 'xfit_lists_v1';
+  const PHOTO_STORAGE_KEY = 'xfit_photos_v1' + SFX;
+  const ANNOUNCEMENTS_KEY = 'xfit_announcements_v1' + SFX;
+  const TRAINERS_KEY = 'xfit_trainers_v1' + SFX;
+  const LISTS_KEY = 'xfit_lists_v1' + SFX;
   const MAX_PHOTO_DIMENSION = 1000;
   const PHOTO_QUALITY = 0.82;
 
@@ -247,42 +258,42 @@
 
   /* ---------- Запити до Supabase ---------- */
   async function remotePullContent() {
-    const { data, error } = await sb.from('site_content').select('key,value');
+    const { data, error } = await scoped(sb.from('site_content').select('key,value'));
     if (error) return null;
     const map = {};
-    data.forEach((row) => { map[row.key] = row.value; });
+    data.forEach((row) => { if (ownKey(row.key)) map[unPfx(row.key)] = row.value; });
     return map;
   }
 
   async function remotePushContent(dataMap) {
-    const rows = Object.entries(dataMap).map(([key, value]) => ({ key, value }));
+    const rows = Object.entries(dataMap).map(([key, value]) => ({ key: PFX + key, value }));
     if (!rows.length) return true;
     const { error } = await sb.from('site_content').upsert(rows);
     return !error;
   }
 
   async function remotePullPhotos() {
-    const { data, error } = await sb.from('site_photos').select('key,data_url');
+    const { data, error } = await scoped(sb.from('site_photos').select('key,data_url'));
     if (error) return null;
     const map = {};
-    data.forEach((row) => { map[row.key] = row.data_url; });
+    data.forEach((row) => { if (ownKey(row.key)) map[unPfx(row.key)] = row.data_url; });
     return map;
   }
 
   async function remotePushPhoto(key, dataUrl) {
-    const { error } = await sb.from('site_photos').upsert({ key, data_url: dataUrl });
+    const { error } = await sb.from('site_photos').upsert({ key: PFX + key, data_url: dataUrl });
     return !error;
   }
 
   async function remoteDeletePhoto(key) {
-    const { error } = await sb.from('site_photos').delete().eq('key', key);
+    const { error } = await sb.from('site_photos').delete().eq('key', PFX + key);
     return !error;
   }
 
   async function remotePullAnnouncements() {
     const [itemsRes, settingsRes] = await Promise.all([
-      sb.from('announcements').select('*').order('sort_order', { ascending: false }),
-      sb.from('site_settings').select('key,value').eq('key', 'announcements_enabled'),
+      sb.from('announcements').select('*').eq('gym', GYM).order('sort_order', { ascending: false }),
+      sb.from('site_settings').select('key,value').eq('key', PFX + 'announcements_enabled'),
     ]);
     if (itemsRes.error || settingsRes.error) return null;
     const enabled = settingsRes.data && settingsRes.data[0] ? settingsRes.data[0].value === 'true' : false;
@@ -293,7 +304,7 @@
   }
 
   async function remotePushAnnouncementsEnabled(enabled) {
-    const { error } = await sb.from('site_settings').upsert({ key: 'announcements_enabled', value: String(enabled) });
+    const { error } = await sb.from('site_settings').upsert({ key: PFX + 'announcements_enabled', value: String(enabled) });
     return !error;
   }
 
@@ -305,6 +316,7 @@
       date_label: item.date || '',
       image_url: item.image || null,
       sort_order: item.sortOrder || Date.now(),
+      gym: GYM,
     });
     return !error;
   }
@@ -315,7 +327,7 @@
   }
 
   async function remotePullTrainers() {
-    const { data, error } = await sb.from('site_settings').select('key,value').eq('key', 'trainers_list');
+    const { data, error } = await sb.from('site_settings').select('key,value').eq('key', PFX + 'trainers_list');
     if (error) return null;
     if (!data || !data[0]) return undefined;
     try {
@@ -327,42 +339,42 @@
   }
 
   async function remotePushTrainers(ids) {
-    const { error } = await sb.from('site_settings').upsert({ key: 'trainers_list', value: JSON.stringify(ids) });
+    const { error } = await sb.from('site_settings').upsert({ key: PFX + 'trainers_list', value: JSON.stringify(ids) });
     return !error;
   }
 
   async function remotePullLists() {
-    const { data, error } = await sb.from('site_settings').select('key,value').like('key', 'list:%');
+    const { data, error } = await sb.from('site_settings').select('key,value').like('key', PFX + 'list:%');
     if (error) return null;
     const lists = {};
     (data || []).forEach((row) => {
       try {
         const ids = JSON.parse(row.value);
-        if (Array.isArray(ids)) lists[row.key.slice(5)] = ids;
+        if (Array.isArray(ids)) lists[row.key.slice(PFX.length + 5)] = ids;
       } catch (e) { /* ignore */ }
     });
     return lists;
   }
 
   async function remotePushList(name, ids) {
-    const { error } = await sb.from('site_settings').upsert({ key: 'list:' + name, value: JSON.stringify(ids) });
+    const { error } = await sb.from('site_settings').upsert({ key: PFX + 'list:' + name, value: JSON.stringify(ids) });
     return !error;
   }
 
   async function remoteDeleteListSettings(names) {
     if (!names.length) return true;
-    const { error } = await sb.from('site_settings').delete().in('key', names.map((n) => 'list:' + n));
+    const { error } = await sb.from('site_settings').delete().in('key', names.map((n) => PFX + 'list:' + n));
     return !error;
   }
 
   async function remoteDeletePhotos(keys) {
     if (!keys.length) return true;
-    const { error } = await sb.from('site_photos').delete().in('key', keys);
+    const { error } = await sb.from('site_photos').delete().in('key', keys.map((k) => PFX + k));
     return !error;
   }
 
   async function remoteDeleteContentKeys(keys) {
-    const { error } = await sb.from('site_content').delete().in('key', keys);
+    const { error } = await sb.from('site_content').delete().in('key', keys.map((k) => PFX + k));
     return !error;
   }
 
@@ -572,10 +584,11 @@
     if (isRemote) {
       try {
         await Promise.all([
-          sb.from('site_content').delete().neq('key', ''),
-          sb.from('site_photos').delete().neq('key', ''),
-          sb.from('announcements').delete().neq('id', ''),
-          sb.from('site_settings').delete().neq('key', ''),
+          // лише ця сторінка (головна або сторінка залу)
+          scoped(sb.from('site_content').delete()),
+          scoped(sb.from('site_photos').delete()),
+          sb.from('announcements').delete().eq('gym', GYM),
+          scoped(sb.from('site_settings').delete()),
         ]);
       } catch (e) { /* ignore */ }
     }
@@ -1601,6 +1614,8 @@
 
   /* ---------- Можливості для «Командного центру» (js/admin-console.js) ---------- */
   Object.assign(window.XFitAdmin, {
+    gym: GYM,
+    resync: () => syncFromRemote(),
     setEditing: (on, discard) => setEditing(on, discard),
     isEditing: () => editing,
     saveContent,

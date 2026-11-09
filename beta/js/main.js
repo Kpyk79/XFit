@@ -33,7 +33,7 @@ mobileMenu.querySelectorAll('a').forEach(a => {
 
 /* ============ CURSOR GLOW ============ */
 const cursorGlow = document.getElementById('cursorGlow');
-if (window.matchMedia('(pointer: fine)').matches) {
+if (cursorGlow && window.matchMedia('(pointer: fine)').matches) {
   window.addEventListener('mousemove', (e) => {
     cursorGlow.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%,-50%)`;
     cursorGlow.style.opacity = 0.12;
@@ -162,11 +162,11 @@ if (emailjsReady) {
 const LEAD_SENT_KEY = 'xfit_lead_sent_at';
 
 // Після заявки — одразу запрошуємо отримати карту клієнта (імʼя й телефон уже підставлені)
-function offerCard(name, phone) {
+function offerCard(name, phone, gym) {
   let hasCard = false;
   try { hasCard = !!(JSON.parse(localStorage.getItem('xfit_card_v1') || 'null') || {}).token; } catch (err) { /* ignore */ }
   if (hasCard || document.getElementById('leadCardCta')) return;
-  try { sessionStorage.setItem('xfit_prefill', JSON.stringify({ name, phone })); } catch (err) { /* ignore */ }
+  try { sessionStorage.setItem('xfit_prefill', JSON.stringify({ name, phone, gym })); } catch (err) { /* ignore */ }
   const a = document.createElement('a');
   a.id = 'leadCardCta';
   a.className = 'btn btn--ghost btn--block lead-card-cta';
@@ -184,6 +184,8 @@ contactForm.addEventListener('submit', async (e) => {
   const phone = (formData.get('phone') || '').toString().trim();
   const note = (formData.get('message') || '').toString().trim();
   const plan = (formData.get('plan') || '').toString().trim();
+  // Зал: на головній — вибір у формі, на сторінці залу — підставлено
+  const gym = (formData.get('gym') || '').toString().trim();
   // Абонемент іде першим рядком повідомлення — так він видно і в листі,
   // і в заявках адмінки без змін у шаблоні EmailJS чи таблиці leads
   const message = plan ? `Абонемент: ${plan}` + (note ? `\n\n${note}` : '') : note;
@@ -220,12 +222,18 @@ contactForm.addEventListener('submit', async (e) => {
   // рядок і впреться в RLS, бо читати "leads" може лише адмін.
   // Supabase не кидає помилку, а повертає { error } — перетворюємо її на відмову.
   if (leadsRemoteReady) {
-    tasks.push(leadsClient.from('leads').insert({ name, phone, message }).then((res) => {
+    tasks.push(leadsClient.from('leads').insert({ name, phone, message, gym }).then((res) => {
+      // база ще без поля «Зал» — надсилаємо заявку як раніше, зал — у тексті
+      if (res.error && /gym/.test(res.error.message || '')) {
+        return leadsClient.from('leads').insert({ name, phone, message: gym ? `Зал: ${gym}` + (message ? `\n${message}` : '') : message });
+      }
+      return res;
+    }).then((res) => {
       if (res.error) throw res.error;
     }));
   }
   if (emailjsReady) {
-    tasks.push(window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { name, phone, message, plan: plan || 'не обрано' }));
+    tasks.push(window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { name, phone, message: gym ? `Зал: ${gym}` + (message ? `\n${message}` : '') : message, plan: plan || 'не обрано', gym: gym || 'не обрано' }));
   }
 
   const results = await Promise.allSettled(tasks);
@@ -238,7 +246,7 @@ contactForm.addEventListener('submit', async (e) => {
   if (results.some((r) => r.status === 'fulfilled')) {
     try { localStorage.setItem(LEAD_SENT_KEY, String(Date.now())); } catch (err) { /* ignore */ }
     showNote('Дякуємо! Ми звʼяжемось з тобою найближчим часом.');
-    offerCard(name, phone);
+    offerCard(name, phone, gym);
     contactForm.reset();
     return;
   }
