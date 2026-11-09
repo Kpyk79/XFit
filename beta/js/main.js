@@ -471,6 +471,60 @@ contactForm.addEventListener('submit', async (e) => {
   }));
 })();
 
+/* ============ «ОБРАТИ ЗАЛ»: КНОПКА В ШАПЦІ + ВІКНО ВИБОРУ ============ */
+(function initGymPicker() {
+  const btns = document.querySelectorAll('[data-gym-pick]');
+  if (!btns.length) return;
+  const here = (document.body && document.body.dataset.gym) || '';
+  const PIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>';
+  const GYMS = [
+    { slug: 'podilsk', city: 'Подільськ', info: 'Тренери, галерея, абонементи й розклад залу' },
+    { slug: 'balta', city: 'Балта', info: 'Тренери, галерея, абонементи й розклад залу' },
+  ];
+  const sheet = document.createElement('div');
+  sheet.className = 'gym-sheet';
+  sheet.hidden = true;
+  sheet.setAttribute('role', 'dialog');
+  sheet.setAttribute('aria-modal', 'true');
+  sheet.setAttribute('aria-labelledby', 'gymSheetTitle');
+  sheet.innerHTML = `<div class="gym-sheet__bg" data-gym-close></div>
+    <div class="gym-sheet__box">
+      <h2 class="gym-sheet__title" id="gymSheetTitle">Оберіть свій зал</h2>
+      <p class="gym-sheet__sub">У кожного залу свої тренери, ціни й розклад.</p>
+      <button type="button" class="gym-sheet__close" data-gym-close aria-label="Закрити"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <div class="gym-sheet__list">${GYMS.map((g) => `<a class="gym-opt${g.slug === here ? ' is-current' : ''}" href="${g.slug}.html"${g.slug === here ? ' aria-current="page"' : ''}>
+        ${g.slug === here ? '<span class="gym-opt__here">Ви тут</span>' : ''}
+        <span class="gym-opt__pin">${PIN}</span>
+        <span class="gym-opt__city">XFit ${g.city}</span>
+        <span class="gym-opt__info">${g.info}</span>
+        <span class="gym-opt__go">${g.slug === here ? 'Залишитись тут' : 'Перейти →'}</span></a>`).join('')}</div>
+      ${here ? '<a class="gym-sheet__all" href="./">← Головна сторінка мережі XFit</a>' : ''}
+    </div>`;
+  document.body.appendChild(sheet);
+  let last = null;
+  const close = () => {
+    if (sheet.hidden) return;
+    sheet.hidden = true;
+    document.documentElement.classList.remove('no-scroll');
+    if (last && last.focus) last.focus({ preventScroll: true });
+  };
+  const open = () => {
+    last = document.activeElement;
+    if (document.body.classList.contains('menu-open')) { const b = document.getElementById('burger'); if (b) b.click(); }
+    sheet.hidden = false;
+    document.documentElement.classList.add('no-scroll');
+    const first = sheet.querySelector('.gym-opt:not(.is-current)') || sheet.querySelector('.gym-opt');
+    if (first) first.focus({ preventScroll: true });
+  };
+  btns.forEach((b) => b.addEventListener('click', open));
+  sheet.addEventListener('click', (e) => {
+    if (e.target.closest('[data-gym-close]')) close();
+    const cur = e.target.closest('.gym-opt.is-current');
+    if (cur) { e.preventDefault(); close(); }
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+})();
+
 /* ============ INSTAGRAM (Behold) ============ */
 // Головна — стрічка мережі в розділі «Про нас»; сторінка залу — своя стрічка (код Behold задається в адмінці).
 // Скрипт віджета вантажимо, коли блок наближається до екрана, — сторінка лишається швидкою.
