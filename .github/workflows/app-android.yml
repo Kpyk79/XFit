@@ -1,4 +1,4 @@
-# Збірка Android-додатку XFit для Google Play (файл .aab).
+# Збірка Android-додатку XFit: .aab для Google Play і .apk для Galaxy Store / AppGallery.
 # Запуск: GitHub → Actions → «Додаток Android» → Run workflow.
 # Потрібні секрети репозиторію (Settings → Secrets and variables → Actions):
 #   ANDROID_KEYSTORE_BASE64  — ключ завантаження upload.jks у base64
@@ -30,9 +30,9 @@ jobs:
         run: echo "$KS" | base64 --decode > "$RUNNER_TEMP/upload.jks"
         env:
           KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      - name: Збірка .aab
+      - name: Збірка .aab (Google Play) і .apk (Galaxy Store, AppGallery)
         working-directory: app/android
-        run: chmod +x gradlew && ./gradlew --no-daemon bundleRelease
+        run: chmod +x gradlew && ./gradlew --no-daemon bundleRelease assembleRelease
         env:
           XFIT_VERSION_CODE: ${{ github.run_number }}
           XFIT_KEYSTORE_FILE: ${{ runner.temp }}/upload.jks
@@ -42,5 +42,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: xfit-android-${{ github.run_number }}
-          path: app/android/app/build/outputs/bundle/release/app-release.aab
+          path: |
+            app/android/app/build/outputs/bundle/release/app-release.aab
+            app/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
