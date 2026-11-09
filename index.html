@@ -115,8 +115,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=39">
-<link rel="stylesheet" href="css/admin.css?v=32">
+<link rel="stylesheet" href="css/style.css?v=40">
+<link rel="stylesheet" href="css/admin.css?v=34">
 </head>
 <body>
 
@@ -135,10 +135,8 @@
       <a href="#about" class="nav-link">Про нас</a>
       <a href="#locations" class="nav-link">Локації</a>
       <a href="#programs" class="nav-link">Програми</a>
-      <a href="#trainers" class="nav-link">Тренери</a>
-      <a href="#gallery" class="nav-link">Галерея</a>
-      <a href="#pricing" class="nav-link">Абонементи</a>
-      <a href="#schedule" class="nav-link">Розклад</a>
+      <a href="podilsk.html" class="nav-link">Подільськ</a>
+      <a href="balta.html" class="nav-link">Балта</a>
       <a href="#contact" class="nav-link">Контакти</a>
     </nav>
 
@@ -175,10 +173,8 @@
   <a href="#about" class="mobile-link">Про нас</a>
   <a href="#locations" class="mobile-link">Локації</a>
   <a href="#programs" class="mobile-link">Програми</a>
-  <a href="#trainers" class="mobile-link">Тренери</a>
-  <a href="#gallery" class="mobile-link">Галерея</a>
-  <a href="#pricing" class="mobile-link">Абонементи</a>
-  <a href="#schedule" class="mobile-link">Розклад</a>
+  <a href="podilsk.html" class="mobile-link">XFit Подільськ</a>
+  <a href="balta.html" class="mobile-link">XFit Балта</a>
   <a href="#contact" class="mobile-link">Контакти</a>
   <a href="card.html" class="mobile-link">Карта клієнта</a>
   <a href="train.html" class="mobile-link">Таймер і мої тренування</a>
@@ -223,7 +219,7 @@
       та (незабаром) у Балті.
     </p>
     <div class="hero__actions reveal">
-      <a href="#pricing" class="btn btn--primary btn--lg">Обрати абонемент</a>
+      <a href="#locations" class="btn btn--primary btn--lg">Обрати зал</a>
       <a href="#programs" class="btn btn--ghost btn--lg">Наші програми ↓</a>
     </div>
 
@@ -385,207 +381,6 @@
   </div>
 </section>
 
-<!-- ===== TRAINERS ===== -->
-<section class="section section--alt" id="trainers">
-  <div class="container">
-    <p class="section-eyebrow reveal center">// КОМАНДА</p>
-    <h2 class="section-title reveal center">Наші тренери</h2>
-
-    <div class="trainers__admin">
-      <button type="button" class="admin-round-btn admin-round-btn--add" id="addTrainerBtn" title="Додати тренера" aria-label="Додати тренера"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-    </div>
-
-    <div class="trainers reveal" id="trainersCarousel">
-      <div class="trainers__viewport">
-        <div class="trainers-grid" id="trainersTrack">
-          <article class="trainer-card" data-trainer-id="trainer1">
-            <div class="trainer-card__photo photo-slot" style="--hue:150">
-              <img class="photo-img" data-photo-key="trainer1" alt="Олександр К.">
-              <label class="photo-upload">
-                <input type="file" accept="image/*" data-photo-input="trainer1" hidden>
-                <span class="photo-upload__btn">📷 Фото</span>
-              </label>
-              <button type="button" class="photo-remove" data-photo-remove="trainer1" title="Видалити фото">✕</button>
-            </div>
-            <h3 data-edit-key="trainer1.name">Олександр К.</h3>
-            <span class="trainer-card__role" data-edit-key="trainer1.role">Силові тренування</span>
-          </article>
-          <article class="trainer-card" data-trainer-id="trainer2">
-            <div class="trainer-card__photo photo-slot" style="--hue:130">
-              <img class="photo-img" data-photo-key="trainer2" alt="Марина В.">
-              <label class="photo-upload">
-                <input type="file" accept="image/*" data-photo-input="trainer2" hidden>
-                <span class="photo-upload__btn">📷 Фото</span>
-              </label>
-              <button type="button" class="photo-remove" data-photo-remove="trainer2" title="Видалити фото">✕</button>
-            </div>
-            <h3 data-edit-key="trainer2.name">Марина В.</h3>
-            <span class="trainer-card__role" data-edit-key="trainer2.role">Кросфіт / Функціонал</span>
-          </article>
-          <article class="trainer-card" data-trainer-id="trainer3">
-            <div class="trainer-card__photo photo-slot" style="--hue:100">
-              <img class="photo-img" data-photo-key="trainer3" alt="Дмитро П.">
-              <label class="photo-upload">
-                <input type="file" accept="image/*" data-photo-input="trainer3" hidden>
-                <span class="photo-upload__btn">📷 Фото</span>
-              </label>
-              <button type="button" class="photo-remove" data-photo-remove="trainer3" title="Видалити фото">✕</button>
-            </div>
-            <h3 data-edit-key="trainer3.name">Дмитро П.</h3>
-            <span class="trainer-card__role" data-edit-key="trainer3.role">Персональний тренер</span>
-          </article>
-          <article class="trainer-card" data-trainer-id="trainer4">
-            <div class="trainer-card__photo photo-slot" style="--hue:160">
-              <img class="photo-img" data-photo-key="trainer4" alt="Ірина С.">
-              <label class="photo-upload">
-                <input type="file" accept="image/*" data-photo-input="trainer4" hidden>
-                <span class="photo-upload__btn">📷 Фото</span>
-              </label>
-              <button type="button" class="photo-remove" data-photo-remove="trainer4" title="Видалити фото">✕</button>
-            </div>
-            <h3 data-edit-key="trainer4.name">Ірина С.</h3>
-            <span class="trainer-card__role" data-edit-key="trainer4.role">Йога / Стретчинг</span>
-          </article>
-        </div>
-      </div>
-      <div class="trainers__controls">
-        <button type="button" class="carousel-arrow" id="trainersPrev" aria-label="Попередній тренер"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <button type="button" class="carousel-arrow" id="trainersNext" aria-label="Наступний тренер"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== GALLERY ===== -->
-<section class="section" id="gallery">
-  <div class="container">
-    <p class="section-eyebrow reveal center">// ГАЛЕРЕЯ</p>
-    <h2 class="section-title reveal center">Атмосфера залу</h2>
-
-    <div class="gallery reveal" id="galleryCarousel">
-      <div class="gallery__viewport">
-        <div class="gallery-grid" data-list="gallery" id="galleryTrack">
-          <div class="gallery-tile photo-slot" data-list-item="gallery1" style="--hue:150">
-            <img class="photo-img" data-photo-key="gallery1" alt="Тренажерний зал XFit у Подільську">
-            <label class="photo-upload">
-              <input type="file" accept="image/*" data-photo-input="gallery1" hidden>
-              <span class="photo-upload__btn">📷 Додати фото</span>
-            </label>
-            <button type="button" class="photo-remove" data-photo-remove="gallery1" title="Видалити фото">✕</button>
-          </div>
-          <div class="gallery-tile photo-slot" data-list-item="gallery2" style="--hue:135">
-            <img class="photo-img" data-photo-key="gallery2" alt="Тренажерний зал XFit у Подільську">
-            <label class="photo-upload">
-              <input type="file" accept="image/*" data-photo-input="gallery2" hidden>
-              <span class="photo-upload__btn">📷 Додати фото</span>
-            </label>
-            <button type="button" class="photo-remove" data-photo-remove="gallery2" title="Видалити фото">✕</button>
-          </div>
-          <div class="gallery-tile photo-slot" data-list-item="gallery3" style="--hue:120">
-            <img class="photo-img" data-photo-key="gallery3" alt="Тренажерний зал XFit у Подільську">
-            <label class="photo-upload">
-              <input type="file" accept="image/*" data-photo-input="gallery3" hidden>
-              <span class="photo-upload__btn">📷 Додати фото</span>
-            </label>
-            <button type="button" class="photo-remove" data-photo-remove="gallery3" title="Видалити фото">✕</button>
-          </div>
-          <div class="gallery-tile photo-slot" data-list-item="gallery4" style="--hue:105">
-            <img class="photo-img" data-photo-key="gallery4" alt="Тренажерний зал XFit у Подільську">
-            <label class="photo-upload">
-              <input type="file" accept="image/*" data-photo-input="gallery4" hidden>
-              <span class="photo-upload__btn">📷 Додати фото</span>
-            </label>
-            <button type="button" class="photo-remove" data-photo-remove="gallery4" title="Видалити фото">✕</button>
-          </div>
-          <div class="gallery-tile photo-slot" data-list-item="gallery5" style="--hue:145">
-            <img class="photo-img" data-photo-key="gallery5" alt="Тренажерний зал XFit у Подільську">
-            <label class="photo-upload">
-              <input type="file" accept="image/*" data-photo-input="gallery5" hidden>
-              <span class="photo-upload__btn">📷 Додати фото</span>
-            </label>
-            <button type="button" class="photo-remove" data-photo-remove="gallery5" title="Видалити фото">✕</button>
-          </div>
-          <div class="gallery-tile photo-slot" data-list-item="gallery6" style="--hue:160">
-            <img class="photo-img" data-photo-key="gallery6" alt="Тренажерний зал XFit у Подільську">
-            <label class="photo-upload">
-              <input type="file" accept="image/*" data-photo-input="gallery6" hidden>
-              <span class="photo-upload__btn">📷 Додати фото</span>
-            </label>
-            <button type="button" class="photo-remove" data-photo-remove="gallery6" title="Видалити фото">✕</button>
-          </div>
-        </div>
-      </div>
-      <div class="gallery__controls">
-        <button type="button" class="carousel-arrow" id="galleryPrev" aria-label="Попереднє фото"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <button type="button" class="carousel-arrow" id="galleryNext" aria-label="Наступне фото"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== PRICING ===== -->
-<section class="section" id="pricing">
-  <div class="container">
-    <p class="section-eyebrow reveal center">// АБОНЕМЕНТИ</p>
-    <h2 class="section-title reveal center">Обери свій план</h2>
-
-    <div class="pricing-grid" data-list="pricing">
-      <article class="price-card reveal" data-list-item="price1">
-        <h3 data-edit-key="price1.name">Старт</h3>
-        <p class="price-card__price"><span data-edit-key="price1.amount">499₴</span><span class="price-card__period" data-edit-key="price1.period">/міс</span></p>
-        <ul data-list="price1.items" data-list-style="row">
-          <li data-list-item="price1.item1"><span data-edit-key="price1.item1">Доступ у будні дні</span></li>
-          <li data-list-item="price1.item2"><span data-edit-key="price1.item2">Тренажерний зал</span></li>
-          <li data-list-item="price1.item3"><span data-edit-key="price1.item3">Роздягальня + душ</span></li>
-        </ul>
-        <a href="#contact" class="btn btn--ghost">Обрати</a>
-      </article>
-
-      <article class="price-card price-card--featured reveal" data-list-item="price2">
-        <span class="price-card__badge">Популярний</span>
-        <h3 data-edit-key="price2.name">Повний</h3>
-        <p class="price-card__price"><span data-edit-key="price2.amount">799₴</span><span class="price-card__period" data-edit-key="price2.period">/міс</span></p>
-        <ul data-list="price2.items" data-list-style="row">
-          <li data-list-item="price2.item1"><span data-edit-key="price2.item1">Доступ 7 днів на тиждень</span></li>
-          <li data-list-item="price2.item2"><span data-edit-key="price2.item2">Тренажерний зал + кросфіт</span></li>
-          <li data-list-item="price2.item3"><span data-edit-key="price2.item3">Групові заняття</span></li>
-          <li data-list-item="price2.item4"><span data-edit-key="price2.item4">1 персональна консультація</span></li>
-        </ul>
-        <a href="#contact" class="btn btn--primary">Обрати</a>
-      </article>
-
-      <article class="price-card reveal" data-list-item="price3">
-        <h3 data-edit-key="price3.name">PRO</h3>
-        <p class="price-card__price"><span data-edit-key="price3.amount">1299₴</span><span class="price-card__period" data-edit-key="price3.period">/міс</span></p>
-        <ul data-list="price3.items" data-list-style="row">
-          <li data-list-item="price3.item1"><span data-edit-key="price3.item1">Все з плану «Повний»</span></li>
-          <li data-list-item="price3.item2"><span data-edit-key="price3.item2">4 персональні тренування</span></li>
-          <li data-list-item="price3.item3"><span data-edit-key="price3.item3">Індивідуальний план харчування</span></li>
-        </ul>
-        <a href="#contact" class="btn btn--ghost">Обрати</a>
-      </article>
-    </div>
-  </div>
-</section>
-
-<!-- ===== SCHEDULE / CTA ===== -->
-<section class="section section--cta" id="schedule">
-  <div class="cta__glow"></div>
-  <div class="container cta__inner">
-    <p class="section-eyebrow reveal center" data-edit-key="schedule.eyebrow">// РОЗКЛАД</p>
-    <h2 class="section-title reveal center" data-edit-key="schedule.title">Відкрито щодня</h2>
-    <div class="schedule-grid reveal" data-list="schedule" data-list-style="row">
-      <div class="schedule-row" data-list-item="schedule1"><span data-edit-key="schedule1.day">Пн — Пт</span><span data-edit-key="schedule1.hours">07:00 — 23:00</span></div>
-      <div class="schedule-row" data-list-item="schedule2"><span data-edit-key="schedule2.day">Субота</span><span data-edit-key="schedule2.hours">09:00 — 21:00</span></div>
-      <div class="schedule-row" data-list-item="schedule3"><span data-edit-key="schedule3.day">Неділя</span><span data-edit-key="schedule3.hours">09:00 — 20:00</span></div>
-    </div>
-    <p class="reveal center" style="margin-top:24px;">Приходь на пробне тренування — покажемо зал і підберемо програму.</p>
-    <div class="reveal center" style="margin-top:24px;">
-      <a href="#contact" class="btn btn--primary btn--lg">Записатись зараз</a>
-    </div>
-  </div>
-</section>
-
 <!-- ===== ДОДАТОК: таймер і «Мої тренування» ===== -->
 <section class="section" id="app">
   <div class="container">
@@ -638,6 +433,7 @@
           <span class="location-card__label">Instagram</span>
           <a href="https://instagram.com/xfit_podilsk" target="_blank" rel="noopener" data-edit-key="location1.instagram">@xfit_podilsk</a>
         </div>
+        <a href="podilsk.html" class="btn btn--primary btn--block location-card__go">Тренери, фото, ціни →</a>
       </article>
 
       <article class="location-card location-card--soon reveal" data-list-item="location2">
@@ -652,6 +448,7 @@
           <span class="location-card__label">Instagram</span>
           <a href="https://www.instagram.com/xfitbalta/" target="_blank" rel="noopener" data-edit-key="location2.instagram">@xfitbalta</a>
         </div>
+        <a href="balta.html" class="btn btn--primary btn--block location-card__go">Тренери, фото, ціни →</a>
       </article>
     </div>
   </div>
@@ -673,8 +470,10 @@
         <input type="text" name="website" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
       </div>
       <div class="form-select">
-        <select name="plan" id="planSelect" aria-label="Абонемент">
-          <option value="">Абонемент: ще не обрано</option>
+        <select name="gym" aria-label="Зал" required>
+          <option value="">Зал: обери Подільськ чи Балту</option>
+          <option value="Подільськ">Подільськ</option>
+          <option value="Балта">Балта</option>
         </select>
       </div>
       <textarea name="message" placeholder="Повідомлення (необов'язково)" rows="4"></textarea>
@@ -693,7 +492,8 @@
     <nav class="footer__links">
       <a href="#about">Про нас</a>
       <a href="#programs">Програми</a>
-      <a href="#pricing">Абонементи</a>
+      <a href="podilsk.html">XFit Подільськ</a>
+      <a href="balta.html">XFit Балта</a>
       <a href="#contact">Контакти</a>
       <a href="card.html">Карта клієнта</a>
       <a href="train.html">Таймер і мої тренування</a>
@@ -763,10 +563,10 @@
 <script src="js/supabase-config.js?v=25"></script>
 <script src="js/emailjs-config.js?v=24"></script>
 <script src="js/logo3d.js?v=24"></script>
-<script src="js/main.js?v=33"></script>
-<script src="js/admin.js?v=31"></script>
-<script src="js/admin-members.js?v=9"></script>
-<script src="js/admin-console.js?v=3"></script>
+<script src="js/main.js?v=35"></script>
+<script src="js/admin.js?v=32"></script>
+<script src="js/admin-members.js?v=10"></script>
+<script src="js/admin-console.js?v=4"></script>
 <script src="js/gallery.js?v=2"></script>
 </body>
 </html>

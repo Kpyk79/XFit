@@ -653,27 +653,32 @@
   })();
 
   /* ---------- Абонементи для форми: ті самі, що в розділі «Абонементи» на сайті ---------- */
+  // Ціни в кожного залу свої (сторінки podilsk.html / balta.html) — беремо абонементи обраного залу
+  const GYM_SLUG = { 'Подільськ': 'podilsk', 'Балта': 'balta' };
   async function loadPlans() {
     const select = document.getElementById('regPlan');
     if (!select) return;
+    const gymSel = document.querySelector('#regForm [name="gym"]');
+    const slug = GYM_SLUG[gymSel && gymSel.value] || 'podilsk';
+    const PFX = slug + ':';
     const DEFAULT_IDS = ['price1', 'price2', 'price3'];
     let ids = DEFAULT_IDS;
     let content = {};
     try {
-      const lists = JSON.parse(localStorage.getItem('xfit_lists_v1') || '{}');
+      const lists = JSON.parse(localStorage.getItem('xfit_lists_v1_' + slug) || '{}');
       if (Array.isArray(lists.pricing)) ids = lists.pricing;
-      content = JSON.parse(localStorage.getItem('xfit_content_v1') || '{}');
+      content = JSON.parse(localStorage.getItem('xfit_content_v1_' + slug) || '{}');
     } catch (e) { /* ignore */ }
     const url = window.XFIT_SUPABASE_URL || '';
     const key = window.XFIT_SUPABASE_ANON_KEY || '';
     if (window.supabase && url && key && !url.includes('YOUR-PROJECT')) {
       try {
         const sb = window.supabase.createClient(url, key);
-        const lst = await sb.from('site_settings').select('value').eq('key', 'list:pricing');
+        const lst = await sb.from('site_settings').select('value').eq('key', PFX + 'list:pricing');
         if (!lst.error && lst.data && lst.data[0]) ids = JSON.parse(lst.data[0].value);
-        const keys = ids.flatMap((id) => [id + '.name', id + '.amount', id + '.period']);
+        const keys = ids.flatMap((id) => [id + '.name', id + '.amount', id + '.period']).map((k) => PFX + k);
         const rows = await sb.from('site_content').select('key,value').in('key', keys);
-        if (!rows.error) rows.data.forEach((r) => { content[r.key] = r.value; });
+        if (!rows.error) rows.data.forEach((r) => { content[r.key.slice(PFX.length)] = r.value; });
       } catch (e) { /* лишаємо типові */ }
     }
     const DEFAULTS = { price1: ['Старт', '499₴'], price2: ['Повний', '799₴'], price3: ['PRO', '1299₴'] };
@@ -690,6 +695,8 @@
     select.value = options.includes(prev) ? prev : (options[1] || options[0]);
   }
   loadPlans();
+  const regGym = document.querySelector('#regForm [name="gym"]');
+  if (regGym) regGym.addEventListener('change', loadPlans);
 
   /* ---------- Пластикова карта: сканування штрихкоду або ввід цифр ---------- */
   function mountPlastic(box, opts = {}) {
@@ -788,6 +795,9 @@
     const phone = params.get('phone') || pre.phone || '';
     if (name && !regForm.elements.full_name.value) regForm.elements.full_name.value = name.slice(0, 80);
     if (phone && !regForm.elements.phone.value) regForm.elements.phone.value = phone.slice(0, 20);
+    const gymParam = params.get('gym') || '';
+    const gym = ({ podilsk: 'Подільськ', balta: 'Балта' })[gymParam] || gymParam || pre.gym || '';
+    if (gym && [...regForm.elements.gym.options].some((o) => o.value === gym)) { regForm.elements.gym.value = gym; loadPlans(); }
   } catch (e) { /* ignore */ }
   function normalizePhone(v) {
     let d = String(v || '').replace(/\D/g, '');

@@ -351,3 +351,21 @@ body.admin-mode .install-fab{ display:none !important; }
 .xc-qr .xc-btn{ min-width:200px; }
 @media (max-width: 1080px){ .xc-grow{ grid-template-columns:minmax(0,1fr) minmax(0,1.4fr); } .xc-grow > div:last-child{ grid-column:1 / -1; } }
 @media (max-width: 560px){ .xc-grow{ grid-template-columns:minmax(0,1fr); } .xc-src{ grid-template-columns:minmax(0,110px) minmax(0,1fr) auto; } }
+
+/* ============ Два зали: перемикач залу, ролі ============ */
+.xc-scope{ display:flex; gap:4px; padding:4px; margin:0 0 14px; border-radius:14px; background:rgba(255,255,255,.04); border:1px solid var(--xc-line); }
+.xc-scope button{ flex:1; min-width:0; height:34px; padding:0 8px; border:0; border-radius:10px; background:none; color:#c1cbc1; font:700 12.5px var(--xc-body); white-space:nowrap; transition:background .2s, color .2s; }
+.xc-scope button[aria-checked="true"]{ background:var(--xc-g); color:var(--xc-ink); }
+.xc-scope--fixed{ align-items:center; gap:8px; padding:8px 12px; font:700 13px var(--xc-body); color:var(--xc-g); }
+.xc-scope--fixed svg.xi{ width:16px; height:16px; }
+.xc-mtop #xcScopeTop{ min-width:0; margin-right:auto; }
+.xc-mtop .xc-scope{ margin:0; }
+.xc-mtop .xc-scope button{ height:30px; padding:0 9px; font-size:12px; }
+.xc-mtop svg.xc-logo{ margin-right:0; }
+.xc-gymtag{ display:inline-block; margin-left:8px; padding:1px 8px; border-radius:99px; background:rgba(143,163,255,.14); color:#b9c4ff; font:700 11px var(--xc-body); vertical-align:2px; }
+.xc-row--admin{ cursor:default; flex-wrap:wrap; }
+.xc-role{ height:38px; padding:0 10px; border-radius:10px; border:1px solid var(--xc-line2); background:rgba(0,0,0,.35); color:var(--xc-tx); font:600 13px var(--xc-body); max-width:100%; }
+.xc-role:disabled{ opacity:.6; }
+@media (max-width: 520px){ .xc-mtop svg.xc-logo{ display:none; } .xc-row--admin .xc-role{ width:100%; margin-left:52px; } }
+.xc-bar[hidden]{ display:none; }
+.xc-side .xc-scope button{ padding:0 4px; font-size:11.5px; letter-spacing:-.01em; }
