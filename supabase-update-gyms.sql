@@ -185,7 +185,7 @@ create policy "Gym admin write announcements" on announcements for all
 -- Нинішні тренери, галерея, ціни й розклад — на сторінку Подільська (один раз)
 insert into site_content (key, value)
 select 'podilsk:' || c.key, c.value from site_content c
-where c.key !~ '^(podilsk|balta):' and c.key ~ '^(trainer|gallery|price|schedule|location1\.)'
+where c.key !~ '^(podilsk|balta):' and c.key ~ '^(trainer|gallery|price|pricing_|schedule|location1\.)'
 on conflict (key) do nothing;
 insert into site_photos (key, data_url)
 select 'podilsk:' || p.key, p.data_url from site_photos p
@@ -193,7 +193,7 @@ where p.key !~ '^(podilsk|balta):' and p.key ~ '^(trainer|gallery)'
 on conflict (key) do nothing;
 insert into site_settings (key, value)
 select 'podilsk:' || s.key, s.value from site_settings s
-where s.key !~ '^(podilsk|balta):' and (s.key = 'trainers_list' or s.key in ('list:gallery', 'list:pricing', 'list:schedule') or s.key ~ '^list:price[0-9]+\.items$')
+where s.key !~ '^(podilsk|balta):' and (s.key = 'trainers_list' or s.key in ('list:gallery', 'list:pricing', 'list:schedule') or s.key ~ '^list:price[0-9]+\.items$' or s.key ~ '^list:pricing_')
 on conflict (key) do nothing;
 -- Контакти Балти з головної — на сторінку Балти
 insert into site_content (key, value)

@@ -358,14 +358,21 @@ body.admin-mode .install-fab{ display:none !important; }
 .xc-scope button[aria-checked="true"]{ background:var(--xc-g); color:var(--xc-ink); }
 .xc-scope--fixed{ align-items:center; gap:8px; padding:8px 12px; font:700 13px var(--xc-body); color:var(--xc-g); }
 .xc-scope--fixed svg.xi{ width:16px; height:16px; }
-.xc-mtop #xcScopeTop{ min-width:0; margin-right:auto; }
+.xc-mtop #xcScopeTop{ min-width:0; }
 .xc-mtop .xc-scope{ margin:0; }
-.xc-mtop .xc-scope button{ height:30px; padding:0 9px; font-size:12px; }
-.xc-mtop svg.xc-logo{ margin-right:0; }
 .xc-gymtag{ display:inline-block; margin-left:8px; padding:1px 8px; border-radius:99px; background:rgba(143,163,255,.14); color:#b9c4ff; font:700 11px var(--xc-body); vertical-align:2px; }
 .xc-row--admin{ cursor:default; flex-wrap:wrap; }
 .xc-role{ height:38px; padding:0 10px; border-radius:10px; border:1px solid var(--xc-line2); background:rgba(0,0,0,.35); color:var(--xc-tx); font:600 13px var(--xc-body); max-width:100%; }
 .xc-role:disabled{ opacity:.6; }
-@media (max-width: 520px){ .xc-mtop svg.xc-logo{ display:none; } .xc-row--admin .xc-role{ width:100%; margin-left:52px; } }
+@media (max-width: 520px){ .xc-row--admin .xc-role{ width:100%; margin-left:52px; } }
+/* телефон: перемикач залу — окремим рядком на всю ширину під верхньою панеллю */
+@media (max-width: 860px){
+  .xc-mtop{ flex-wrap:wrap; row-gap:10px; }
+  .xc-mtop svg.xc-logo{ margin-right:auto; }
+  .xc-mtop #xcScopeTop{ order:5; flex:1 0 100%; }
+  .xc-mtop #xcScopeTop:empty{ display:none; }
+  .xc-mtop .xc-scope button{ height:34px; font-size:13px; padding:0 8px; }
+  .xc-mtop .xc-scope--fixed{ justify-content:center; }
+}
 .xc-bar[hidden]{ display:none; }
 .xc-side .xc-scope button{ padding:0 4px; font-size:11.5px; letter-spacing:-.01em; }

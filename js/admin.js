@@ -215,7 +215,13 @@
     });
   }
 
+  // Фото, які не вмістились у сховище браузера, — тримаємо в пам'яті, щоб сторінка все одно їх показала
+  let photoMem = null;
+  function safeSet(key, value) {
+    try { localStorage.setItem(key, value); return true; } catch (e) { return false; }
+  }
   function getPhotoStore() {
+    if (photoMem) return photoMem;
     try {
       return JSON.parse(localStorage.getItem(PHOTO_STORAGE_KEY) || '{}');
     } catch (e) {
@@ -385,11 +391,15 @@
       const [content, photos, announcements, trainers, lists] = await Promise.all([
         remotePullContent(), remotePullPhotos(), remotePullAnnouncements(), remotePullTrainers(), remotePullLists(),
       ]);
-      if (lists) localStorage.setItem(LISTS_KEY, JSON.stringify(lists));
-      if (content) localStorage.setItem(STORAGE_CONTENT_KEY, JSON.stringify(content));
-      if (photos) localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
-      if (announcements) localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
-      if (trainers) localStorage.setItem(TRAINERS_KEY, JSON.stringify(trainers));
+      // переповнене сховище браузера не повинно ламати показ сторінки
+      if (lists) safeSet(LISTS_KEY, JSON.stringify(lists));
+      if (content) safeSet(STORAGE_CONTENT_KEY, JSON.stringify(content));
+      if (photos) {
+        photoMem = null;
+        if (!safeSet(PHOTO_STORAGE_KEY, JSON.stringify(photos))) { try { localStorage.removeItem(PHOTO_STORAGE_KEY); } catch (e) { /* ignore */ } photoMem = photos; }
+      }
+      if (announcements) safeSet(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
+      if (trainers) safeSet(TRAINERS_KEY, JSON.stringify(trainers));
       else if (trainers === undefined) localStorage.removeItem(TRAINERS_KEY);
       renderTrainers();
       renderAllLists();
@@ -656,8 +666,10 @@
     photos[key] = dataUrl;
     try {
       localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+      if (photoMem) photoMem = photos;
       return true;
     } catch (e) {
+      if (isRemote) { photoMem = photos; return true; } // у хмарному режимі фото збережеться в базі
       showToast('Забракло місця в браузері для цього фото. Спробуй менше зображення.');
       return false;
     }
@@ -699,7 +711,7 @@
     if (!photos[key]) return;
     if (!confirm('Видалити це фото?')) return;
     delete photos[key];
-    localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+    if (!safeSet(PHOTO_STORAGE_KEY, JSON.stringify(photos))) photoMem = photos;
     applySavedPhotos();
     if (isRemote) await remoteDeletePhoto(key);
     showToast('Фото видалено');
@@ -1094,7 +1106,7 @@
     const photos = getPhotoStore();
     if (photos[id]) {
       delete photos[id];
-      localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+      if (!safeSet(PHOTO_STORAGE_KEY, JSON.stringify(photos))) photoMem = photos;
     }
     const keys = [id + '.name', id + '.role', id + '.instagram'];
     const cache = getContentCache();
@@ -1587,7 +1599,7 @@
     localStorage.setItem(STORAGE_CONTENT_KEY, JSON.stringify(cache));
     const photos = getPhotoStore();
     photoKeys.forEach((k) => delete photos[k]);
-    localStorage.setItem(PHOTO_STORAGE_KEY, JSON.stringify(photos));
+    if (!safeSet(PHOTO_STORAGE_KEY, JSON.stringify(photos))) photoMem = photos;
     const store = getListsStore();
     nestedLists.forEach((n) => { delete store[n]; delete lists[n]; });
     localStorage.setItem(LISTS_KEY, JSON.stringify(store));
