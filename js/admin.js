@@ -174,11 +174,13 @@
       if (spans.length < 2) return null;
       const days = parseDays(spans[0].textContent.trim());
       const times = spans[1].textContent.match(/(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})/);
+      if (days && !times && /вихідн|зачин|не працю/i.test(spans[1].textContent)) return 'closed'; // вихідний — у розмітці просто не вказуємо
       if (!days || !times) return null;
       const t = (h, m) => `${h.padStart(2, '0')}:${m}`;
       return { '@type': 'OpeningHoursSpecification', dayOfWeek: days.length === 1 ? days[0] : days, opens: t(times[1], times[2]), closes: t(times[3], times[4]) };
     });
-    if (hours.length && hours.every(Boolean)) gym.openingHoursSpecification = hours;
+    const open = hours.filter((h) => h !== 'closed');
+    if (open.length && open.every(Boolean)) gym.openingHoursSpecification = open;
 
     script.textContent = JSON.stringify(data, null, 2);
   }
