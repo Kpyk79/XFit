@@ -1,0 +1,33 @@
+{
+  "name": "xfit-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "XFit — мобільний додаток (Android, iOS) на Capacitor: карта клієнта, таймер, «Мої тренування»",
+  "scripts": {
+    "build": "node scripts/build-www.mjs",
+    "sync": "node scripts/build-www.mjs && npx cap sync",
+    "assets": "npx capacitor-assets generate --iconBackgroundColor \"#060706\" --iconBackgroundColorDark \"#060706\" --splashBackgroundColor \"#060706\" --splashBackgroundColorDark \"#060706\"",
+    "android": "node scripts/build-www.mjs && npx cap sync android && npx cap open android",
+    "ios": "node scripts/build-www.mjs && npx cap sync ios && npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor-community/keep-awake": "8.0.1",
+    "@capacitor-community/screen-brightness": "8.0.0",
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/browser": "8.0.5",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/ios": "8.6.0",
+    "@capacitor/share": "8.0.3",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4",
+    "@supabase/supabase-js": "2.119.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "4.0.0",
+    "@capacitor/cli": "8.6.0",
+    "@fontsource/inter": "5.3.0",
+    "@fontsource/unbounded": "5.3.0"
+  }
+}

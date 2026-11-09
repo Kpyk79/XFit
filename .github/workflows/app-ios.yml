@@ -1,0 +1,59 @@
+# Збірка iOS-додатку XFit і завантаження в App Store Connect (TestFlight) на Mac-сервері GitHub.
+# Запуск: GitHub → Actions → «Додаток iOS» → Run workflow.
+# Потрібні секрети репозиторію (Settings → Secrets and variables → Actions):
+#   APPLE_TEAM_ID           — Team ID з developer.apple.com → Membership
+#   APPSTORE_API_KEY_ID     — Key ID ключа App Store Connect API (роль App Manager)
+#   APPSTORE_API_ISSUER_ID  — Issuer ID зі сторінки ключів
+#   APPSTORE_API_KEY_P8     — вміст файлу AuthKey_XXXX.p8 (увесь текст)
+# Номер збірки (build) = номер запуску.
+name: Додаток iOS
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Вебчастина
+        working-directory: app
+        run: npm ci && npm run build && npx cap sync ios
+      - name: Ключ App Store Connect API
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s' "$P8" > "$RUNNER_TEMP/keys/AuthKey.p8"
+        env:
+          P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+      - name: Архів (підпис — автоматично через API-ключ)
+        run: |
+          xcodebuild -project app/ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/XFit.xcarchive" archive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey.p8" \
+            -authenticationKeyID "${{ secrets.APPSTORE_API_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APPSTORE_API_ISSUER_ID }}" \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}"
+      - name: Завантаження в App Store Connect
+        run: |
+          cat > "$RUNNER_TEMP/export.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/XFit.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/export.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/keys/AuthKey.p8" \
+            -authenticationKeyID "${{ secrets.APPSTORE_API_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APPSTORE_API_ISSUER_ID }}"

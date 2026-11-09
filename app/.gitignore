@@ -1,0 +1,19 @@
+node_modules/
+www/
+# службові файли збірок (самі проєкти android/ та ios/ — у репозиторії)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/app/release/
+android/capacitor-cordova-android-plugins/build/
+*.keystore
+*.jks
+keystore.properties
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+*.ipa
+*.aab
+*.apk
+*.p8
