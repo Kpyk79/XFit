@@ -33,25 +33,12 @@
   const loginError = $('#adminLoginError');
   const loginCancel = $('#adminLoginCancel');
   const syncStatusEl = $('#adminSyncStatus');
-  const adminBar = $('#adminBar');
-  const adminBarSync = $('#adminBarSync');
-  const adminBarCollapseToggle = $('#adminBarCollapseToggle');
-  const editToggleBtn = $('#adminEditToggle');
-  const saveBtn = $('#adminSaveBtn');
-  const resetBtn = $('#adminResetBtn');
-  const passwordBtn = $('#adminPasswordBtn');
-  const logoutBtn = $('#adminLogoutBtn');
   const secretTrigger = $('#secretTrigger');
-  const announcementsToggleBtn = $('#adminAnnouncementsToggle');
   const addAnnouncementBtn = $('#addAnnouncementBtn');
   const announcementsGrid = $('#announcementsGrid');
   const announcementsSection = $('#announcements');
   const navAnnounceLink = $('#navAnnounceLink');
   const mobileAnnounceLink = $('#mobileAnnounceLink');
-  const leadsBtn = $('#adminLeadsBtn');
-  const leadsModal = $('#adminLeadsModal');
-  const leadsList = $('#adminLeadsList');
-  const leadsClose = $('#adminLeadsClose');
   const trainersCarousel = $('#trainersCarousel');
   const trainersTrack = $('#trainersTrack');
   const addTrainerBtn = $('#addTrainerBtn');
@@ -62,7 +49,8 @@
   let editing = false;
   let toastTimer = null;
 
-  function showToast(message) {
+  function showToast(message, undo) {
+    if (window.XFitConsole && window.XFitConsole.toast) { window.XFitConsole.toast(message, undo); return; }
     if (!toast) return;
     toast.textContent = message;
     toast.classList.add('show');
@@ -85,17 +73,22 @@
   );
   const sb = isRemote ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
+  // Попередження показуємо лише в локальному режимі (без бази даних)
   function updateSyncBadges() {
-    const label = isRemote ? '☁ Хмара (Supabase)' : '💾 Локальний режим (тільки цей браузер)';
-    const cls = isRemote ? 'is-cloud' : 'is-local';
-    [syncStatusEl, adminBarSync].forEach((el) => {
-      if (!el) return;
-      el.textContent = label;
-      el.classList.remove('is-cloud', 'is-local');
-      el.classList.add(cls);
-    });
+    if (!syncStatusEl) return;
+    syncStatusEl.hidden = isRemote;
+    syncStatusEl.textContent = isRemote ? '' : 'Локальний режим: зміни бачить лише цей браузер';
+    syncStatusEl.classList.toggle('is-local', !isRemote);
   }
   updateSyncBadges();
+
+  // Доступ для інших модулів адмінки (напр. «Клієнти»)
+  window.XFitAdmin = {
+    sb,
+    isRemote,
+    showToast: (m, undo) => showToast(m, undo),
+    isAdmin: () => document.body.classList.contains('admin-mode'),
+  };
 
   async function hasRemoteSession() {
     if (!isRemote) return false;
@@ -502,18 +495,18 @@
 
   /* ---------- Режим адміністратора ---------- */
   function enterAdminMode() {
-    adminBar.classList.add('open');
+    if (document.body.classList.contains('admin-mode')) { document.dispatchEvent(new CustomEvent('xfit:admin', { detail: { on: true } })); return; }
     document.body.classList.add('admin-mode');
     renderAnnouncements();
     carousel.restartAutoplay();
     galleryWheel.restartAutoplay();
-    showToast(isRemote ? 'Адмін-режим активовано (хмара Supabase)' : 'Адмін-режим активовано (локальний режим)');
+    document.dispatchEvent(new CustomEvent('xfit:admin', { detail: { on: true } }));
   }
 
   async function exitAdminMode() {
-    setEditing(false);
-    adminBar.classList.remove('open');
+    setEditing(false, true);
     document.body.classList.remove('admin-mode');
+    document.dispatchEvent(new CustomEvent('xfit:admin', { detail: { on: false } }));
     carousel.restartAutoplay();
     galleryWheel.restartAutoplay();
     if (isRemote) {
@@ -525,11 +518,20 @@
     showToast('Вихід з адмін-режиму');
   }
 
-  function setEditing(on) {
+  // Знімок текстів на початку редагування — щоб «Скасувати» повертало все як було
+  let editSnapshot = null;
+  function setEditing(on, discard) {
+    if (on && !editing) {
+      editSnapshot = new Map();
+      document.querySelectorAll('[data-edit-key]').forEach((el) => editSnapshot.set(el, el.textContent));
+    }
+    if (!on && discard && editSnapshot) {
+      editSnapshot.forEach((text, el) => { if (el.isConnected) el.textContent = text; });
+    }
+    if (!on) editSnapshot = null;
     editing = on;
     document.body.classList.toggle('admin-editing', editing);
-    editToggleBtn.classList.toggle('is-active', editing);
-    editToggleBtn.textContent = editing ? 'Завершити редагування' : 'Редагувати';
+    document.dispatchEvent(new CustomEvent('xfit:editing', { detail: { on: editing } }));
     document.querySelectorAll('[data-edit-key]').forEach((el) => {
       el.setAttribute('contenteditable', editing ? 'true' : 'false');
       el.spellcheck = false;
@@ -537,14 +539,6 @@
     document.querySelectorAll('.announcement-card [data-field]').forEach((el) => {
       el.setAttribute('contenteditable', editing ? 'true' : 'false');
       el.spellcheck = false;
-    });
-  }
-
-  editToggleBtn.addEventListener('click', () => setEditing(!editing));
-
-  if (adminBarCollapseToggle) {
-    adminBarCollapseToggle.addEventListener('click', () => {
-      adminBar.classList.toggle('is-collapsed');
     });
   }
 
@@ -557,20 +551,19 @@
     return data;
   }
 
-  saveBtn.addEventListener('click', async () => {
+  // Зберегти всі тексти сторінки (для всіх відвідувачів)
+  async function saveContent() {
     const data = collectContent();
     localStorage.setItem(STORAGE_CONTENT_KEY, JSON.stringify(data));
-    if (isRemote) {
-      showToast('Зберігаємо в хмару…');
-      const ok = await remotePushContent(data);
-      showToast(ok ? 'Зміни збережено в хмарі ✓ (видно всім відвідувачам)' : 'Не вдалося зберегти в хмарі. Перевір з\'єднання/вхід.');
-    } else {
-      showToast('Зміни збережено в цьому браузері ✓ (локальний режим)');
-    }
-  });
+    if (editSnapshot) document.querySelectorAll('[data-edit-key]').forEach((el) => editSnapshot.set(el, el.textContent));
+    if (!isRemote) { showToast('Збережено в цьому браузері ✓'); return true; }
+    const ok = await remotePushContent(data);
+    showToast(ok ? 'Збережено ✓ Зміни вже бачать відвідувачі' : 'Не вдалося зберегти. Перевір інтернет і спробуй ще раз.');
+    return ok;
+  }
 
-  resetBtn.addEventListener('click', async () => {
-    if (!confirm('Скинути весь контент, фото та оголошення до початкових значень? Це стосується ' + (isRemote ? 'бази даних Supabase (усі відвідувачі).' : 'лише цього браузера.'))) return;
+  // Скинути весь контент, фото та оголошення до початкових (підтвердження — в панелі)
+  async function resetAll() {
     localStorage.removeItem(STORAGE_CONTENT_KEY);
     localStorage.removeItem(PHOTO_STORAGE_KEY);
     localStorage.removeItem(ANNOUNCEMENTS_KEY);
@@ -588,39 +581,24 @@
     }
     showToast('Скинуто. Перезавантаження…');
     setTimeout(() => location.reload(), 600);
-  });
+  }
 
-  passwordBtn.addEventListener('click', async () => {
-    const current = prompt('Введи поточний пароль:');
-    if (current === null) return;
-    const next = prompt('Новий пароль (мін. 4 символи):');
-    if (!next || next.trim().length < 4) {
-      showToast('Пароль занадто короткий');
-      return;
-    }
-
+  // Зміна пароля: повертає текст помилки або '' якщо все добре
+  async function changePassword(current, next) {
+    next = String(next || '').trim();
+    if (next.length < 6) return 'Новий пароль має містити щонайменше 6 символів.';
     if (isRemote) {
       const { data: userData } = await sb.auth.getUser();
       const currentEmail = userData && userData.user ? userData.user.email : DEFAULT_ADMIN_EMAIL;
       const { error: reauthError } = await sb.auth.signInWithPassword({ email: currentEmail, password: current });
-      if (reauthError) {
-        showToast('Поточний пароль невірний');
-        return;
-      }
-      const { error } = await sb.auth.updateUser({ password: next.trim() });
-      showToast(error ? 'Не вдалося оновити пароль: ' + error.message : 'Пароль оновлено ✓');
-      return;
+      if (reauthError) return 'Поточний пароль невірний.';
+      const { error } = await sb.auth.updateUser({ password: next });
+      return error ? 'Не вдалося оновити пароль: ' + error.message : '';
     }
-
-    if (current !== getStoredPassword()) {
-      showToast('Поточний пароль невірний');
-      return;
-    }
-    localStorage.setItem(STORAGE_PASSWORD_KEY, next.trim());
-    showToast('Пароль оновлено');
-  });
-
-  logoutBtn.addEventListener('click', exitAdminMode);
+    if (current !== getStoredPassword()) return 'Поточний пароль невірний.';
+    localStorage.setItem(STORAGE_PASSWORD_KEY, next);
+    return '';
+  }
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && loginModal.classList.contains('open')) closeLogin();
@@ -731,13 +709,20 @@
   }
 
   async function deleteAnnouncement(id) {
-    if (!confirm('Видалити це оголошення?')) return;
     const store = getAnnouncementsStore();
+    const gone = store.items.find((i) => i.id === id);
+    if (!gone) return;
     store.items = store.items.filter((i) => i.id !== id);
     saveAnnouncementsStoreLocal(store);
     renderAnnouncements();
     if (isRemote) await remoteDeleteAnnouncement(id);
-    showToast('Оголошення видалено');
+    showToast('Оголошення видалено', async () => {
+      const s2 = getAnnouncementsStore();
+      s2.items.push(gone);
+      saveAnnouncementsStoreLocal(s2);
+      renderAnnouncements();
+      if (isRemote) await remoteUpsertAnnouncement(gone);
+    });
   }
 
   async function setAnnouncementImage(id, dataUrl) {
@@ -863,10 +848,7 @@
       .sort((a, b) => (b.sortOrder || 0) - (a.sortOrder || 0))
       .forEach((item) => announcementsGrid.appendChild(buildAnnouncementCard(item)));
 
-    if (announcementsToggleBtn) {
-      announcementsToggleBtn.textContent = `Оголошення: ${store.enabled ? 'Увімкнено' : 'Вимкнено'}`;
-      announcementsToggleBtn.classList.toggle('is-active', store.enabled);
-    }
+    document.dispatchEvent(new CustomEvent('xfit:announcements'));
     [navAnnounceLink, mobileAnnounceLink].forEach((link) => {
       if (link) link.classList.toggle('is-visible', store.enabled);
     });
@@ -877,31 +859,44 @@
     }
   }
 
-  if (announcementsToggleBtn) {
-    announcementsToggleBtn.addEventListener('click', async () => {
-      const store = getAnnouncementsStore();
-      store.enabled = !store.enabled;
-      saveAnnouncementsStoreLocal(store);
-      renderAnnouncements();
-      if (isRemote) await remotePushAnnouncementsEnabled(store.enabled);
-      showToast(store.enabled ? 'Розділ оголошень увімкнено для відвідувачів' : 'Розділ оголошень приховано від відвідувачів');
-    });
+  async function setAnnouncementsEnabled(on) {
+    const store = getAnnouncementsStore();
+    store.enabled = !!on;
+    saveAnnouncementsStoreLocal(store);
+    renderAnnouncements();
+    const ok = isRemote ? await remotePushAnnouncementsEnabled(store.enabled) : true;
+    showToast(!ok ? 'Не вдалося зберегти. Перевір інтернет.' : store.enabled ? 'Оголошення показуються на сайті' : 'Оголошення сховано з сайту');
+  }
+
+  async function addAnnouncement(fields) {
+    const store = getAnnouncementsStore();
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const newItem = { id, title: 'Нове оголошення', text: 'Опис події, акції чи анонсу…', date: todayLabel(), image: null, sortOrder: Date.now(), ...(fields || {}) };
+    store.items.unshift(newItem);
+    saveAnnouncementsStoreLocal(store);
+    renderAnnouncements();
+    if (isRemote) await remoteUpsertAnnouncement(newItem);
+    return newItem;
+  }
+
+  async function saveAnnouncement(id, fields) {
+    const store = getAnnouncementsStore();
+    const item = store.items.find((i) => i.id === id);
+    if (!item) return false;
+    Object.assign(item, fields);
+    saveAnnouncementsStoreLocal(store);
+    renderAnnouncements();
+    return isRemote ? remoteUpsertAnnouncement(item) : true;
   }
 
   if (addAnnouncementBtn) {
     addAnnouncementBtn.addEventListener('click', async () => {
-      const store = getAnnouncementsStore();
-      const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      const newItem = { id, title: 'Нове оголошення', text: 'Опис події, акції чи анонсу…', date: todayLabel(), image: null, sortOrder: Date.now() };
-      store.items.unshift(newItem);
-      saveAnnouncementsStoreLocal(store);
-      renderAnnouncements();
+      await addAnnouncement();
       const firstTitle = announcementsGrid.querySelector('.announcement-card__title');
       if (firstTitle) {
         firstTitle.focus();
         document.execCommand('selectAll', false, null);
       }
-      if (isRemote) await remoteUpsertAnnouncement(newItem);
       showToast('Оголошення додано — заповни деталі');
     });
   }
@@ -1604,90 +1599,20 @@
     }
   });
 
-  /* ============================================================
-     Перегляд заявок з контактної форми (тільки для адміна)
-     ============================================================ */
-  function formatLeadDate(iso) {
-    try {
-      return new Date(iso).toLocaleString('uk-UA', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
-      return iso;
-    }
-  }
-
-  async function loadLeads() {
-    if (!isRemote) {
-      leadsList.innerHTML = '<p class="admin-leads-empty">Заявки доступні лише в хмарному режимі (Supabase не налаштований).</p>';
-      return;
-    }
-    leadsList.innerHTML = '<p class="admin-leads-empty">Завантаження…</p>';
-    const { data, error } = await sb.from('leads').select('*').order('created_at', { ascending: false });
-    if (error) {
-      leadsList.innerHTML = '<p class="admin-leads-empty">Не вдалося завантажити заявки. Переконайся, що ти залогінений.</p>';
-      return;
-    }
-    if (!data || !data.length) {
-      leadsList.innerHTML = '<p class="admin-leads-empty">Поки що немає заявок.</p>';
-      return;
-    }
-    leadsList.innerHTML = '';
-    data.forEach((lead) => {
-      const card = document.createElement('div');
-      card.className = 'admin-lead-card';
-
-      const date = document.createElement('p');
-      date.className = 'admin-lead-card__date';
-      date.textContent = formatLeadDate(lead.created_at);
-
-      const nameRow = document.createElement('p');
-      nameRow.className = 'admin-lead-card__row';
-      nameRow.innerHTML = '<b>Ім\'я:</b> ';
-      nameRow.appendChild(document.createTextNode(lead.name || '—'));
-
-      const phoneRow = document.createElement('p');
-      phoneRow.className = 'admin-lead-card__row';
-      phoneRow.innerHTML = '<b>Телефон:</b> ';
-      phoneRow.appendChild(document.createTextNode(lead.phone || '—'));
-
-      const msgRow = document.createElement('p');
-      msgRow.className = 'admin-lead-card__row';
-      msgRow.innerHTML = '<b>Повідомлення:</b> ';
-      msgRow.appendChild(document.createTextNode(lead.message || '—'));
-
-      const del = document.createElement('button');
-      del.type = 'button';
-      del.className = 'admin-lead-card__delete';
-      del.title = 'Видалити заявку';
-      del.textContent = '✕';
-      del.addEventListener('click', async () => {
-        if (!confirm('Видалити цю заявку?')) return;
-        await sb.from('leads').delete().eq('id', lead.id);
-        loadLeads();
-      });
-
-      card.appendChild(date);
-      card.appendChild(nameRow);
-      card.appendChild(phoneRow);
-      card.appendChild(msgRow);
-      card.appendChild(del);
-      leadsList.appendChild(card);
-    });
-  }
-
-  if (leadsBtn) {
-    leadsBtn.addEventListener('click', () => {
-      leadsModal.classList.add('open');
-      loadLeads();
-    });
-  }
-  if (leadsClose) {
-    leadsClose.addEventListener('click', () => leadsModal.classList.remove('open'));
-  }
-  if (leadsModal) {
-    leadsModal.addEventListener('click', (e) => {
-      if (e.target === leadsModal) leadsModal.classList.remove('open');
-    });
-  }
+  /* ---------- Можливості для «Командного центру» (js/admin-console.js) ---------- */
+  Object.assign(window.XFitAdmin, {
+    setEditing: (on, discard) => setEditing(on, discard),
+    isEditing: () => editing,
+    saveContent,
+    resetAll,
+    changePassword,
+    logout: exitAdminMode,
+    announcements: () => getAnnouncementsStore(),
+    setAnnouncementsEnabled,
+    addAnnouncement,
+    saveAnnouncement,
+    deleteAnnouncement,
+  });
 
   /* ---------- Ініціалізація ---------- */
   renderTrainers();

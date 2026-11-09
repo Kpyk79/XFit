@@ -1,0 +1,31 @@
+{
+  "appId": "ua.com.xfit.app",
+  "appName": "XFit",
+  "webDir": "www",
+  "backgroundColor": "#060706",
+  "loggingBehavior": "none",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#060706",
+    "scrollEnabled": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false,
+      "launchShowDuration": 3000,
+      "backgroundColor": "#060706",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#060706",
+      "overlaysWebView": false
+    }
+  }
+}

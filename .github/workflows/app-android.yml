@@ -1,0 +1,46 @@
+# Збірка Android-додатку XFit для Google Play (файл .aab).
+# Запуск: GitHub → Actions → «Додаток Android» → Run workflow.
+# Потрібні секрети репозиторію (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64  — ключ завантаження upload.jks у base64
+#   ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+# Номер версії (versionCode) = номер запуску, тож кожна збірка новіша за попередню.
+name: Додаток Android
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run build && npx cap sync android
+      - name: Ключ підпису
+        run: echo "$KS" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      - name: Збірка .aab
+        working-directory: app/android
+        run: chmod +x gradlew && ./gradlew --no-daemon bundleRelease
+        env:
+          XFIT_VERSION_CODE: ${{ github.run_number }}
+          XFIT_KEYSTORE_FILE: ${{ runner.temp }}/upload.jks
+          XFIT_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          XFIT_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          XFIT_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xfit-android-${{ github.run_number }}
+          path: app/android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
