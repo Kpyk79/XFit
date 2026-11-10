@@ -52,8 +52,11 @@
     const { sb, isRemote } = A();
     m.updated_at = new Date().toISOString();
     if (isRemote) {
+      const { data: sess } = await sb.auth.getSession();
+      if (!sess || !sess.session) throw new Error('Сесія адміністратора завершилась. Вийди з адмін-режиму й увійди знову.');
       const { data, error } = await sb.from('members').upsert(m).select().single();
       if (error) {
+        if (/row-level security/i.test(error.message)) throw new Error('Немає прав зберегти клієнта для цього залу. Перевір, що ти увійшов під своїм акаунтом адміністратора.');
         if (/barcode/.test(error.message) && /duplicate|unique/i.test(error.message)) throw new Error('Цей штрихкод уже має інший клієнт.');
         throw new Error('Не вдалося зберегти: ' + error.message);
       }
