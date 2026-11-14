@@ -132,6 +132,26 @@ alter table members add column if not exists status text not null default 'activ
 alter table members add column if not exists consent_at timestamptz;
 alter table members add column if not exists desired_plan text not null default ''; -- що клієнт обрав при реєстрації
 
+-- ---------- Ліміти по IP (див. supabase-update-limits.sql) ----------
+alter table members                 add column if not exists reg_ip  text not null default '';
+alter table leads                   add column if not exists ip_hash text not null default '';
+create index if not exists members_reg_ip_at on members (reg_ip, created_at) where reg_ip <> '';
+create index if not exists leads_ip_at on leads (ip_hash, created_at) where ip_hash <> '';
+
+-- Хеш IP відвідувача з заголовків запиту (Cloudflare → X-Forwarded-For). Порожній, якщо IP невідомий.
+create or replace function client_ip_hash()
+returns text language sql stable set search_path = public as $$
+  select case when ip = '' then '' else md5('xfit-ip:' || ip) end
+  from (
+    select trim(split_part(coalesce(
+      nullif(h ->> 'cf-connecting-ip', ''),
+      nullif(h ->> 'x-forwarded-for', ''),
+      ''), ',', 1)) as ip
+    from (select coalesce(nullif(current_setting('request.headers', true), ''), '{}')::json as h) x
+  ) y;
+$$;
+revoke all on function client_ip_hash() from public, anon, authenticated;
+
 -- ---------- Захист заявок від спаму ----------
 -- Перевірка виконується в базі, тому її не обійти навіть запитом напряму:
 -- завеликі поля, заявка без телефону, повтор з того самого номера частіше
@@ -141,11 +161,13 @@ returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
   v_digits text := regexp_replace(coalesce(new.phone, ''), '\D', '', 'g');
+  v_ip text := client_ip_hash();
 begin
   new.name := left(trim(coalesce(new.name, '')), 80);
   new.phone := left(trim(coalesce(new.phone, '')), 30);
   new.message := left(coalesce(new.message, ''), 2000);
   new.created_at := now();
+  new.ip_hash := v_ip; -- завжди з сервера: підставити свій хеш не можна
   if length(new.name) < 2 or length(v_digits) < 9 or length(v_digits) > 15 then
     raise exception 'invalid_data';
   end if;
@@ -156,7 +178,10 @@ begin
   ) then
     raise exception 'too_many_requests';
   end if;
-  if (select count(*) from leads l where l.created_at > now() - interval '10 minutes') >= 30 then
+  if v_ip <> '' and (select count(*) from leads l where l.ip_hash = v_ip and l.created_at > now() - interval '10 minutes') >= 5 then
+    raise exception 'too_many_requests';
+  end if;
+  if (select count(*) from leads l where l.created_at > now() - interval '10 minutes') >= 100 then
     raise exception 'too_many_requests';
   end if;
   return new;
@@ -255,6 +280,8 @@ create table if not exists member_restore_attempts (
   at timestamptz not null default now()
 );
 create index if not exists member_restore_attempts_phone on member_restore_attempts (phone_key, at);
+alter table member_restore_attempts add column if not exists ip_hash text not null default '';
+create index if not exists member_restore_attempts_ip on member_restore_attempts (ip_hash, at) where ip_hash <> '';
 -- Доступ лише через функцію нижче: RLS увімкнено, політик немає
 alter table member_restore_attempts enable row level security;
 
@@ -264,13 +291,17 @@ language plpgsql volatile security definer set search_path = public as $$
 declare
   v_key text := right(regexp_replace(coalesce(p_phone, ''), '\D', '', 'g'), 9);
   v_code text := nullif(regexp_replace(coalesce(p_barcode, ''), '\D', '', 'g'), '');
+  v_ip text := client_ip_hash();
   v_token text;
 begin
   if length(v_key) < 9 or (v_code is null and p_birth_date is null) then
     raise exception 'invalid_data';
   end if;
-  if (select count(*) from member_restore_attempts a where a.phone_key = v_key and not a.ok and a.at > now() - interval '1 day') >= 5
-     or (select count(*) from member_restore_attempts a where a.at > now() - interval '1 hour') >= 100 then
+  if (select count(*) from member_restore_attempts a where a.phone_key = v_key and not a.ok and a.at > now() - interval '1 day') >= 30
+     or (v_ip <> '' and (
+          (select count(*) from member_restore_attempts a where a.phone_key = v_key and a.ip_hash = v_ip and not a.ok and a.at > now() - interval '1 day') >= 5
+       or (select count(*) from member_restore_attempts a where a.ip_hash = v_ip and a.at > now() - interval '1 hour') >= 20
+     )) then
     raise exception 'too_many_attempts';
   end if;
   select m.token into v_token
@@ -279,7 +310,7 @@ begin
     and ((v_code is not null and m.barcode = v_code) or (p_birth_date is not null and m.birth_date = p_birth_date))
   limit 1;
   -- спробу записуємо й тоді, коли дані не підійшли (тому без raise — інакше запис відкотиться)
-  insert into member_restore_attempts (phone_key, ok) values (v_key, v_token is not null);
+  insert into member_restore_attempts (phone_key, ok, ip_hash) values (v_key, v_token is not null, v_ip);
   delete from member_restore_attempts where at < now() - interval '7 days';
   return v_token; -- null — карту не знайдено
 end;
@@ -313,6 +344,7 @@ declare
   v_source text := left(regexp_replace(coalesce(p_source, ''), '[^a-z0-9_-]', '', 'g'), 20);
   v_ref text := left(regexp_replace(lower(coalesce(p_ref, '')), '[^0-9a-f]', '', 'g'), 10);
   v_bsource text := 'app';
+  v_ip text := client_ip_hash();
   v_token text;
   v_body text;
   v_num text;
@@ -335,7 +367,13 @@ begin
   else
     v_barcode := gen_member_barcode();
   end if;
-  if (select count(*) from members m where m.created_at > now() - interval '1 hour') >= 20 then
+  if v_ip <> '' and (
+       (select count(*) from members m where m.reg_ip = v_ip and m.created_at > now() - interval '1 hour') >= 8
+    or (select count(*) from members m where m.reg_ip = v_ip and m.created_at > now() - interval '1 day') >= 20
+  ) then
+    raise exception 'too_many_requests';
+  end if;
+  if (select count(*) from members m where m.created_at > now() - interval '1 hour') >= 60 then
     raise exception 'too_many_requests';
   end if;
   if length(v_ref) <> 10 then v_ref := ''; end if;
@@ -351,8 +389,8 @@ begin
     v_num := v_body || ((10 - v_sum % 10) % 10)::text;
     exit when not exists (select 1 from members m where m.card_number = v_num);
   end loop;
-  insert into members (card_number, token, full_name, phone, gym, birth_date, email, status, consent_at, plan, desired_plan, barcode, barcode_source, source, referred_by)
-  values (v_num, v_token, v_name, '+' || v_digits, left(coalesce(p_gym, ''), 40), p_birth_date, left(coalesce(p_email, ''), 120), 'pending', now(), '', left(coalesce(p_plan, ''), 60), v_barcode, v_bsource, v_source, v_ref);
+  insert into members (card_number, token, full_name, phone, gym, birth_date, email, status, consent_at, plan, desired_plan, barcode, barcode_source, source, referred_by, reg_ip)
+  values (v_num, v_token, v_name, '+' || v_digits, left(coalesce(p_gym, ''), 40), p_birth_date, left(coalesce(p_email, ''), 120), 'pending', now(), '', left(coalesce(p_plan, ''), 60), v_barcode, v_bsource, v_source, v_ref, v_ip);
   return query select v_token, v_num;
 end;
 $$;
