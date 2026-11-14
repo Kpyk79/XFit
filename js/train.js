@@ -597,7 +597,7 @@
   const fmtMass = (kg) => (kg >= 1000 ? (Math.round(kg / 100) / 10).toLocaleString('uk-UA') + ' т' : fmtKg(kg) + ' кг');
   // підхід з власною вагою (0 кг) показуємо лише повторами
   const fmtSet = (s) => (s.w > 0 ? `${fmtKg(s.w)} кг × ${s.r}` : `${s.r} повт.`);
-  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   const dateInput = $('#logDate');
   const weightInput = $('#logWeight');
