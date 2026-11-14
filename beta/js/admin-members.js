@@ -58,6 +58,7 @@
       if (error) {
         if (/row-level security/i.test(error.message)) throw new Error('Немає прав зберегти клієнта для цього залу. Перевір, що ти увійшов під своїм акаунтом адміністратора.');
         if (/barcode/.test(error.message) && /duplicate|unique/i.test(error.message)) throw new Error('Цей штрихкод уже має інший клієнт.');
+        if (/phone9/.test(error.message)) throw new Error('Клієнт із таким номером телефону вже є.');
         throw new Error('Не вдалося зберегти: ' + error.message);
       }
       const i = members.findIndex((x) => x.id === data.id);

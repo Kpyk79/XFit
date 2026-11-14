@@ -132,76 +132,6 @@ alter table members add column if not exists status text not null default 'activ
 alter table members add column if not exists consent_at timestamptz;
 alter table members add column if not exists desired_plan text not null default ''; -- що клієнт обрав при реєстрації
 
--- Клієнт бачить лише свою карту — за секретним кодом з особистого посилання.
--- Повертаються тільки дані для карти (телефон частково приховано, без нотаток).
-drop function if exists get_member_card(text);
-create or replace function get_member_card(p_token text)
-returns table (card_number text, full_name text, phone_masked text, plan text, gym text, valid_from date, valid_to date, status text, desired_plan text)
-language sql stable security definer set search_path = public as $$
-  select m.card_number, m.full_name,
-    case when length(d.digits) >= 7
-      then '+' || left(d.digits, 3) || ' •• ••• ' || substr(right(d.digits, 4), 1, 2) || ' ' || right(d.digits, 2)
-      else '' end,
-    m.plan, m.gym, m.valid_from, m.valid_to, m.status, m.desired_plan
-  from members m
-  cross join lateral (select regexp_replace(m.phone, '\D', '', 'g') as digits) d
-  where length(p_token) >= 16 and m.token = p_token;
-$$;
-
-revoke all on function get_member_card(text) from public;
-grant execute on function get_member_card(text) to anon, authenticated;
-
--- Реєстрація клієнта самим клієнтом (з додатку). Номер карти й секретний код
--- генерує сервер; один номер телефону — одна карта.
-drop function if exists register_member(text, text, text, date, text);
-create or replace function register_member(p_full_name text, p_phone text, p_gym text, p_birth_date date, p_email text, p_plan text default '')
-returns table (token text, card_number text)
-language plpgsql volatile security definer set search_path = public as $$
-declare
-  v_name text := left(trim(coalesce(p_full_name, '')), 80);
-  v_digits text := regexp_replace(coalesce(p_phone, ''), '\D', '', 'g');
-  v_token text;
-  v_body text;
-  v_num text;
-  v_sum int;
-  v_d int;
-  i int;
-begin
-  -- 067… → 38067…, 67… → 38067…
-  if length(v_digits) = 10 and left(v_digits, 1) = '0' then v_digits := '38' || v_digits; end if;
-  if length(v_digits) = 9 then v_digits := '380' || v_digits; end if;
-  if length(v_name) < 3 or length(v_digits) < 11 or length(v_digits) > 15 then
-    raise exception 'invalid_data';
-  end if;
-  -- той самий номер у будь-якому записі (+380…, 067…, з пробілами) — порівнюємо останні 9 цифр
-  if exists (select 1 from members m where right(regexp_replace(m.phone, '\D', '', 'g'), 9) = right(v_digits, 9)) then
-    raise exception 'phone_exists';
-  end if;
-  -- захист від масової реєстрації ботом: не більше 20 нових карт за годину
-  if (select count(*) from members m where m.created_at > now() - interval '1 hour') >= 20 then
-    raise exception 'too_many_requests';
-  end if;
-  v_token := replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
-  loop
-    v_body := to_char(now(), 'YYYY') || lpad((floor(random() * 1e11))::bigint::text, 11, '0');
-    v_sum := 0;
-    for i in 1..15 loop
-      v_d := substr(v_body, 16 - i, 1)::int;
-      if i % 2 = 1 then v_d := v_d * 2; if v_d > 9 then v_d := v_d - 9; end if; end if;
-      v_sum := v_sum + v_d;
-    end loop;
-    v_num := v_body || ((10 - v_sum % 10) % 10)::text;
-    exit when not exists (select 1 from members m where m.card_number = v_num);
-  end loop;
-  insert into members (card_number, token, full_name, phone, gym, birth_date, email, status, consent_at, plan, desired_plan)
-  values (v_num, v_token, v_name, '+' || v_digits, left(coalesce(p_gym, ''), 40), p_birth_date, left(coalesce(p_email, ''), 120), 'pending', now(), '', left(coalesce(p_plan, ''), 60));
-  return query select v_token, v_num;
-end;
-$$;
-
-revoke all on function register_member(text, text, text, date, text, text) from public;
-grant execute on function register_member(text, text, text, date, text, text) to anon, authenticated;
-
 -- ---------- Захист заявок від спаму ----------
 -- Перевірка виконується в базі, тому її не обійти навіть запитом напряму:
 -- завеликі поля, заявка без телефону, повтор з того самого номера частіше
@@ -239,7 +169,7 @@ create trigger leads_guard before insert on leads
 -- функцію викликає лише тригер — напряму через API вона недоступна
 revoke all on function leads_guard() from public, anon, authenticated;
 
--- ---------- Штрихкоди EAN-13, як на пластикових картах (див. supabase-update-barcodes.sql) ----------
+-- ---------- Штрихкоди EAN-13, як на пластикових картах ----------
 alter table members add column if not exists barcode text;
 alter table members add column if not exists barcode_source text not null default 'app'; -- 'app' | 'plastic'
 create unique index if not exists members_barcode_key on members (barcode) where barcode is not null;
@@ -296,61 +226,6 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function get_member_card(text) from public;
 grant execute on function get_member_card(text) to anon, authenticated;
-
--- Реєстрація з додатку: p_barcode — номер пластикової карти (якщо клієнт її вже має)
-drop function if exists register_member(text, text, text, date, text, text);
-create or replace function register_member(p_full_name text, p_phone text, p_gym text, p_birth_date date, p_email text, p_plan text default '', p_barcode text default null)
-returns table (token text, card_number text)
-language plpgsql volatile security definer set search_path = public as $$
-declare
-  v_name text := left(trim(coalesce(p_full_name, '')), 80);
-  v_digits text := regexp_replace(coalesce(p_phone, ''), '\D', '', 'g');
-  v_barcode text := nullif(regexp_replace(coalesce(p_barcode, ''), '\D', '', 'g'), '');
-  v_source text := 'app';
-  v_token text;
-  v_body text;
-  v_num text;
-  v_sum int;
-  v_d int;
-  i int;
-begin
-  if length(v_digits) = 10 and left(v_digits, 1) = '0' then v_digits := '38' || v_digits; end if;
-  if length(v_digits) = 9 then v_digits := '380' || v_digits; end if;
-  if length(v_name) < 3 or length(v_digits) < 11 or length(v_digits) > 15 then
-    raise exception 'invalid_data';
-  end if;
-  if exists (select 1 from members m where right(regexp_replace(m.phone, '\D', '', 'g'), 9) = right(v_digits, 9)) then
-    raise exception 'phone_exists';
-  end if;
-  if v_barcode is not null then
-    if not is_member_barcode(v_barcode) then raise exception 'invalid_barcode'; end if;
-    if exists (select 1 from members m where m.barcode = v_barcode) then raise exception 'barcode_exists'; end if;
-    v_source := 'plastic';
-  else
-    v_barcode := gen_member_barcode();
-  end if;
-  if (select count(*) from members m where m.created_at > now() - interval '1 hour') >= 20 then
-    raise exception 'too_many_requests';
-  end if;
-  v_token := replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
-  loop
-    v_body := to_char(now(), 'YYYY') || lpad((floor(random() * 1e11))::bigint::text, 11, '0');
-    v_sum := 0;
-    for i in 1..15 loop
-      v_d := substr(v_body, 16 - i, 1)::int;
-      if i % 2 = 1 then v_d := v_d * 2; if v_d > 9 then v_d := v_d - 9; end if; end if;
-      v_sum := v_sum + v_d;
-    end loop;
-    v_num := v_body || ((10 - v_sum % 10) % 10)::text;
-    exit when not exists (select 1 from members m where m.card_number = v_num);
-  end loop;
-  insert into members (card_number, token, full_name, phone, gym, birth_date, email, status, consent_at, plan, desired_plan, barcode, barcode_source)
-  values (v_num, v_token, v_name, '+' || v_digits, left(coalesce(p_gym, ''), 40), p_birth_date, left(coalesce(p_email, ''), 120), 'pending', now(), '', left(coalesce(p_plan, ''), 60), v_barcode, v_source);
-  return query select v_token, v_num;
-end;
-$$;
-revoke all on function register_member(text, text, text, date, text, text, text) from public;
-grant execute on function register_member(text, text, text, date, text, text, text) to anon, authenticated;
 
 -- Клієнт з віртуальною картою додає свою пластикову карту (за секретним кодом посилання)
 create or replace function link_member_barcode(p_token text, p_barcode text)
@@ -422,6 +297,9 @@ create policy "Admin update leads" on leads for update
 alter table members add column if not exists source text not null default '';
 alter table members add column if not exists referred_by text not null default '';
 
+-- старі версії функції (на 5, 6 і 7 аргументів) прибираємо, щоб не лишалися поруч із новою
+drop function if exists register_member(text, text, text, date, text);
+drop function if exists register_member(text, text, text, date, text, text);
 drop function if exists register_member(text, text, text, date, text, text, text);
 drop function if exists register_member(text, text, text, date, text, text, text, text, text);
 create or replace function register_member(p_full_name text, p_phone text, p_gym text, p_birth_date date, p_email text,
@@ -480,6 +358,9 @@ end;
 $$;
 revoke all on function register_member(text, text, text, date, text, text, text, text, text) from public;
 grant execute on function register_member(text, text, text, date, text, text, text, text, text) to anon, authenticated;
+
+-- Один номер телефону — одна картка (порівнюємо останні 9 цифр); блокує дублі навіть при одночасних запитах
+create unique index if not exists members_phone9_key on members ((right(regexp_replace(phone, '\D', '', 'g'), 9))) where length(regexp_replace(phone, '\D', '', 'g')) >= 9;
 
 -- ---------- Клієнт видаляє свою карту (див. supabase-update-delete.sql) ----------
 create or replace function delete_member_card(p_token text)
